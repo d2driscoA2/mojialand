@@ -72,9 +72,16 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--cream);color:var
 .center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:34px;padding:20px}
 /* match */
 .grid{position:absolute;inset:14px;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(4,1fr);gap:10px}
-.mt{border:3px solid #FFD6E7;border-radius:22px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:48px;line-height:1;cursor:pointer;transition:transform .12s}
-.mt.sel{border:6px solid var(--sun);box-shadow:0 0 0 5px rgba(255,200,61,.35);transform:scale(1.05)}
-.mt.gone{transform:scale(0);opacity:0}
+.mt{position:relative;border:0;border-radius:22px;background:transparent;cursor:pointer;perspective:600px;padding:0}
+.mt .in{position:absolute;inset:0;transition:transform .45s cubic-bezier(.4,0,.2,1);transform-style:preserve-3d}
+.mt.up .in{transform:rotateY(180deg)}
+.mt .f,.mt .b{position:absolute;inset:0;border-radius:22px;display:flex;align-items:center;justify-content:center;backface-visibility:hidden;-webkit-backface-visibility:hidden;font-size:46px;line-height:1}
+.mt .b{background:var(--grape);border:4px solid #B98BF0;font-size:34px;color:#fff}
+.mt .f{background:#fff;border:4px solid #FFD6E7;transform:rotateY(180deg)}
+.mt.done .f{border-color:var(--lime);box-shadow:0 0 0 4px rgba(138,226,52,.4)}
+.mt.glow .b{box-shadow:0 0 0 6px var(--sun)}
+.mt.pop .in{animation:popcard .5s}
+@keyframes popcard{0%,100%{transform:rotateY(180deg) scale(1)}50%{transform:rotateY(180deg) scale(1.15)}}
 /* parade */
 .field{position:absolute;inset:0;background:linear-gradient(#DDF3FF 0 26%,#BFEAFF 26% 30%,#B9E88A 30% 31%,#A6DE72 31% 60%,#8FD35C 60% 100%)}
 .field::before{content:"";position:absolute;left:-20%;right:-20%;top:22%;height:22%;border-radius:50%;background:#B9E88A}
@@ -311,9 +318,15 @@ games.bounce=(function(){
   const cv=$('#bcanvas'), stage=$('#bstage'); const cx=cv.getContext('2d'); let W=0,H=0,dpr=1, bodies=[], raf=null, dropEmoji='🦄', running=false;
   const vt=$('#vtray'); ['🦄','🐲','🦈','🐴','🦖','⭐'].forEach((e,i)=>{ const t=document.createElement('button'); t.className='tile'+(i?'':' on'); t.textContent=e; t.setAttribute('aria-label',nameOf(e)); t.onclick=()=>{ ctx(); sfx.boop(); $$('#vtray .tile').forEach(x=>x.classList.remove('on')); t.classList.add('on'); dropEmoji=e; say(nameOf(e)); }; vt.appendChild(t); });
   function size(){ dpr=Math.min(2,window.devicePixelRatio||1); W=stage.clientWidth; H=stage.clientHeight; cv.width=W*dpr; cv.height=H*dpr; cx.setTransform(dpr,0,0,dpr,0,0); }
-  function drop(x,y,e){ if(bodies.length>40) bodies.shift(); const r=e==='🦖'?34:28; bodies.push({x:Math.max(r,Math.min(W-r,x)),y:y||-r,vx:(Math.random()-0.5)*3,vy:0,r,e,rest:e==='🦖'?0.35:(e==='🦄'?0.7:0.55),m:r*r}); sfx.boop(); }
-  function step(){ const g=0.55; for(const b of bodies){ b.vy+=g; b.x+=b.vx; b.y+=b.vy; b.vx*=0.995; if(b.y+b.r>H){ b.y=H-b.r; if(b.vy>2.5) sfx.bounce(b.vy); b.vy=-b.vy*b.rest; b.vx*=0.9; } if(b.x-b.r<0){ b.x=b.r; b.vx=-b.vx*0.7; } if(b.x+b.r>W){ b.x=W-b.r; b.vx=-b.vx*0.7; } }
-    for(let i=0;i<bodies.length;i++) for(let j=i+1;j<bodies.length;j++){ const a=bodies[i], c=bodies[j]; const dx=c.x-a.x, dy=c.y-a.y, d=Math.hypot(dx,dy)||0.01, min=a.r+c.r; if(d<min){ const nx=dx/d, ny=dy/d, ov=(min-d)/2; a.x-=nx*ov; a.y-=ny*ov; c.x+=nx*ov; c.y+=ny*ov; const rv=(c.vx-a.vx)*nx+(c.vy-a.vy)*ny; if(rv<0){ const imp=-(1+0.4)*rv/(1/a.m+1/c.m); a.vx-=imp*nx/a.m; a.vy-=imp*ny/a.m; c.vx+=imp*nx/c.m; c.vy+=imp*ny/c.m; } } }
+  let lastBounceSfx=0;
+  function capacity(){ return Math.max(6,Math.floor((W*H*0.30)/(Math.PI*30*30))); }
+  function full(){ return bodies.length>=Math.min(18,capacity()); }
+  function drop(x,y,e){ if(full()){ sfx.hmm(); cv.animate([{transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},{transform:'translateX(0)'}],{duration:300}); return; } const r=e==='🦖'?34:28; bodies.push({x:Math.max(r,Math.min(W-r,x)),y:y||-r,vx:(Math.random()-0.5)*3,vy:0,r,e,rest:e==='🦖'?0.35:(e==='🦄'?0.7:0.55),m:r*r}); sfx.boop(); }
+  function step(){ const g=0.55; for(const b of bodies){ b.c=0; b.sup=false; b.vy+=g; b.x+=b.vx; b.y+=b.vy; b.vx*=0.985; b.vy*=0.995;
+      if(b.y+b.r>H){ b.y=H-b.r; b.c++; b.sup=true; if(b.vy>3.5){ const now=performance.now(); if(now-lastBounceSfx>90){ sfx.bounce(b.vy); lastBounceSfx=now; } b.vy=-b.vy*b.rest; } else b.vy=0; b.vx*=0.8; }
+      if(b.x-b.r<0){ b.x=b.r; b.vx=-b.vx*0.5; } if(b.x+b.r>W){ b.x=W-b.r; b.vx=-b.vx*0.5; } }
+    for(let it=0;it<3;it++) for(let i=0;i<bodies.length;i++) for(let j=i+1;j<bodies.length;j++){ const a=bodies[i], c=bodies[j]; const dx=c.x-a.x, dy=c.y-a.y, d=Math.hypot(dx,dy)||0.01, min=a.r+c.r; if(d<min){ a.c++; c.c++; const nx=dx/d, ny=dy/d; if(ny>0.35) a.sup=true; if(ny<-0.35) c.sup=true; const pen=Math.max(0,min-d-0.5); const ov=pen*0.45; a.x-=nx*ov; a.y-=ny*ov; c.x+=nx*ov; c.y+=ny*ov; if(it===0){ const rv=(c.vx-a.vx)*nx+(c.vy-a.vy)*ny; if(rv<0){ const e=Math.abs(rv)<2?0:0.25; const imp=-(1+e)*rv/(1/a.m+1/c.m); a.vx-=imp*nx/a.m; a.vy-=imp*ny/a.m; c.vx+=imp*nx/c.m; c.vy+=imp*ny/c.m; } } } }
+    for(const b of bodies){ if(b.c>=2&&b.sup){ b.vx*=0.7; b.vy*=0.7; } if(Math.abs(b.vx)<0.2) b.vx=0; if(Math.abs(b.vy)<1.3&&b.sup) b.vy=0; if(b.y+b.r>H) b.y=H-b.r; if(b.x-b.r<0) b.x=b.r; if(b.x+b.r>W) b.x=W-b.r; }
     cx.clearRect(0,0,W,H); cx.textAlign='center'; cx.textBaseline='middle'; for(const b of bodies){ const sq=Math.min(1,Math.abs(b.vy)/25); cx.save(); cx.translate(b.x,b.y); cx.scale(1+sq*0.15,1-sq*0.15); cx.font=(b.r*1.8)+'px system-ui'; cx.fillText(b.e,0,0); cx.restore(); }
     if(running) raf=requestAnimationFrame(step); }
   cv.addEventListener('pointerdown',ev=>{ ctx(); const r=cv.getBoundingClientRect(); drop(ev.clientX-r.left,ev.clientY-r.top,dropEmoji); });
@@ -322,20 +335,23 @@ games.bounce=(function(){
   return { enter(){ running=true; size(); bodies=[]; cancelAnimationFrame(raf); step(); }, leave(){ running=false; cancelAnimationFrame(raf); }, async demo(tap,stopped){ say('Tap the box. Watch them bounce.'); const fake={getBoundingClientRect(){ const r=cv.getBoundingClientRect(); return {left:r.left+r.width*0.4,top:r.top+r.height*0.35,width:0,height:0}; }, click(){ drop(W*0.4,H*0.3,dropEmoji); }}; for(let i=0;i<3;i++){ if(stopped()) return; await tap(fake); } if(stopped()) return; await tap(vt.children[1]); const fake2={getBoundingClientRect(){ const r=cv.getBoundingClientRect(); return {left:r.left+r.width*0.6,top:r.top+r.height*0.3,width:0,height:0}; }, click(){ drop(W*0.6,H*0.25,dropEmoji); }}; await tap(fake2); await wait(800); } };
 })();
 
-/* ---------- MATCH ---------- */
+/* ---------- MATCH (memory) ---------- */
 games.match=(function(){
-  const grid=$('#mgrid'); let cells=[], sel=null, busy=false; const POOL=['🦄','🐴','🐲','🦖','🦈','⭐'];
-  function fill(){ let arr; do{ arr=Array.from({length:12},()=>rnd(POOL)); }while(!hasPair(arr)); cells=arr; render(); }
-  function hasPair(a){ const c={}; for(const e of a){ if(e==null) continue; c[e]=(c[e]||0)+1; if(c[e]>1) return true; } return false; }
-  function render(){ grid.innerHTML=''; cells.forEach((e,i)=>{ const t=document.createElement('button'); t.className='mt'; t.dataset.i=i; t.textContent=e||''; t.setAttribute('aria-label',nameOf(e)); t.onclick=()=>tap(t); grid.appendChild(t); }); armIdle(); }
-  function pairTarget(){ const c={}; for(let i=0;i<12;i++){ const e=cells[i]; if(!e) continue; if(c[e]!=null) return sel&&sel.dataset.i==c[e]?grid.children[i]:grid.children[c[e]]; c[e]=i; } return null; }
-  function armIdle(){ idleArm(()=>{ if(sel){ const e=cells[sel.dataset.i]; for(let i=0;i<12;i++) if(cells[i]===e&&i!=sel.dataset.i) return grid.children[i]; } return pairTarget(); }); }
-  async function tap(t){ if(busy) return; ctx(); const i=+t.dataset.i; if(!cells[i]) return; if(!sel){ sel=t; t.classList.add('sel'); sfx.boop(); say(nameOf(cells[i])); armIdle(); return; } if(sel===t){ sel.classList.remove('sel'); sel=null; sfx.boop(); armIdle(); return; }
-    const j=+sel.dataset.i; if(cells[i]===cells[j]){ busy=true; idleClear(); t.classList.add('sel'); sfx.chime(); say('two '+nameOf(cells[i])+'s!'); const s=$('#s-match .stage').getBoundingClientRect(); [t,sel].forEach(x=>{ const r=x.getBoundingClientRect(); confetti($('#s-match .stage'),r.left-s.left+r.width/2,r.top-s.top+r.height/2,12); }); await wait(350); t.classList.add('gone'); sel.classList.add('gone'); await wait(400); cells[i]=null; cells[j]=null; sel=null; refill(); busy=false; }
-    else { sfx.hmm(); t.classList.add('wobble'); setTimeout(()=>t.classList.remove('wobble'),500); sel.classList.remove('sel'); sel=null; armIdle(); } }
-  function refill(){ let tries=0; do{ for(let i=0;i<12;i++) if(cells[i]==null) cells[i]=rnd(POOL); if(hasPair(cells)) break; cells[0]=null; }while(++tries<20); render(); }
-  $('#msay').onclick=()=>{ ctx(); sfx.boop(); say('Find two the same.'); };
-  return { enter(){ sel=null; busy=false; fill(); }, leave(){ idleClear(); }, async demo(tap,stopped){ say('Find two the same.'); await wait(500); const c={}; let a=-1,b=-1; for(let i=0;i<12;i++){ const e=cells[i]; if(c[e]!=null){ a=c[e]; b=i; break; } c[e]=i; } if(a<0) return; await tap(grid.children[a]); if(stopped()) return; await tap(grid.children[b]); await wait(1000); } };
+  const grid=$('#mgrid'); const POOL=['🦄','🐴','🐲','🦖','🦈','⭐','🐸','🦋','🐶','🐱']; let cards=[], open=[], busy=false, matched=0;
+  function deal(){ const pick=[...POOL].sort(()=>Math.random()-0.5).slice(0,6); const deck=[...pick,...pick].sort(()=>Math.random()-0.5); cards=deck.map(e=>({e,up:false,done:false})); open=[]; busy=false; matched=0; render(); }
+  function render(){ grid.innerHTML=''; cards.forEach((c,i)=>{ const t=document.createElement('button'); t.className='mt'+(c.up||c.done?' up':'')+(c.done?' done':''); t.dataset.i=i; t.setAttribute('aria-label',c.up||c.done?nameOf(c.e):'hidden card'); t.innerHTML='<div class="in"><div class="b">🌟</div><div class="f">'+c.e+'</div></div>'; t.onclick=()=>flip(i); grid.appendChild(t); }); armIdle(); }
+  function el(i){ return grid.children[i]; }
+  function pairHint(){ if(open.length===1){ const e=cards[open[0]].e; for(let i=0;i<12;i++) if(i!==open[0]&&cards[i].e===e&&!cards[i].done) return el(i); } for(let i=0;i<12;i++) if(!cards[i].done&&!cards[i].up) return el(i); return null; }
+  function armIdle(){ idleArm(pairHint); }
+  async function flip(i){ if(busy) return; const c=cards[i]; if(c.up||c.done) return; ctx(); c.up=true; el(i).classList.add('up'); el(i).setAttribute('aria-label',nameOf(c.e)); sfx.boop(); say(nameOf(c.e)); open.push(i);
+    if(open.length<2){ armIdle(); return; }
+    busy=true; idleClear(); const [a,b]=open; await wait(700);
+    if(cards[a].e===cards[b].e){ cards[a].done=cards[b].done=true; cards[a].up=cards[b].up=false; el(a).classList.add('done','pop'); el(b).classList.add('done','pop'); sfx.chime(); say('two '+nameOf(cards[a].e)+'s!'); const s=$('#s-match .stage').getBoundingClientRect(); [a,b].forEach(i=>{ const r=el(i).getBoundingClientRect(); confetti($('#s-match .stage'),r.left-s.left+r.width/2,r.top-s.top+r.height/2,12); }); matched++; open=[]; busy=false;
+      if(matched===6){ busy=true; sfx.cheer(); say('You found them all!'); const st=$('#s-match .stage').getBoundingClientRect(); for(let k=0;k<5;k++) setTimeout(()=>confetti($('#s-match .stage'),Math.random()*st.width,st.height*0.3,16),k*150); await wait(2200); deal(); }
+      else armIdle(); }
+    else { sfx.hmm(); el(a).classList.add('wobble'); el(b).classList.add('wobble'); await wait(500); cards[a].up=cards[b].up=false; el(a).classList.remove('up','wobble'); el(b).classList.remove('up','wobble'); el(a).setAttribute('aria-label','hidden card'); el(b).setAttribute('aria-label','hidden card'); open=[]; busy=false; armIdle(); } }
+  $('#msay').onclick=()=>{ ctx(); sfx.boop(); say('Flip two cards. Find two the same.'); };
+  return { enter(){ deal(); }, leave(){ idleClear(); }, async demo(tap,stopped){ say('Flip two cards. Find two the same.'); await wait(500); const e=cards[0].e; let j=cards.findIndex((c,i)=>i>0&&c.e===e); await tap(el(0)); if(stopped()) return; await wait(300); await tap(el(j)); await wait(1400); } };
 })();
 
 /* ---------- EMOJI PICKER (shared drawer) ---------- */
