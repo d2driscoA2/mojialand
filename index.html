@@ -207,6 +207,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--cream);color:var
   <div style="font-size:13px;color:var(--mute);line-height:1.4">You held the lock for 3 seconds. Kids do not get here by accident.</div>
   <div class="row"><div><div class="l">Voice</div><div class="s">Names emoji out loud</div></div><button class="sw" id="swVoice" role="switch" aria-checked="true" aria-label="Voice"></button></div>
   <div class="row"><div><div class="l">Sounds</div><div class="s">Boops, chimes, cheers</div></div><button class="sw" id="swSound" role="switch" aria-checked="true" aria-label="Sounds"></button></div>
+  <div class="row"><div><div class="l">Sound check</div><div class="s" id="sndInfo">Tap to play a chime</div></div><button class="small" id="sndTest">Test</button></div>
   <div class="row"><div><div class="l">Show demos again</div><div class="s">Replay first-play demos for every game</div></div><button class="small" id="resetDemos">Reset</button></div>
   <div class="note">Mojialand v0.1. No accounts, no ads, no tracking. Nothing leaves this phone.<br><span id="voiceInfo"></span></div>
 </section>
@@ -301,6 +302,7 @@ $('#canvas').addEventListener('pointerdown',ev=>{ ctx(); const r=ev.currentTarge
 /* ---------- GATE ---------- */
 function bindSwitch(id,key){ const s=$(id); s.setAttribute('aria-checked',String(settings[key])); s.onclick=()=>{ settings[key]=!settings[key]; s.setAttribute('aria-checked',String(settings[key])); store.set(key,settings[key]); sfx.boop(); }; }
 bindSwitch('#swVoice','voice'); bindSwitch('#swSound','sound');
+$('#sndTest').onclick=()=>{ unlock(); const a=ctx(); sfx.chime(); say('Hello! Can you hear me?'); setTimeout(()=>{ $('#sndInfo').textContent='Audio: '+(a?a.state:'unavailable')+' · Sounds '+(settings.sound?'on':'off')+' · Voice '+(settings.voice?'on':'off')+(('speechSynthesis' in window)?'':' · no speech'); },300); };
 $('#resetDemos').onclick=()=>{ demoDone={}; store.set('demoDone',{}); sfx.chime(); $('#resetDemos').textContent='Done'; setTimeout(()=>$('#resetDemos').textContent='Reset',1200); };
 
 /* ---------- PATTERN ---------- */
@@ -321,7 +323,8 @@ games.bounce=(function(){
   let lastBounceSfx=0;
   function capacity(){ return Math.max(6,Math.floor((W*H*0.30)/(Math.PI*30*30))); }
   function full(){ return bodies.length>=Math.min(18,capacity()); }
-  function drop(x,y,e){ if(full()){ sfx.hmm(); cv.animate([{transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},{transform:'translateX(0)'}],{duration:300}); return; } const r=e==='🦖'?34:28; bodies.push({x:Math.max(r,Math.min(W-r,x)),y:y||-r,vx:(Math.random()-0.5)*3,vy:0,r,e,rest:e==='🦖'?0.35:(e==='🦄'?0.7:0.55),m:r*r}); sfx.boop(); }
+  function popOldest(){ const o=bodies.shift(); if(!o) return; const r=stage.getBoundingClientRect(); confetti(stage,o.x,o.y,10); tone(900,0,0.08,'sine',0.15); }
+  function drop(x,y,e){ while(full()) popOldest(); const r=e==='🦖'?34:28; bodies.push({x:Math.max(r,Math.min(W-r,x)),y:y||-r,vx:(Math.random()-0.5)*3,vy:0,r,e,rest:e==='🦖'?0.35:(e==='🦄'?0.7:0.55),m:r*r}); sfx.boop(); }
   function step(){ const g=0.55; for(const b of bodies){ b.c=0; b.sup=false; b.vy+=g; b.x+=b.vx; b.y+=b.vy; b.vx*=0.985; b.vy*=0.995;
       if(b.y+b.r>H){ b.y=H-b.r; b.c++; b.sup=true; if(b.vy>3.5){ const now=performance.now(); if(now-lastBounceSfx>90){ sfx.bounce(b.vy); lastBounceSfx=now; } b.vy=-b.vy*b.rest; } else b.vy=0; b.vx*=0.8; }
       if(b.x-b.r<0){ b.x=b.r; b.vx=-b.vx*0.5; } if(b.x+b.r>W){ b.x=W-b.r; b.vx=-b.vx*0.5; } }
