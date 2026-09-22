@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <circle cx="128" cy="128" r="116" fill="#FFF7E8"/>
+  <circle cx="128" cy="128" r="116" fill="none" stroke="#9B5DE5" stroke-width="16"/>
+  <circle cx="128" cy="128" r="102" fill="none" stroke="#FFFFFF" stroke-width="4" opacity=".9"/>
+  <text x="76" y="138" text-anchor="middle" dominant-baseline="central" font-size="104" font-family="'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif">🦄</text>
+  <g transform="translate(180 138) scale(-1 1)"><text x="0" y="0" text-anchor="middle" dominant-baseline="central" font-size="104" font-family="'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif">🦈</text></g>
+</svg>
