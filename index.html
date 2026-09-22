@@ -23,7 +23,7 @@
   --lime:#8AE234; --lime-d:#4E9E1B; --grape:#9B5DE5; --grape-d:#7A3FD1; --grape-dd:#5B2BA6;
   --display:'Fredoka',system-ui,sans-serif; --body:'Nunito',system-ui,sans-serif;
 }
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 html,body{height:100%;margin:0;overflow:hidden;background:var(--cream);color:var(--ink);font-family:var(--body);font-weight:700;touch-action:manipulation;user-select:none;-webkit-user-select:none}
 #app{height:100%;max-width:480px;margin:0 auto;position:relative;background:var(--cream)}
 .screen{position:absolute;inset:0;display:flex;flex-direction:column;gap:14px;padding:max(14px,env(safe-area-inset-top,0px)) 16px max(14px,env(safe-area-inset-bottom,0px))}
@@ -397,7 +397,16 @@ games.parade=(function(){
 })();
 
 /* ---------- boot ---------- */
-document.addEventListener('pointerdown',()=>ctx(),{once:true});
+/* iOS unlock: mute switch, audio context, speech */
+const SILENT='data:audio/wav;base64,UklGRrQBAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YZABAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA';
+let unlocked=false;
+function unlock(){ if(unlocked) return; unlocked=true; try{ const a=new Audio(SILENT); a.setAttribute('playsinline',''); a.muted=false; a.volume=0.01; const pr=a.play(); if(pr&&pr.catch) pr.catch(()=>{}); }catch(e){} const a=ctx(); if(a){ try{ const b=a.createBuffer(1,1,22050), s=a.createBufferSource(); s.buffer=b; s.connect(a.destination); s.start(0); }catch(e){} } if('speechSynthesis' in window){ try{ const u=new SpeechSynthesisUtterance(' '); u.volume=0; speechSynthesis.speak(u); }catch(e){} } }
+['touchend','click','pointerup'].forEach(ev=>document.addEventListener(ev,unlock,{once:true,passive:true}));
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&ac&&ac.state==='suspended') ac.resume(); });
+/* no double-tap zoom, no pinch */
+document.addEventListener('dblclick',e=>e.preventDefault(),{passive:false});
+document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});
+document.addEventListener('gesturechange',e=>e.preventDefault(),{passive:false});
 go('home');
 })();
 </script>
