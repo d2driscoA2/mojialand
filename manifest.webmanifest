@@ -1,0 +1,14 @@
+{
+  "name": "Mojialand",
+  "short_name": "Mojialand",
+  "description": "Emoji games for little hands.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFF7E8",
+  "theme_color": "#9B5DE5",
+  "icons": [
+    {"src": "/logo/icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "/logo/icon-512.png", "sizes": "512x512", "type": "image/png"}
+  ]
+}
