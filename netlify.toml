@@ -1,18 +1,5 @@
 [build]
   publish = "."
+  command = "python3 scripts/update-csp-hash.py"
 
-[[headers]]
-  for = "/*"
-  [headers.values]
-    X-Frame-Options = "DENY"
-    X-Content-Type-Options = "nosniff"
-    Referrer-Policy = "no-referrer"
-    Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), interest-cohort=(), browsing-topics=()"
-    Content-Security-Policy = "default-src 'none'; script-src 'self' 'sha256-cOmGrQOcKHIdknr10yNrjm9J259iIQfOV4PanEOdw9U='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; media-src data:; manifest-src 'self'; connect-src 'self'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests"
-    Cross-Origin-Opener-Policy = "same-origin"
-    Strict-Transport-Security = "max-age=31536000; includeSubDomains"
-
-[[headers]]
-  for = "/fonts/*"
-  [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
+# Security headers live in _headers, written by scripts/update-csp-hash.py on every build.
