@@ -123,8 +123,9 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--cream);color:var
 @keyframes pulse2{from{transform:translate(-50%,-60%) rotate(-12deg) scale(1)}to{transform:translate(-50%,-70%) rotate(12deg) scale(1.12)}}
 .addbtn{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);width:120px;height:64px;border:0;border-radius:999px;background:var(--purple);color:#fff;display:flex;align-items:center;justify-content:center;gap:6px;font-family:var(--display);font-weight:900;font-size:18px;cursor:pointer;box-shadow:var(--shadow);z-index:1000}
 .addbtn b{font-size:34px;font-weight:800;line-height:1}
+body.drawer-open .addbtn{display:none}
 /* drawer */
-.drawer{position:absolute;left:0;right:0;bottom:0;z-index:60;height:58%;background:var(--cream);border-radius:28px 28px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,.2);display:flex;flex-direction:column;padding:12px 12px max(12px,env(safe-area-inset-bottom,0px));gap:10px}
+.drawer{position:absolute;left:0;right:0;bottom:0;z-index:1100;height:58%;background:var(--cream);border-radius:28px 28px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,.2);display:flex;flex-direction:column;padding:12px 12px max(12px,env(safe-area-inset-bottom,0px));gap:10px}
 .dtabs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;flex:0 0 auto}
 .dtabs::-webkit-scrollbar{display:none}
 .dtab{flex:0 0 auto;height:56px;padding:0 12px;border:0;border-radius:999px;background:#fff;display:flex;align-items:center;gap:6px;font:inherit;font-weight:800;font-size:13px;color:var(--ink);cursor:pointer}
@@ -201,12 +202,20 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--cream);color:var
 .ggoal .e{font-size:26px;line-height:1;flex:0 0 auto}
 .gstep{display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:16px;background:var(--cream);border:2px solid var(--line)}
 .gstep .n{width:26px;height:26px;border-radius:999px;background:var(--purple);color:#fff;font-weight:900;font-size:14px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
-.gstep .pic{flex:0 0 auto;max-width:52%;display:flex;align-items:center;justify-content:center;flex-wrap:nowrap;gap:1px;font-size:22px;line-height:1}
+.gstep .pic{flex:0 0 auto;max-width:56%;display:flex;align-items:center;justify-content:center;flex-wrap:nowrap;white-space:nowrap;gap:1px;font-size:22px;line-height:1}
 .gstep .pic .ar{font-size:16px;color:var(--mute);margin:0 2px}
 .gstep .pic .sm{font-size:18px}
 .gstep .pic .fl{display:inline-block;transform:scaleX(-1)}
 .gstep .pic .tap{animation:tapb .9s infinite ease-in-out;display:inline-block}
 @keyframes tapb{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px) scale(.9)}}
+.gstep .pic .slotm{width:24px;height:24px;border-radius:7px;border:2px dashed var(--purple);background:var(--purple-l);display:inline-flex;align-items:center;justify-content:center;font-size:14px;margin-left:2px;position:relative}
+.gstep .pic .slotm .tap{position:absolute;left:4px;top:8px;font-size:18px}
+.gstep .pic .fill{width:24px;height:24px;border-radius:7px;border:2px solid var(--green);background:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:15px;margin-left:2px}
+.gstep .pic .party{font-size:20px;margin-left:4px;display:inline-block;animation:tapb 1.1s infinite ease-in-out}
+.gstep .pic .knock{display:inline-flex;gap:0}
+.gstep .pic .knock i{font-style:normal;display:inline-block;animation:knock .9s infinite ease-in-out}
+.gstep .pic .knock i:nth-child(2){animation-direction:alternate-reverse}
+@keyframes knock{0%,100%{transform:translateX(-4px)}50%{transform:translateX(3px) scale(1.08,.92)}}
 .gstep .pic .cardm{width:22px;height:30px;border-radius:6px;background:var(--purple);color:#fff;font-size:14px;display:inline-flex;align-items:center;justify-content:center;margin:0 1px}
 .gstep .pic .cardm.f{background:#fff;border:2px solid var(--line);font-size:16px}
 .gstep .t{flex:1;min-width:0;font-weight:800;font-size:13.5px;line-height:1.25;color:var(--ink)}
@@ -374,11 +383,11 @@ const P=(h)=>'<span class="pic">'+h+'</span>', AR='<span class="ar">→</span>',
 const HOWTO={
   pattern:{icon:'🦄', title:'Pattern', goal:'Find what comes next.', say:'Look at the pattern. Tap what comes next.', steps:[
     {pic:P('<span class="sm">🦄🐴🦄🐴</span><span class="ar">?</span>'), t:'Look at the row. It repeats!'},
-    {pic:P(TAP+'<span class="sm">🦄</span>'+AR+'<span class="sm">🦄🐴🦄🐴🦄</span>'), t:'Tap the one that comes next.'},
-    {pic:P('⭐⭐⭐'+AR+'🎉'), t:'Three in a row makes a new pattern.'}]},
+    {pic:P('<span class="sm">🦄🐴🦄🐴</span><span class="slotm">'+TAP+'</span>'), t:'Tap the one that fills the empty box.'},
+    {pic:P('<span class="sm">🦄🐴🦄🐴</span><span class="fill">🦄</span><span class="party">🎉</span>'), t:'Fill the box to finish the pattern!'}]},
   bounce:{icon:'🐸', title:'Bounce', goal:'Fill the box with bouncy friends.', say:'Tap the box. Watch them bounce. Pick more friends on the side.', steps:[
-    {pic:P(TAP+AR+'🦄<span class="sm">⬇️</span>'), t:'Tap the box to drop a friend.'},
-    {pic:P('<span class="sm">🐸🦋🐶</span><span class="sm">⬇️</span>'), t:'Slide the side list to find more.'},
+    {pic:P(TAP+'<span class="sm">🐸</span><span class="ar">·</span><span class="sm">🦋🐶</span><span class="sm">⬇️</span>'), t:'Pick a friend from the side list. Slide to see more.'},
+    {pic:P(TAP+AR+'<span class="knock"><i>🐸</i><i>🦄</i></span><span class="sm">🐸</span>'), t:'Tap the box again and again. Watch them bounce off each other!'},
     {pic:P('🗑️'+AR+'<span class="sm">💨</span>'), t:'Clear sends them all away.'}]},
   match:{icon:'🌟', title:'Match', goal:'Find two cards that are the same.', say:'Flip two cards. Find two the same.', steps:[
     {pic:P(TAP+'<span class="cardm">🌟</span>'+AR+'<span class="cardm f">🦄</span>'), t:'Tap a card to flip it.'},
@@ -524,8 +533,8 @@ const drawer=(function(){
   LIB.forEach(([name,icon],i)=>{ const b=document.createElement('button'); b.className='dtab'+(i?'':' on'); b.innerHTML='<span class="e">'+icon+'</span>'+name; b.onclick=()=>{ ctx(); sfx.boop(); cat=i; $$('.dtab').forEach(x=>x.classList.remove('on')); b.classList.add('on'); fill(); }; tabs.appendChild(b); });
   function fill(){ grid.innerHTML=''; LIB[cat][2].forEach(([e,n])=>{ const t=document.createElement('button'); t.className='tile'; t.textContent=e; t.setAttribute('aria-label',n); t.onclick=()=>{ ctx(); sfx.boop(); t.animate([{transform:'scale(1)'},{transform:'scale(1.3)'},{transform:'scale(1)'}],{duration:220}); if(onPick) onPick(e); }; grid.appendChild(t); }); grid.scrollTop=0; }
   $('#dclose').onclick=()=>{ ctx(); sfx.boop(); close(); };
-  function open(fn){ onPick=fn; fill(); box.classList.remove('hidden'); box.animate([{transform:'translateY(100%)'},{transform:'translateY(0)'}],{duration:260,easing:'cubic-bezier(.2,.8,.2,1)'}); }
-  function close(){ box.classList.add('hidden'); onPick=null; }
+  function open(fn){ onPick=fn; fill(); box.classList.remove('hidden'); document.body.classList.add('drawer-open'); box.animate([{transform:'translateY(100%)'},{transform:'translateY(0)'}],{duration:260,easing:'cubic-bezier(.2,.8,.2,1)'}); }
+  function close(){ box.classList.add('hidden'); document.body.classList.remove('drawer-open'); onPick=null; }
   return { open, close, isOpen:()=>!box.classList.contains('hidden'), firstTile:()=>grid.children[0], tab:i=>tabs.children[i] };
 })();
 
