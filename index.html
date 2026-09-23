@@ -279,13 +279,13 @@ body.drawer-open .addbtn{display:none}
 #splash .sp-cta button:active{transform:scale(.94)}
 #splash.run .sp-hero{animation:spHeroIn .5s cubic-bezier(.34,1.56,.64,1) both}
 #splash.run .sp-hero span{animation:spBounce 1.3s var(--d,.8s) cubic-bezier(.34,1.3,.64,1) both}
-#splash.run .sp-space{animation:spFade .5s .4s ease-out forwards,spDim .9s 1.8s ease forwards}
+#splash.run .sp-space{animation:spFade .5s .4s ease-out forwards,spDim .9s 3.2s ease forwards}
 #splash.run .sp-p{animation:spFly var(--dur) var(--delay) linear infinite}
 #splash.run .sp-word{animation:spRise .55s .25s cubic-bezier(.2,.9,.3,1.2) both}
 #splash.run .sp-burst i{animation:spPop .45s calc(.62s + var(--n) * .07s) cubic-bezier(.34,1.8,.64,1) both}
 #splash.run .sp-tag{animation:spRise .5s .45s cubic-bezier(.2,.9,.3,1) both}
-#splash.run .sp-cta{animation:spReveal .6s 2s cubic-bezier(.34,1.56,.64,1) forwards}
-#splash.run .sp-cta button{animation:spFloat 2.4s 2.7s ease-in-out infinite}
+#splash.run .sp-cta{animation:spReveal .6s 3.4s cubic-bezier(.34,1.56,.64,1) forwards}
+#splash.run .sp-cta button{animation:spFloat 2.4s 4.1s ease-in-out infinite}
 @keyframes spHeroIn{from{opacity:0;transform:translate(-50%,-4cqw) scale(.92)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
 @keyframes spBounce{0%,100%{transform:translateY(0) rotate(0) scale(1)}15%{transform:translateY(.6cqw) scale(1.04,.96)}34%{transform:translateY(-3.4cqw) rotate(var(--tilt,3deg)) scale(.97,1.03)}52%{transform:translateY(.4cqw) rotate(0) scale(1.03,.97)}68%{transform:translateY(-1.4cqw) rotate(calc(var(--tilt,3deg) * -.5))}84%{transform:translateY(0) rotate(0) scale(1)}}
 @keyframes spFly{0%{opacity:0;transform:translate(calc(-50% + var(--sx) * 1cqw),calc(-50% + var(--sy) * 1cqh)) scale(.05) rotate(var(--r))}14%{opacity:.5}70%{opacity:.55}100%{opacity:0;transform:translate(calc(-50% + var(--ex) * 1cqw),calc(-50% + var(--ey) * 1cqh)) scale(2.3) rotate(calc(var(--r) + 150deg));filter:blur(2.5px)}}
@@ -297,17 +297,18 @@ body.drawer-open .addbtn{display:none}
 @keyframes spFloat{0%,100%{translate:0 0}50%{translate:0 -1.2cqw}}
 @media (prefers-reduced-motion:reduce){#splash.run *,#splash.run .sp-hero span{animation:none!important}#splash .sp-space{display:none}#splash .sp-cta{opacity:1}#splash{transition:none}}
 #splash .sp-cta button:focus-visible,.big:focus-visible,.gamebtn:focus-visible,.pill:focus-visible,.choice:focus-visible,.tile:focus-visible,.mt:focus-visible{outline:3px solid var(--purple-d);outline-offset:2px}
-/* home brand header (v1.4) */
-.homehead{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;padding-top:6px}.homehead .wordmark{width:212px;height:auto;display:block;pointer-events:none}.tagline{display:flex;align-items:center;gap:8px;font-family:var(--display);font-size:11px;font-weight:900;letter-spacing:2px;color:var(--purple-d)}.tagline i{width:6px;height:6px;border-radius:999px;display:block}.watermark{position:absolute;left:50%;top:50%;width:110px;transform:translate(-50%,-50%);opacity:.08;pointer-events:none;user-select:none}#s-home .gamebtn{color:var(--ink)!important}
 </style>
 
 <div id="app">
 
 <!-- HOME -->
 <section class="screen" id="s-home">
-  <div class="homehead"><button class="pill gear" id="lockBtn" style="position:absolute;top:0;right:0;z-index:5" aria-label="Grown-ups, hold for 3 seconds"><span class="hold"></span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7138D1" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg></button><img class="wordmark" src="/logo/wordmark.png" width="212" height="77" alt="Mojialand" draggable="false"><div class="tagline" aria-hidden="true"><span>PLAY</span><i style="background:var(--pink)"></i><span>CREATE</span><i style="background:var(--yellow)"></i><span>EXPLORE</span><i style="background:var(--blue)"></i><span>TOGETHER</span></div></div>
-  
-  <div class="stage" id="canvas"><img class="watermark" src="/logo/monogram-watermark.png" alt="" draggable="false"><div class="hint">Tap anywhere to stamp!</div><button class="pill danger" id="clearHome" aria-label="Clear the picture" style="position:absolute;right:12px;top:8px;height:40px;z-index:5"><span class="e" style="font-size:16px">🗑️</span>Clear</button></div>
+  <div class="bar">
+    <div class="brand" style="display:flex;align-items:center;gap:10px"><img src="/logo/icon-180.png" alt="" width="44" height="44" style="display:block">Mojialand</div>
+    <button class="pill gear" id="lockBtn" aria-label="Grown-ups, hold for 3 seconds"><span class="hold"></span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7138D1" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg></button>
+  </div>
+  <div style="font-size:14px;font-weight:800;color:var(--mute);margin-top:-6px">Pick a game and start playing!</div>
+  <div class="stage" id="canvas"><div class="hint">Tap anywhere to stamp!</div><button class="pill danger" id="clearHome" aria-label="Clear the picture" style="position:absolute;right:12px;top:8px;height:40px;z-index:5"><span class="e" style="font-size:16px">🗑️</span>Clear</button></div>
   <div class="tray" id="tray"></div>
   <div class="btnrow">
     <button class="gamebtn" data-go="pattern" style="background:var(--pink)"><span class="ico" aria-hidden="true"><i>🦄</i><i>🐴</i><i>🦄</i><i>🐴</i><i class="q">?</i></span>Pattern<small>What comes next?</small></button>
@@ -677,14 +678,9 @@ games.parade=(function(){
 /* iOS unlock: mute switch, audio context, speech */
 const SILENT='data:audio/wav;base64,UklGRrQBAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YZABAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA';
 let unlocked=false;
-/* v1.6: keep iOS in playback mode so the ring/silent switch does not mute Web Audio after the first tap */
-function setPlayback(){ try{ if(navigator.audioSession&&navigator.audioSession.type!=='playback') navigator.audioSession.type='playback'; }catch(e){} }
-setPlayback();
-let keepAlive=null;
-function keepSession(){ if(navigator.audioSession) return; try{ if(!keepAlive){ keepAlive=new Audio(SILENT); keepAlive.setAttribute('playsinline',''); keepAlive.loop=true; keepAlive.volume=0.01; } if(keepAlive.paused){ const pr=keepAlive.play(); if(pr&&pr.catch) pr.catch(()=>{}); } }catch(e){} }
-function unlock(){ setPlayback(); keepSession(); if(unlocked) return; unlocked=true; const a=ctx(); if(a){ try{ const b=a.createBuffer(1,1,22050), s=a.createBufferSource(); s.buffer=b; s.connect(a.destination); s.start(0); }catch(e){} } if('speechSynthesis' in window){ try{ const u=new SpeechSynthesisUtterance(' '); u.volume=0; speechSynthesis.speak(u); }catch(e){} } }
-['touchend','click','pointerup'].forEach(ev=>document.addEventListener(ev,unlock,{passive:true}));
-document.addEventListener('visibilitychange',()=>{ if(document.hidden) return; setPlayback(); if(unlocked) keepSession(); if(ac&&ac.state!=='running') ac.resume(); });
+function unlock(){ if(unlocked) return; unlocked=true; try{ const a=new Audio(SILENT); a.setAttribute('playsinline',''); a.muted=false; a.volume=0.01; const pr=a.play(); if(pr&&pr.catch) pr.catch(()=>{}); }catch(e){} const a=ctx(); if(a){ try{ const b=a.createBuffer(1,1,22050), s=a.createBufferSource(); s.buffer=b; s.connect(a.destination); s.start(0); }catch(e){} } if('speechSynthesis' in window){ try{ const u=new SpeechSynthesisUtterance(' '); u.volume=0; speechSynthesis.speak(u); }catch(e){} } }
+['touchend','click','pointerup'].forEach(ev=>document.addEventListener(ev,unlock,{once:true,passive:true}));
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&ac&&ac.state==='suspended') ac.resume(); });
 /* no double-tap zoom, no pinch */
 document.addEventListener('dblclick',e=>e.preventDefault(),{passive:false});
 document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});
@@ -708,7 +704,7 @@ const splash=(function(){
   return { show, hide };
 })();
 $('#replaySplash').onclick=()=>{ sfx.boop(); go('home'); splash.show(); };
-splash.show();
+if(!store.get('welcomed',false)) splash.show();
 
 })();
 </script>
