@@ -99,7 +99,6 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--cream);color:var
 .mt .b{background:var(--purple);border:3px solid #A585E6;font-size:calc(var(--fs,46px)*.7);color:#fff}
 .mt .f{background:#fff;border:3px solid var(--line);transform:rotateY(180deg)}
 .mt.done .f{border-color:var(--green);box-shadow:0 0 0 4px rgba(114,214,154,.45)}
-.mt.glow .b{box-shadow:0 0 0 5px rgba(255,200,61,.7)}
 .mt.pop .in{animation:popcard .5s}
 @keyframes popcard{0%,100%{transform:rotateY(180deg) scale(1)}50%{transform:rotateY(180deg) scale(1.15)}}
 /* parade */
@@ -615,8 +614,7 @@ games.match=(function(){
   function deal(){ const [cols,rows]=LV[tier(lv)]; const n=cols*rows; const pool=poolFor(lv); const pick=[...pool].sort(()=>Math.random()-0.5).slice(0,n/2); newFaces=pick.filter(e=>!BASE.includes(e)).slice(0,3); const deck=[...pick,...pick].sort(()=>Math.random()-0.5); cards=deck.map(e=>({e,up:false,done:false})); open=[]; busy=false; matched=0; grid.style.gridTemplateColumns='repeat('+cols+',1fr)'; grid.style.gridTemplateRows='repeat('+rows+',1fr)'; grid.style.setProperty('--fs',(cols>=5?26:rows>=6?30:rows>=5?34:rows>=4?(cols>=4?38:46):52)+'px'); reward.classList.add('hidden'); render(); }
   function render(){ grid.innerHTML=''; cards.forEach((c,i)=>{ const t=document.createElement('button'); t.className='mt'+(c.up||c.done?' up':'')+(c.done?' done':''); t.dataset.i=i; t.setAttribute('aria-label',c.up||c.done?nameOf(c.e):'hidden card'); t.innerHTML='<div class="in"><div class="b">🌟</div><div class="f">'+c.e+'</div></div>'; t.onclick=()=>flip(i); grid.appendChild(t); }); armIdle(); }
   function el(i){ return grid.children[i]; }
-  function pairHint(){ const n=cards.length; if(open.length===1){ const e=cards[open[0]].e; for(let i=0;i<n;i++) if(i!==open[0]&&cards[i].e===e&&!cards[i].done) return el(i); } for(let i=0;i<n;i++) if(!cards[i].done&&!cards[i].up) return el(i); return null; }
-  function armIdle(){ idleArm(pairHint); }
+  function armIdle(){ idleClear(); } /* v1.10: no hints in Match */
   async function flip(i){ if(busy) return; const c=cards[i]; if(c.up||c.done) return; ctx(); c.up=true; el(i).classList.add('up'); el(i).setAttribute('aria-label',nameOf(c.e)); sfx.boop(); say(nameOf(c.e)); open.push(i);
     if(open.length<2){ armIdle(); return; }
     busy=true; idleClear(); const [a,b]=open; await wait(700);
