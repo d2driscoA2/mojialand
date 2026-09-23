@@ -1,0 +1,7 @@
+# One main address: https://mojialand.com
+# Every other address forwards there with a permanent (301) redirect, so search
+# engines see one site. The mojialand.displayedux.com rules get added once
+# mojialand.com is live with HTTPS.
+https://mojialand.app/*      https://mojialand.com/:splat  301!
+https://www.mojialand.app/*  https://mojialand.com/:splat  301!
+https://www.mojialand.com/*  https://mojialand.com/:splat  301!
