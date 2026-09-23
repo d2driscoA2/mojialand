@@ -242,16 +242,18 @@ body.drawer-open .addbtn{display:none}
 @keyframes fall{to{transform:translate(var(--dx),var(--dy)) rotate(540deg);opacity:0}}
 .hidden{display:none!important}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
-/* ---------- welcome splash (v1.7 responsive: fills any screen, side-by-side when wide) ---------- */
+/* ---------- welcome splash (v1.8: stronger space flight; v1.7 responsive layout) ---------- */
 #splash{position:fixed;inset:0;z-index:3000;background:var(--cream);overflow:hidden;cursor:pointer;container:sp/size;font-family:var(--display);transition:opacity .45s ease,transform .45s cubic-bezier(.4,0,.2,1)}
 #splash.leaving{opacity:0;transform:scale(1.06);pointer-events:none}
 #splash::before{content:"";position:absolute;inset:0;z-index:0;background:radial-gradient(circle at 12% 6%,rgba(255,95,162,.10),transparent 26%),radial-gradient(circle at 90% 8%,rgba(77,188,236,.10),transparent 26%),radial-gradient(circle at 50% 98%,rgba(113,56,209,.08),transparent 30%)}
 #splash .sp-confetti,#splash .sp-space{position:absolute;inset:0;pointer-events:none}
 #splash .sp-confetti{z-index:1}
 #splash .sp-confetti i{position:absolute;display:block;border-radius:999px}
+#splash.run .sp-confetti i{animation:spDrift var(--dd,7s) var(--dl,0s) ease-in-out infinite alternate}
+@keyframes spDrift{from{translate:0 0}to{translate:var(--dx,0) var(--dy,0)}}
 #splash .sp-confetti i.st,#splash .sp-p.st{border-radius:0;clip-path:polygon(50% 0,61% 35%,98% 35%,68% 56%,79% 94%,50% 71%,21% 94%,32% 56%,2% 35%,39% 35%)}
 #splash .sp-space{z-index:2;opacity:0;-webkit-mask-image:radial-gradient(ellipse var(--mw,40%) var(--mh,10%) at var(--mx,50%) var(--my,62%),transparent 60%,#000 100%);mask-image:radial-gradient(ellipse var(--mw,40%) var(--mh,10%) at var(--mx,50%) var(--my,62%),transparent 60%,#000 100%)}
-#splash .sp-p{position:absolute;left:var(--ox,50%);top:var(--oy,31%);width:min(2.2cqw,1.2cqh);height:min(6cqw,3.2cqh);border-radius:999px;opacity:0}
+#splash .sp-p{position:absolute;left:var(--ox,50%);top:var(--oy,31%);width:min(2.4cqw,1.3cqh);height:min(6.6cqw,3.5cqh);border-radius:999px;opacity:0}
 #splash .sp-p.st{width:min(5.4cqw,3cqh);height:min(5.4cqw,3cqh)}
 /* layout: one column when tall, two columns when wide; --W is the design width */
 #splash .sp-stage{position:absolute;inset:0;z-index:3;--W:min(92cqw,52cqh,560px);display:grid;justify-content:center;justify-items:center;align-items:center;
@@ -293,7 +295,7 @@ body.drawer-open .addbtn{display:none}
 }
 #splash.run .sp-hero{animation:spHeroIn .5s cubic-bezier(.34,1.56,.64,1) both}
 #splash.run .sp-hero span{animation:spBounce 1.3s var(--d,.8s) cubic-bezier(.34,1.3,.64,1) both}
-#splash.run .sp-space{animation:spFade .5s .4s ease-out forwards,spDim .9s 1.8s ease forwards}
+#splash.run .sp-space{animation:spFade .5s .3s ease-out forwards}
 #splash.run .sp-p{animation:spFly var(--dur) var(--delay) linear infinite}
 #splash.run .sp-word{animation:spRise .55s .25s cubic-bezier(.2,.9,.3,1.2) both}
 #splash.run .sp-burst i{animation:spPop .45s calc(.62s + var(--n) * .07s) cubic-bezier(.34,1.8,.64,1) both}
@@ -302,7 +304,7 @@ body.drawer-open .addbtn{display:none}
 #splash.run .sp-cta button{animation:spFloat 2.4s 2.7s ease-in-out infinite}
 @keyframes spHeroIn{from{opacity:0;transform:translateY(-16px) scale(.92)}to{opacity:1;transform:none}}
 @keyframes spBounce{0%,100%{transform:translateY(0) rotate(0) scale(1)}15%{transform:translateY(.75cqw) scale(1.04,.96)}34%{transform:translateY(-4.25cqw) rotate(var(--tilt,3deg)) scale(.97,1.03)}52%{transform:translateY(.5cqw) rotate(0) scale(1.03,.97)}68%{transform:translateY(-1.75cqw) rotate(calc(var(--tilt,3deg) * -.5))}84%{transform:translateY(0) rotate(0) scale(1)}}
-@keyframes spFly{0%{opacity:0;transform:translate(calc(-50% + var(--sx) * 1cqw),calc(-50% + var(--sy) * 1cqh)) scale(.05) rotate(var(--r))}14%{opacity:.5}70%{opacity:.55}100%{opacity:0;transform:translate(calc(-50% + var(--ex) * 1cqw),calc(-50% + var(--ey) * 1cqh)) scale(2.3) rotate(calc(var(--r) + 150deg));filter:blur(2.5px)}}
+@keyframes spFly{0%{opacity:0;transform:translate(calc(-50% + var(--sx) * 1cqw),calc(-50% + var(--sy) * 1cqh)) scale(.05) rotate(var(--r))}10%{opacity:.8}75%{opacity:.85}100%{opacity:0;transform:translate(calc(-50% + var(--ex) * 1cqw),calc(-50% + var(--ey) * 1cqh)) scale(2.3) rotate(calc(var(--r) + 150deg));filter:blur(2.5px)}}
 @keyframes spFade{to{opacity:1}}
 @keyframes spDim{from{opacity:1}to{opacity:.55}}
 @keyframes spRise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
@@ -713,8 +715,8 @@ const splash=(function(){
   const el=$('#splash'), conf=$('#spConfetti'), space=$('#spSpace'), smiley=$('#spSmiley');
   const pal=['#7138D1','#FF5FA2','#FFC83D','#4DBCEC','#72D69A'];
   let seed=7; const r=()=>{ seed=(seed*16807)%2147483647; return (seed-1)/2147483646; };
-  for(let i=0;i<46;i++){ const c=document.createElement('i'); const band=r(); const y=band<.45?r()*15:band<.9?82+r()*18:(r()<.5?16+r()*10:72+r()*10); const star=r()<.18, s=1.6+r()*2.6; c.className=star?'st':''; c.style.cssText='left:'+(r()*100)+'%;top:'+y+'%;width:'+(star?s*1.8:s)+'cqw;height:'+(star?s*1.8:s*(r()<.5?1:2.6))+'cqw;background:'+pal[i%5]+';opacity:'+(.28+r()*.3)+';filter:blur('+(1+r()*3)+'px);transform:rotate('+(r()*180)+'deg)'; conf.appendChild(c); }
-  for(let i=0;i<30;i++){ const p=document.createElement('i'); p.className='sp-p'+(i%6===0?' st':''); p.style.background=pal[i%5]; const a=(i*137.5)*Math.PI/180, r0=3+(i%7)*2.2, e=70+(i%9)*9; p.style.setProperty('--sx',(Math.cos(a)*r0).toFixed(2)); p.style.setProperty('--sy',(Math.sin(a)*r0*.6).toFixed(2)); p.style.setProperty('--ex',(Math.cos(a)*e).toFixed(2)); p.style.setProperty('--ey',(Math.sin(a)*e*.75).toFixed(2)); p.style.setProperty('--r',(i*29%180)+'deg'); p.style.setProperty('--dur',(2.6+(i%8)*.32).toFixed(2)+'s'); p.style.setProperty('--delay',(.4+i*.085).toFixed(2)+'s'); space.appendChild(p); }
+  for(let i=0;i<46;i++){ const c=document.createElement('i'); const band=r(); const y=band<.45?r()*15:band<.9?82+r()*18:(r()<.5?16+r()*10:72+r()*10); const star=r()<.18, s=1.6+r()*2.6; c.className=star?'st':''; c.style.cssText='left:'+(r()*100)+'%;top:'+y+'%;width:'+(star?s*1.8:s)+'cqw;height:'+(star?s*1.8:s*(r()<.5?1:2.6))+'cqw;background:'+pal[i%5]+';opacity:'+(.28+r()*.3)+';filter:blur('+(1+r()*3)+'px);transform:rotate('+(r()*180)+'deg)'; { const cx=parseFloat(c.style.left)-50, cy=y-50, d=Math.hypot(cx,cy)||1, m=2.5+r()*3.5; c.style.setProperty('--dx',(cx/d*m).toFixed(2)+'cqw'); c.style.setProperty('--dy',(cy/d*m).toFixed(2)+'cqh'); c.style.setProperty('--dd',(5+r()*4).toFixed(1)+'s'); c.style.setProperty('--dl',(-r()*6).toFixed(1)+'s'); } conf.appendChild(c); }
+  for(let i=0;i<48;i++){ const p=document.createElement('i'); p.className='sp-p'+(i%6===0?' st':''); p.style.background=pal[i%5]; const a=(i*137.5)*Math.PI/180, r0=3+(i%7)*2.2, e=70+(i%9)*9; p.style.setProperty('--sx',(Math.cos(a)*r0).toFixed(2)); p.style.setProperty('--sy',(Math.sin(a)*r0*.6).toFixed(2)); p.style.setProperty('--ex',(Math.cos(a)*e).toFixed(2)); p.style.setProperty('--ey',(Math.sin(a)*e*.75).toFixed(2)); p.style.setProperty('--r',(i*29%180)+'deg'); p.style.setProperty('--dur',(1.7+(i%8)*.2).toFixed(2)+'s'); p.style.setProperty('--delay',(.3+i*.045).toFixed(2)+'s'); space.appendChild(p); }
   const FACES=[[0,'🙂'],[1000,'😊'],[1180,'😃'],[1750,'😆'],[1900,'😄'],[2300,'😀']];
   let timers=[];
   const reduced=()=>{ try{ return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){ return false; } };
