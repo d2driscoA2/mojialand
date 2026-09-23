@@ -677,9 +677,14 @@ games.parade=(function(){
 /* iOS unlock: mute switch, audio context, speech */
 const SILENT='data:audio/wav;base64,UklGRrQBAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YZABAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA';
 let unlocked=false;
-function unlock(){ if(unlocked) return; unlocked=true; try{ const a=new Audio(SILENT); a.setAttribute('playsinline',''); a.muted=false; a.volume=0.01; const pr=a.play(); if(pr&&pr.catch) pr.catch(()=>{}); }catch(e){} const a=ctx(); if(a){ try{ const b=a.createBuffer(1,1,22050), s=a.createBufferSource(); s.buffer=b; s.connect(a.destination); s.start(0); }catch(e){} } if('speechSynthesis' in window){ try{ const u=new SpeechSynthesisUtterance(' '); u.volume=0; speechSynthesis.speak(u); }catch(e){} } }
-['touchend','click','pointerup'].forEach(ev=>document.addEventListener(ev,unlock,{once:true,passive:true}));
-document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&ac&&ac.state==='suspended') ac.resume(); });
+/* v1.6: keep iOS in playback mode so the ring/silent switch does not mute Web Audio after the first tap */
+function setPlayback(){ try{ if(navigator.audioSession&&navigator.audioSession.type!=='playback') navigator.audioSession.type='playback'; }catch(e){} }
+setPlayback();
+let keepAlive=null;
+function keepSession(){ if(navigator.audioSession) return; try{ if(!keepAlive){ keepAlive=new Audio(SILENT); keepAlive.setAttribute('playsinline',''); keepAlive.loop=true; keepAlive.volume=0.01; } if(keepAlive.paused){ const pr=keepAlive.play(); if(pr&&pr.catch) pr.catch(()=>{}); } }catch(e){} }
+function unlock(){ setPlayback(); keepSession(); if(unlocked) return; unlocked=true; const a=ctx(); if(a){ try{ const b=a.createBuffer(1,1,22050), s=a.createBufferSource(); s.buffer=b; s.connect(a.destination); s.start(0); }catch(e){} } if('speechSynthesis' in window){ try{ const u=new SpeechSynthesisUtterance(' '); u.volume=0; speechSynthesis.speak(u); }catch(e){} } }
+['touchend','click','pointerup'].forEach(ev=>document.addEventListener(ev,unlock,{passive:true}));
+document.addEventListener('visibilitychange',()=>{ if(document.hidden) return; setPlayback(); if(unlocked) keepSession(); if(ac&&ac.state!=='running') ac.resume(); });
 /* no double-tap zoom, no pinch */
 document.addEventListener('dblclick',e=>e.preventDefault(),{passive:false});
 document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});
