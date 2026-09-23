@@ -62,12 +62,13 @@ section{padding-block:72px}
 /* Header */
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;background:rgba(255,248,232,.92);backdrop-filter:saturate(1.2) blur(10px);-webkit-backdrop-filter:saturate(1.2) blur(10px);border-bottom:2px solid transparent;transition:border-color .2s}
 .top.scrolled{border-color:var(--line)}
-.top .wrap{display:flex;align-items:center;gap:16px;min-height:72px}
-.top .wm{font-size:30px;margin-top:6px;text-decoration:none}
+.top .wrap{display:flex;align-items:center;gap:16px;min-height:76px}
+.top .logo{display:block;flex:none}
+.top .logo img{height:52px;width:auto;display:block}
 .top nav{margin-left:auto;display:flex;gap:4px;align-items:center}
 .top nav a{text-decoration:none;color:var(--deep);padding:10px 14px;border-radius:999px;font-size:16px}
 .top nav a:hover{background:var(--lilac)}
-@media (max-width:760px){.top nav a.nl{display:none}.top .wm{font-size:26px}}
+@media (max-width:760px){.top nav a.nl{display:none}.top .logo img{height:42px}}
 
 /* Hero */
 .hero{padding-block:40px 64px;position:relative;overflow:hidden}
@@ -298,7 +299,7 @@ footer .fine{grid-column:1/-1;font-size:13px;border-top:1px solid rgba(255,255,2
 
 <header class="top" id="top">
  <div class="wrap">
-  <a class="wm" href="#home" aria-label="Mojialand home"><span class="burst" aria-hidden="true"><i></i><i></i><i></i></span>Mojialand</a>
+  <a class="logo" href="#home"><img src="img/logo.webp" width="720" height="239" alt="Mojialand"></a>
   <nav aria-label="Main">
    <a class="nl" href="#games">Games</a>
    <a class="nl" href="#passes">Passes</a>
