@@ -242,73 +242,86 @@ body.drawer-open .addbtn{display:none}
 @keyframes fall{to{transform:translate(var(--dx),var(--dy)) rotate(540deg);opacity:0}}
 .hidden{display:none!important}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
-/* ---------- welcome splash (v1.3) ---------- */
-#splash{position:absolute;inset:0;z-index:3000;background:var(--cream);overflow:hidden;cursor:pointer;container-type:size;font-family:var(--display);transition:opacity .45s ease,transform .45s cubic-bezier(.4,0,.2,1)}
+/* ---------- welcome splash (v1.7 responsive: fills any screen, side-by-side when wide) ---------- */
+#splash{position:fixed;inset:0;z-index:3000;background:var(--cream);overflow:hidden;cursor:pointer;container:sp/size;font-family:var(--display);transition:opacity .45s ease,transform .45s cubic-bezier(.4,0,.2,1)}
 #splash.leaving{opacity:0;transform:scale(1.06);pointer-events:none}
 #splash::before{content:"";position:absolute;inset:0;z-index:0;background:radial-gradient(circle at 12% 6%,rgba(255,95,162,.10),transparent 26%),radial-gradient(circle at 90% 8%,rgba(77,188,236,.10),transparent 26%),radial-gradient(circle at 50% 98%,rgba(113,56,209,.08),transparent 30%)}
 #splash .sp-confetti,#splash .sp-space{position:absolute;inset:0;pointer-events:none}
 #splash .sp-confetti{z-index:1}
 #splash .sp-confetti i{position:absolute;display:block;border-radius:999px}
 #splash .sp-confetti i.st,#splash .sp-p.st{border-radius:0;clip-path:polygon(50% 0,61% 35%,98% 35%,68% 56%,79% 94%,50% 71%,21% 94%,32% 56%,2% 35%,39% 35%)}
-#splash .sp-space{z-index:2;opacity:0;-webkit-mask-image:linear-gradient(to bottom,#000 0 46%,transparent 52%,transparent 67%,#000 76%);mask-image:linear-gradient(to bottom,#000 0 46%,transparent 52%,transparent 67%,#000 76%)}
-#splash .sp-p{position:absolute;left:50%;top:31%;width:2.2cqw;height:6cqw;border-radius:999px;opacity:0}
-#splash .sp-p.st{width:5.4cqw;height:5.4cqw}
-#splash .sp-hero{position:absolute;z-index:3;left:50%;top:13cqh;width:min(80cqw,40.3cqh);aspect-ratio:1016/934;transform:translateX(-50%)}
-#splash .sp-hero span{position:absolute;display:block;line-height:1;transform-origin:50% 90%;filter:drop-shadow(0 1.4cqw 1.6cqw rgba(81,34,165,.18));font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;font-weight:400}
-#splash .sp-shark{left:44%;top:1%;font-size:30cqw}
+#splash .sp-space{z-index:2;opacity:0;-webkit-mask-image:radial-gradient(ellipse var(--mw,40%) var(--mh,10%) at var(--mx,50%) var(--my,62%),transparent 60%,#000 100%);mask-image:radial-gradient(ellipse var(--mw,40%) var(--mh,10%) at var(--mx,50%) var(--my,62%),transparent 60%,#000 100%)}
+#splash .sp-p{position:absolute;left:var(--ox,50%);top:var(--oy,31%);width:min(2.2cqw,1.2cqh);height:min(6cqw,3.2cqh);border-radius:999px;opacity:0}
+#splash .sp-p.st{width:min(5.4cqw,3cqh);height:min(5.4cqw,3cqh)}
+/* layout: one column when tall, two columns when wide; --W is the design width */
+#splash .sp-stage{position:absolute;inset:0;z-index:3;--W:min(92cqw,52cqh,560px);display:grid;justify-content:center;justify-items:center;align-items:center;
+  grid-template-columns:auto;grid-template-rows:minmax(0,.9fr) auto auto minmax(12px,1fr) auto minmax(calc(16px + env(safe-area-inset-bottom,0px)),.55fr);
+  grid-template-areas:"." "hero" "text" "." "cta" ".";padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) 0 env(safe-area-inset-left,0px)}
+#splash .sp-hero{grid-area:hero;position:relative;width:calc(var(--W) * .87);aspect-ratio:1016/934;container-type:inline-size}
+#splash .sp-text{grid-area:text;display:flex;flex-direction:column;align-items:center;gap:calc(var(--W) * .05);margin-top:calc(var(--W) * .05)}
+#splash .sp-cta{grid-area:cta;opacity:0}
+#splash .sp-hero span{position:absolute;display:block;line-height:1;transform-origin:50% 90%;filter:drop-shadow(0 1.75cqw 2cqw rgba(81,34,165,.18));font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;font-weight:400}
+#splash .sp-shark{left:44%;top:1%;font-size:37.5cqw}
 #splash .sp-shark b{display:inline-block;transform:scaleX(-1);font-weight:400}
-#splash .sp-unicorn{left:5%;top:5%;font-size:30cqw}
-#splash .sp-puppy{left:-1%;top:44%;font-size:24cqw}
-#splash .sp-pizza{left:63%;top:42%;font-size:24cqw}
-#splash .sp-smiley{left:26%;top:33%;font-size:33cqw}
-#splash .sp-star1{left:-4%;top:30%;font-size:9cqw}
-#splash .sp-star2{left:88%;top:26%;font-size:9cqw}
+#splash .sp-unicorn{left:5%;top:5%;font-size:37.5cqw}
+#splash .sp-puppy{left:-1%;top:44%;font-size:30cqw}
+#splash .sp-pizza{left:63%;top:42%;font-size:30cqw}
+#splash .sp-smiley{left:26%;top:33%;font-size:41cqw}
+#splash .sp-star1{left:-4%;top:30%;font-size:11cqw}
+#splash .sp-star2{left:88%;top:26%;font-size:11cqw}
 #splash .sp-cloud{position:absolute;left:2%;right:2%;bottom:0;height:22%;z-index:5}
-#splash .sp-cloud i{position:absolute;bottom:0;border-radius:50%;background:radial-gradient(circle at 40% 30%,#fff 55%,#EFE9F7 100%);box-shadow:0 1.2cqw 2cqw rgba(81,34,165,.10)}
-#splash .sp-word{position:absolute;z-index:4;left:0;right:0;top:53.5cqh;text-align:center;color:var(--purple);font-weight:900;font-size:min(14.2cqw,7cqh);line-height:1;letter-spacing:-.025em;white-space:nowrap}
+#splash .sp-cloud i{position:absolute;bottom:0;border-radius:50%;background:radial-gradient(circle at 40% 30%,#fff 55%,#EFE9F7 100%);box-shadow:0 1.5cqw 2.5cqw rgba(81,34,165,.10)}
+#splash .sp-word{color:var(--purple);font-weight:900;font-size:calc(var(--W) * .155);line-height:1;letter-spacing:-.025em;white-space:nowrap}
 #splash .sp-i{position:relative;display:inline-block}
 #splash .sp-burst{position:absolute;left:50%;top:-.02em;width:0;height:0}
 #splash .sp-burst i{position:absolute;left:-.045em;bottom:0;width:.09em;height:.24em;border-radius:999px;transform-origin:50% 190%}
 #splash .sp-burst i:nth-child(1){background:var(--pink);transform:rotate(-34deg)}
 #splash .sp-burst i:nth-child(2){background:var(--yellow);transform:translateY(-.03em)}
 #splash .sp-burst i:nth-child(3){background:var(--blue);transform:rotate(34deg)}
-#splash .sp-tag{position:absolute;z-index:4;left:0;right:0;top:63.5cqh;text-align:center;color:var(--purple-d);font-weight:800;font-size:3.1cqw;letter-spacing:.22em;white-space:nowrap;padding-left:.22em}
+#splash .sp-tag{color:var(--purple-d);font-weight:800;font-size:max(9px,calc(var(--W) * .032));letter-spacing:.22em;white-space:nowrap;padding-left:.22em}
 #splash .sp-tag b{display:inline-block;margin:0 .5em;font-size:1.3em;line-height:0;vertical-align:-.05em}
-#splash .sp-cta{position:absolute;z-index:8;left:50%;bottom:11cqh;transform:translate(-50%,0);opacity:0}
-#splash .sp-cta button{font-family:var(--display);font-weight:900;font-size:6.4cqw;min-height:44px;min-width:44px;padding:4cqw 10cqw;border:0;border-radius:999px;cursor:pointer;white-space:nowrap;color:#fff;background:linear-gradient(180deg,#8349E8,var(--purple));box-shadow:0 3cqw 7cqw rgba(81,34,165,.28),inset 0 1px rgba(255,255,255,.4)}
+#splash .sp-cta button{font-family:var(--display);font-weight:900;font-size:max(18px,calc(var(--W) * .07));min-height:44px;min-width:44px;padding:calc(var(--W) * .044) calc(var(--W) * .11);border:0;border-radius:999px;cursor:pointer;white-space:nowrap;color:#fff;background:linear-gradient(180deg,#8349E8,var(--purple));box-shadow:0 calc(var(--W) * .03) calc(var(--W) * .07) rgba(81,34,165,.28),inset 0 1px rgba(255,255,255,.4)}
 #splash .sp-cta button:active{transform:scale(.94)}
+/* wide screens: phone sideways, tablet sideways, desktop */
+@container sp (aspect-ratio > 1.15){
+  #splash .sp-stage{--W:min(44cqw,80cqh,560px);grid-template-columns:auto auto;grid-template-rows:minmax(0,1fr) auto auto minmax(0,1fr);grid-template-areas:". ." "hero text" "hero cta" ". .";column-gap:calc(var(--W) * .1);row-gap:calc(var(--W) * .08)}
+  #splash .sp-hero{width:calc(var(--W) * .95)}
+  #splash .sp-text{align-self:end;margin-top:0}
+  #splash .sp-word{font-size:calc(var(--W) * .17)}
+  #splash .sp-tag{font-size:max(9px,calc(var(--W) * .033))}
+  #splash .sp-cta{align-self:start}
+}
 #splash.run .sp-hero{animation:spHeroIn .5s cubic-bezier(.34,1.56,.64,1) both}
 #splash.run .sp-hero span{animation:spBounce 1.3s var(--d,.8s) cubic-bezier(.34,1.3,.64,1) both}
-#splash.run .sp-space{animation:spFade .5s .4s ease-out forwards,spDim .9s 3.2s ease forwards}
+#splash.run .sp-space{animation:spFade .5s .4s ease-out forwards,spDim .9s 1.8s ease forwards}
 #splash.run .sp-p{animation:spFly var(--dur) var(--delay) linear infinite}
 #splash.run .sp-word{animation:spRise .55s .25s cubic-bezier(.2,.9,.3,1.2) both}
 #splash.run .sp-burst i{animation:spPop .45s calc(.62s + var(--n) * .07s) cubic-bezier(.34,1.8,.64,1) both}
 #splash.run .sp-tag{animation:spRise .5s .45s cubic-bezier(.2,.9,.3,1) both}
-#splash.run .sp-cta{animation:spReveal .6s 3.4s cubic-bezier(.34,1.56,.64,1) forwards}
-#splash.run .sp-cta button{animation:spFloat 2.4s 4.1s ease-in-out infinite}
-@keyframes spHeroIn{from{opacity:0;transform:translate(-50%,-4cqw) scale(.92)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
-@keyframes spBounce{0%,100%{transform:translateY(0) rotate(0) scale(1)}15%{transform:translateY(.6cqw) scale(1.04,.96)}34%{transform:translateY(-3.4cqw) rotate(var(--tilt,3deg)) scale(.97,1.03)}52%{transform:translateY(.4cqw) rotate(0) scale(1.03,.97)}68%{transform:translateY(-1.4cqw) rotate(calc(var(--tilt,3deg) * -.5))}84%{transform:translateY(0) rotate(0) scale(1)}}
+#splash.run .sp-cta{animation:spReveal .6s 2s cubic-bezier(.34,1.56,.64,1) forwards}
+#splash.run .sp-cta button{animation:spFloat 2.4s 2.7s ease-in-out infinite}
+@keyframes spHeroIn{from{opacity:0;transform:translateY(-16px) scale(.92)}to{opacity:1;transform:none}}
+@keyframes spBounce{0%,100%{transform:translateY(0) rotate(0) scale(1)}15%{transform:translateY(.75cqw) scale(1.04,.96)}34%{transform:translateY(-4.25cqw) rotate(var(--tilt,3deg)) scale(.97,1.03)}52%{transform:translateY(.5cqw) rotate(0) scale(1.03,.97)}68%{transform:translateY(-1.75cqw) rotate(calc(var(--tilt,3deg) * -.5))}84%{transform:translateY(0) rotate(0) scale(1)}}
 @keyframes spFly{0%{opacity:0;transform:translate(calc(-50% + var(--sx) * 1cqw),calc(-50% + var(--sy) * 1cqh)) scale(.05) rotate(var(--r))}14%{opacity:.5}70%{opacity:.55}100%{opacity:0;transform:translate(calc(-50% + var(--ex) * 1cqw),calc(-50% + var(--ey) * 1cqh)) scale(2.3) rotate(calc(var(--r) + 150deg));filter:blur(2.5px)}}
 @keyframes spFade{to{opacity:1}}
 @keyframes spDim{from{opacity:1}to{opacity:.55}}
-@keyframes spRise{from{opacity:0;transform:translateY(3cqw)}to{opacity:1;transform:none}}
+@keyframes spRise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
 @keyframes spPop{from{opacity:0;scale:0}to{opacity:1;scale:1}}
-@keyframes spReveal{from{opacity:0;transform:translate(-50%,5cqw) scale(.9)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
-@keyframes spFloat{0%,100%{translate:0 0}50%{translate:0 -1.2cqw}}
+@keyframes spReveal{from{opacity:0;transform:translateY(20px) scale(.9)}to{opacity:1;transform:none}}
+@keyframes spFloat{0%,100%{translate:0 0}50%{translate:0 -5px}}
 @media (prefers-reduced-motion:reduce){#splash.run *,#splash.run .sp-hero span{animation:none!important}#splash .sp-space{display:none}#splash .sp-cta{opacity:1}#splash{transition:none}}
 #splash .sp-cta button:focus-visible,.big:focus-visible,.gamebtn:focus-visible,.pill:focus-visible,.choice:focus-visible,.tile:focus-visible,.mt:focus-visible{outline:3px solid var(--purple-d);outline-offset:2px}
+/* home brand header (v1.4) */
+.homehead{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;padding-top:6px}.homehead .wordmark{width:212px;height:auto;display:block;pointer-events:none}.tagline{display:flex;align-items:center;gap:8px;font-family:var(--display);font-size:11px;font-weight:900;letter-spacing:2px;color:var(--purple-d)}.tagline i{width:6px;height:6px;border-radius:999px;display:block}.watermark{position:absolute;left:50%;top:50%;width:110px;transform:translate(-50%,-50%);opacity:.08;pointer-events:none;user-select:none}#s-home .gamebtn{color:var(--ink)!important}
 </style>
 
 <div id="app">
 
 <!-- HOME -->
 <section class="screen" id="s-home">
-  <div class="bar">
-    <div class="brand" style="display:flex;align-items:center;gap:10px"><img src="/logo/icon-180.png" alt="" width="44" height="44" style="display:block">Mojialand</div>
-    <button class="pill gear" id="lockBtn" aria-label="Grown-ups, hold for 3 seconds"><span class="hold"></span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7138D1" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg></button>
-  </div>
-  <div style="font-size:14px;font-weight:800;color:var(--mute);margin-top:-6px">Pick a game and start playing!</div>
-  <div class="stage" id="canvas"><div class="hint">Tap anywhere to stamp!</div><button class="pill danger" id="clearHome" aria-label="Clear the picture" style="position:absolute;right:12px;top:8px;height:40px;z-index:5"><span class="e" style="font-size:16px">🗑️</span>Clear</button></div>
+  <div class="homehead"><button class="pill gear" id="lockBtn" style="position:absolute;top:0;right:0;z-index:5" aria-label="Grown-ups, hold for 3 seconds"><span class="hold"></span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7138D1" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg></button><img class="wordmark" src="/logo/wordmark.png" width="212" height="77" alt="Mojialand" draggable="false"><div class="tagline" aria-hidden="true"><span>PLAY</span><i style="background:var(--pink)"></i><span>CREATE</span><i style="background:var(--yellow)"></i><span>EXPLORE</span><i style="background:var(--blue)"></i><span>TOGETHER</span></div></div>
+  
+  <div class="stage" id="canvas"><img class="watermark" src="/logo/monogram-watermark.png" alt="" draggable="false"><div class="hint">Tap anywhere to stamp!</div><button class="pill danger" id="clearHome" aria-label="Clear the picture" style="position:absolute;right:12px;top:8px;height:40px;z-index:5"><span class="e" style="font-size:16px">🗑️</span>Clear</button></div>
   <div class="tray" id="tray"></div>
   <div class="btnrow">
     <button class="gamebtn" data-go="pattern" style="background:var(--pink)"><span class="ico" aria-hidden="true"><i>🦄</i><i>🐴</i><i>🦄</i><i>🐴</i><i class="q">?</i></span>Pattern<small>What comes next?</small></button>
@@ -374,23 +387,27 @@ body.drawer-open .addbtn{display:none}
   <div class="note"><div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="width:28px;height:28px;border-radius:999px;background:var(--purple);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px">✓</span><b style="color:var(--ink);font-size:13px">No accounts · No ads · No tracking</b></div>Nothing leaves your phone. Just a safe, fun place to play, create and explore.<br><span id="voiceInfo"></span></div>
 </section>
 
-<!-- WELCOME SPLASH (first open only) -->
+<!-- WELCOME SPLASH -->
 <main id="splash" class="hidden" aria-label="Welcome to Mojialand">
   <div class="sp-confetti" id="spConfetti" aria-hidden="true"></div>
   <div class="sp-space" id="spSpace" aria-hidden="true"></div>
-  <div class="sp-hero" role="img" aria-label="Mojialand emoji friends">
-    <span class="sp-shark" style="--d:.80s;--tilt:-3deg"><b>🦈</b></span>
-    <span class="sp-unicorn" style="--d:.88s;--tilt:3deg">🦄</span>
-    <span class="sp-star1" style="--d:1.2s">⭐</span>
-    <span class="sp-star2" style="--d:1.26s">⭐</span>
-    <span class="sp-puppy" style="--d:.96s;--tilt:4deg">🐶</span>
-    <span class="sp-pizza" style="--d:1.04s;--tilt:-4deg">🍕</span>
-    <span class="sp-smiley" id="spSmiley" style="--d:.92s;--tilt:2deg">🙂</span>
-    <div class="sp-cloud"><i style="left:0;width:26%;height:70%"></i><i style="left:16%;width:30%;height:100%"></i><i style="left:38%;width:28%;height:86%"></i><i style="left:58%;width:28%;height:100%"></i><i style="left:76%;width:24%;height:72%"></i></div>
+  <div class="sp-stage">
+    <div class="sp-hero" id="spHero" role="img" aria-label="Mojialand emoji friends">
+      <span class="sp-shark" style="--d:.80s;--tilt:-3deg"><b>🦈</b></span>
+      <span class="sp-unicorn" style="--d:.88s;--tilt:3deg">🦄</span>
+      <span class="sp-star1" style="--d:1.2s">⭐</span>
+      <span class="sp-star2" style="--d:1.26s">⭐</span>
+      <span class="sp-puppy" style="--d:.96s;--tilt:4deg">🐶</span>
+      <span class="sp-pizza" style="--d:1.04s;--tilt:-4deg">🍕</span>
+      <span class="sp-smiley" id="spSmiley" style="--d:.92s;--tilt:2deg">🙂</span>
+      <div class="sp-cloud"><i style="left:0;width:26%;height:70%"></i><i style="left:16%;width:30%;height:100%"></i><i style="left:38%;width:28%;height:86%"></i><i style="left:58%;width:28%;height:100%"></i><i style="left:76%;width:24%;height:72%"></i></div>
+    </div>
+    <div class="sp-text" id="spText">
+      <div class="sp-word" aria-label="Mojialand"><span aria-hidden="true">Moj<span class="sp-i">ı<span class="sp-burst"><i style="--n:0"></i><i style="--n:1"></i><i style="--n:2"></i></span></span>aland</span></div>
+      <div class="sp-tag" aria-label="Play, create, explore, together"><span aria-hidden="true">PLAY<b style="color:var(--pink)">•</b>CREATE<b style="color:var(--yellow)">•</b>EXPLORE<b style="color:var(--blue)">•</b>TOGETHER</span></div>
+    </div>
+    <div class="sp-cta"><button type="button" id="spGo">Tap to Play</button></div>
   </div>
-  <div class="sp-word" aria-label="Mojialand"><span aria-hidden="true">Moj<span class="sp-i">ı<span class="sp-burst"><i style="--n:0"></i><i style="--n:1"></i><i style="--n:2"></i></span></span>aland</span></div>
-  <div class="sp-tag" aria-label="Play, create, explore, together"><span aria-hidden="true">PLAY<b style="color:var(--pink)">•</b>CREATE<b style="color:var(--yellow)">•</b>EXPLORE<b style="color:var(--blue)">•</b>TOGETHER</span></div>
-  <div class="sp-cta"><button type="button" id="spGo">Tap to Play</button></div>
 </main>
 <div id="toast" class="toast"><span class="ck">✓</span><span id="toastText">You did it!</span></div>
 <div id="hand" class="hidden">👆</div>
@@ -678,15 +695,20 @@ games.parade=(function(){
 /* iOS unlock: mute switch, audio context, speech */
 const SILENT='data:audio/wav;base64,UklGRrQBAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YZABAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA';
 let unlocked=false;
-function unlock(){ if(unlocked) return; unlocked=true; try{ const a=new Audio(SILENT); a.setAttribute('playsinline',''); a.muted=false; a.volume=0.01; const pr=a.play(); if(pr&&pr.catch) pr.catch(()=>{}); }catch(e){} const a=ctx(); if(a){ try{ const b=a.createBuffer(1,1,22050), s=a.createBufferSource(); s.buffer=b; s.connect(a.destination); s.start(0); }catch(e){} } if('speechSynthesis' in window){ try{ const u=new SpeechSynthesisUtterance(' '); u.volume=0; speechSynthesis.speak(u); }catch(e){} } }
-['touchend','click','pointerup'].forEach(ev=>document.addEventListener(ev,unlock,{once:true,passive:true}));
-document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&ac&&ac.state==='suspended') ac.resume(); });
+/* v1.6: keep iOS in playback mode so the ring/silent switch does not mute Web Audio after the first tap */
+function setPlayback(){ try{ if(navigator.audioSession&&navigator.audioSession.type!=='playback') navigator.audioSession.type='playback'; }catch(e){} }
+setPlayback();
+let keepAlive=null;
+function keepSession(){ if(navigator.audioSession) return; try{ if(!keepAlive){ keepAlive=new Audio(SILENT); keepAlive.setAttribute('playsinline',''); keepAlive.loop=true; keepAlive.volume=0.01; } if(keepAlive.paused){ const pr=keepAlive.play(); if(pr&&pr.catch) pr.catch(()=>{}); } }catch(e){} }
+function unlock(){ setPlayback(); keepSession(); if(unlocked) return; unlocked=true; const a=ctx(); if(a){ try{ const b=a.createBuffer(1,1,22050), s=a.createBufferSource(); s.buffer=b; s.connect(a.destination); s.start(0); }catch(e){} } if('speechSynthesis' in window){ try{ const u=new SpeechSynthesisUtterance(' '); u.volume=0; speechSynthesis.speak(u); }catch(e){} } }
+['touchend','click','pointerup'].forEach(ev=>document.addEventListener(ev,unlock,{passive:true}));
+document.addEventListener('visibilitychange',()=>{ if(document.hidden) return; setPlayback(); if(unlocked) keepSession(); if(ac&&ac.state!=='running') ac.resume(); });
 /* no double-tap zoom, no pinch */
 document.addEventListener('dblclick',e=>e.preventDefault(),{passive:false});
 document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});
 document.addEventListener('gesturechange',e=>e.preventDefault(),{passive:false});
 go('home'); // v1.3
-/* ---------- WELCOME SPLASH (v1.3): first open only, replay from Grown-ups ---------- */
+/* ---------- WELCOME SPLASH (v1.7 responsive): replay from Grown-ups ---------- */
 const splash=(function(){
   const el=$('#splash'), conf=$('#spConfetti'), space=$('#spSpace'), smiley=$('#spSmiley');
   const pal=['#7138D1','#FF5FA2','#FFC83D','#4DBCEC','#72D69A'];
@@ -696,7 +718,13 @@ const splash=(function(){
   const FACES=[[0,'🙂'],[1000,'😊'],[1180,'😃'],[1750,'😆'],[1900,'😄'],[2300,'😀']];
   let timers=[];
   const reduced=()=>{ try{ return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){ return false; } };
-  function show(){ timers.forEach(clearTimeout); timers=[]; el.classList.remove('run','leaving','hidden'); void el.offsetWidth; el.classList.add('run');
+  const hero=$('#spHero'), text=$('#spText');
+  function layout(){ if(el.classList.contains('hidden')) return; const s0=el.getBoundingClientRect(), h=hero.getBoundingClientRect(), t=text.getBoundingClientRect(); if(!s0.width) return;
+    space.style.setProperty('--ox',(h.left+h.width/2-s0.left)+'px'); space.style.setProperty('--oy',(h.top+h.height*.48-s0.top)+'px');
+    space.style.setProperty('--mx',(t.left+t.width/2-s0.left)+'px'); space.style.setProperty('--my',(t.top+t.height/2-s0.top)+'px');
+    space.style.setProperty('--mw',(t.width*.72)+'px'); space.style.setProperty('--mh',(t.height*1.3)+'px'); }
+  window.addEventListener('resize',layout); window.addEventListener('orientationchange',()=>setTimeout(layout,300));
+  function show(){ timers.forEach(clearTimeout); timers=[]; el.classList.remove('run','leaving','hidden'); void el.offsetWidth; layout(); el.classList.add('run');
     if(reduced()) smiley.textContent='😀'; else FACES.forEach(([ms,f])=>timers.push(setTimeout(()=>{ smiley.textContent=f; },ms))); }
   function hide(){ if(el.classList.contains('hidden')||el.classList.contains('leaving')) return; timers.forEach(clearTimeout); store.set('welcomed',true); unlock(); ctx(); sfx.chime();
     el.classList.add('leaving'); setTimeout(()=>{ el.classList.add('hidden'); el.classList.remove('run','leaving'); },reduced()?0:460); }
@@ -704,7 +732,7 @@ const splash=(function(){
   return { show, hide };
 })();
 $('#replaySplash').onclick=()=>{ sfx.boop(); go('home'); splash.show(); };
-if(!store.get('welcomed',false)) splash.show();
+splash.show();
 
 })();
 </script>
