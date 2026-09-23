@@ -301,7 +301,7 @@ body.drawer-open .addbtn{display:none}
 <section class="screen hidden" id="s-gate">
   <div class="bar"><button class="pill gear" data-go="home" aria-label="Back to home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7138D1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg></button><div class="gname">Grown-ups</div><div style="width:48px"></div></div>
   <div class="banner"><span class="e">🔒</span><div>Hold for 3 seconds<div style="font-size:12px;font-weight:700;color:var(--purple-d);opacity:.8">This area is for grown-ups.</div></div></div>
-  <div class="row"><div><div class="l">Voice</div><div class="s">Names emoji out loud</div></div><button class="sw" id="swVoice" role="switch" aria-checked="true" aria-label="Voice"></button></div>
+  <div class="row"><div><div class="l">Voice</div><div class="s">Speaks emoji names and how-to cards out loud. Off by default.</div></div><button class="sw" id="swVoice" role="switch" aria-checked="false" aria-label="Voice"></button></div>
   <div class="row"><div><div class="l">Sounds</div><div class="s">Boops, chimes, cheers</div></div><button class="sw" id="swSound" role="switch" aria-checked="true" aria-label="Sounds"></button></div>
   <div class="row"><div><div class="l">Sound check</div><div class="s" id="sndInfo">Tap to play a chime</div></div><button class="small" id="sndTest">Test</button></div>
   <div class="row"><div><div class="l">How-to-play cards</div><div class="s" id="demosInfo">Show a how-to card the first time each game opens</div></div><button class="sw" id="swDemos" role="switch" aria-checked="true" aria-label="How-to-play cards"></button></div>
@@ -339,7 +339,7 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
 
 /* ---------- settings + storage ---------- */
 const store={get(k,d){try{const v=localStorage.getItem('mojia.'+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem('mojia.'+k,JSON.stringify(v))}catch(e){}}};
-const settings={voice:store.get('voice',true),sound:store.get('sound',true),demos:store.get('demos',true)};
+const settings={voice:store.get('voice',false),sound:store.get('sound',true),demos:store.get('demos',true)};
 let demoDone=store.get('demoDone',{});
 
 /* ---------- audio ---------- */
