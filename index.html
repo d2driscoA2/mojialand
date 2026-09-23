@@ -297,18 +297,17 @@ body.drawer-open .addbtn{display:none}
 @keyframes spFloat{0%,100%{translate:0 0}50%{translate:0 -1.2cqw}}
 @media (prefers-reduced-motion:reduce){#splash.run *,#splash.run .sp-hero span{animation:none!important}#splash .sp-space{display:none}#splash .sp-cta{opacity:1}#splash{transition:none}}
 #splash .sp-cta button:focus-visible,.big:focus-visible,.gamebtn:focus-visible,.pill:focus-visible,.choice:focus-visible,.tile:focus-visible,.mt:focus-visible{outline:3px solid var(--purple-d);outline-offset:2px}
+/* home brand header (v1.4) */
+.homehead{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;padding-top:6px}.homehead .wordmark{width:212px;height:auto;display:block;pointer-events:none}.tagline{display:flex;align-items:center;gap:8px;font-family:var(--display);font-size:11px;font-weight:900;letter-spacing:2px;color:var(--purple-d)}.tagline i{width:6px;height:6px;border-radius:999px;display:block}.watermark{position:absolute;left:50%;top:50%;width:110px;transform:translate(-50%,-50%);opacity:.08;pointer-events:none;user-select:none}#s-home .gamebtn{color:var(--ink)!important}
 </style>
 
 <div id="app">
 
 <!-- HOME -->
 <section class="screen" id="s-home">
-  <div class="bar">
-    <div class="brand" style="display:flex;align-items:center;gap:10px"><img src="/logo/icon-180.png" alt="" width="44" height="44" style="display:block">Mojialand</div>
-    <button class="pill gear" id="lockBtn" aria-label="Grown-ups, hold for 3 seconds"><span class="hold"></span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7138D1" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg></button>
-  </div>
-  <div style="font-size:14px;font-weight:800;color:var(--mute);margin-top:-6px">Pick a game and start playing!</div>
-  <div class="stage" id="canvas"><div class="hint">Tap anywhere to stamp!</div><button class="pill danger" id="clearHome" aria-label="Clear the picture" style="position:absolute;right:12px;top:8px;height:40px;z-index:5"><span class="e" style="font-size:16px">🗑️</span>Clear</button></div>
+  <div class="homehead"><button class="pill gear" id="lockBtn" style="position:absolute;top:0;right:0;z-index:5" aria-label="Grown-ups, hold for 3 seconds"><span class="hold"></span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7138D1" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg></button><img class="wordmark" src="/logo/wordmark.png" width="212" height="77" alt="Mojialand" draggable="false"><div class="tagline" aria-hidden="true"><span>PLAY</span><i style="background:var(--pink)"></i><span>CREATE</span><i style="background:var(--yellow)"></i><span>EXPLORE</span><i style="background:var(--blue)"></i><span>TOGETHER</span></div></div>
+  
+  <div class="stage" id="canvas"><img class="watermark" src="/logo/monogram-watermark.png" alt="" draggable="false"><div class="hint">Tap anywhere to stamp!</div><button class="pill danger" id="clearHome" aria-label="Clear the picture" style="position:absolute;right:12px;top:8px;height:40px;z-index:5"><span class="e" style="font-size:16px">🗑️</span>Clear</button></div>
   <div class="tray" id="tray"></div>
   <div class="btnrow">
     <button class="gamebtn" data-go="pattern" style="background:var(--pink)"><span class="ico" aria-hidden="true"><i>🦄</i><i>🐴</i><i>🦄</i><i>🐴</i><i class="q">?</i></span>Pattern<small>What comes next?</small></button>
