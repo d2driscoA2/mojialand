@@ -1,5 +1,6 @@
 [build]
-  publish = "."
+  publish = "site"
   command = "python3 scripts/update-csp-hash.py"
 
-# Security headers live in _headers, written by scripts/update-csp-hash.py on every build.
+# Only site/ is public. README, scripts, and any root file stay private.
+# Security headers live in site/_headers, written by the build command.

@@ -3,5 +3,5 @@ node_modules
 
 # Local Netlify folder
 .netlify
-_headers
-robots.txt
+site/_headers
+site/robots.txt
