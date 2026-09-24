@@ -4,3 +4,9 @@
 
 # Only site/ is public. README, scripts, and any root file stay private.
 # Security headers live in site/_headers, written by the build command.
+
+# Server code: Netlify Functions (Node). Secrets live only in Netlify
+# environment variables, never in this repo.
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"

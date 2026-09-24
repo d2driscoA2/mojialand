@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FFF8E8">
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/svg+xml" href="/logo/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/logo/icon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/logo/icon-180.png">
+<title>Mojialand pass</title>
+<style>
+@font-face{font-family:'Nunito';font-style:normal;font-weight:700 900;font-display:swap;src:url('/fonts/nunito-latin.woff2') format('woff2')}
+:root{--purple:#7138D1;--deep:#5122A5;--yellow:#FFC83D;--blue:#4DBCEC;--cream:#FFF8E8;--ink:#30254A;--white:#FFFFFF;--soft:#6B6180;--line:#E9E0F5;color-scheme:light}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;min-height:100%}
+body{background:var(--cream);color:var(--ink);font:700 15px/1.45 Nunito,ui-rounded,system-ui,sans-serif;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:max(24px,env(safe-area-inset-top,0px)) 16px max(24px,env(safe-area-inset-bottom,0px));text-align:center}
+button,a{font-family:inherit}
+button:focus-visible,a:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.wm{width:170px;height:auto;display:block}
+.card{background:var(--white);border-radius:24px;box-shadow:0 4px 12px rgba(0,0,0,.08);padding:26px 20px;width:100%;max-width:420px;display:grid;gap:12px;justify-items:center}
+.friends{font-size:40px;letter-spacing:-2px;line-height:1}
+.friends span{display:inline-block;animation:hop 1.2s ease-in-out infinite}
+.friends span:nth-child(2){animation-delay:.12s}.friends span:nth-child(3){animation-delay:.24s}.friends span:nth-child(4){animation-delay:.36s}.friends span:nth-child(5){animation-delay:.48s}
+@keyframes hop{0%,60%,100%{transform:none}30%{transform:translateY(-8px)}}
+h1{margin:0;font:900 25px/1.15 Nunito,sans-serif;color:var(--purple);text-wrap:balance}
+p{margin:0;color:var(--soft);font-size:14px;max-width:32ch}
+.bar{width:160px;height:8px;border-radius:999px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;width:40%;border-radius:inherit;background:linear-gradient(90deg,var(--purple),var(--yellow));animation:slide 1.3s ease-in-out infinite}
+@keyframes slide{0%{transform:translateX(-100%)}100%{transform:translateX(260%)}}
+@media (prefers-reduced-motion:reduce){.friends span,.bar i{animation:none}}
+.primary{background:var(--purple);color:var(--white);border:0;border-radius:999px;padding:14px;font:900 17px Nunito,sans-serif;cursor:pointer;width:100%;text-decoration:none;display:block}
+.secondary{background:var(--white);border:2px solid var(--purple);color:var(--purple);border-radius:999px;padding:11px;font:900 15px Nunito,sans-serif;cursor:pointer;width:100%;text-decoration:none;display:block}
+</style>
+</head>
+<body>
+<img class="wm" src="/logo/wordmark.png" width="170" height="62" alt="Mojialand">
+<main class="card" id="dWork" role="status">
+  <div class="friends" aria-hidden="true"><span>🦄</span><span>🦈</span><span>🐶</span><span>😀</span><span>🍕</span></div>
+  <h1>Turning your pass on…</h1>
+  <p>This takes a few seconds. Please keep this page open.</p>
+  <div class="bar" aria-hidden="true"><i></i></div>
+</main>
+<main class="card" id="dErr" role="alert" hidden>
+  <div class="friends" aria-hidden="true">🦄💭</div>
+  <h1>Your pass isn't on yet</h1>
+  <p id="dErrText">Your payment is safe. Check your email for your code, or try again.</p>
+  <button class="primary" id="dRetry" type="button">Try again</button>
+  <a class="secondary" href="mailto:hello@mojialand.com?subject=Mojialand%20pass">Contact us</a>
+</main>
+<script>
+(function(){
+'use strict';
+const PASS_PUBLIC_JWK=/*__PASS_PUBLIC_JWK__*/null;
+const $=id=>document.getElementById(id);
+const sid=new URLSearchParams(location.search).get('session_id')||'';
+const WAITS=[0,1000,1500,2000,2500,3000,3500,4000,4000];
+let busy=false;
+
+function b64u(s){ s=s.replace(/-/g,'+').replace(/_/g,'/'); while(s.length%4) s+='='; const bin=atob(s), a=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) a[i]=bin.charCodeAt(i); return a; }
+async function verifyToken(tok){
+  if(!PASS_PUBLIC_JWK||typeof tok!=='string') return null;
+  const parts=tok.split('.'); if(parts.length!==2) return null;
+  try{
+    const key=await crypto.subtle.importKey('jwk',{kty:'EC',crv:'P-256',x:PASS_PUBLIC_JWK.x,y:PASS_PUBLIC_JWK.y,ext:true},{name:'ECDSA',namedCurve:'P-256'},false,['verify']);
+    const ok=await crypto.subtle.verify({name:'ECDSA',hash:'SHA-256'},key,b64u(parts[1]),new TextEncoder().encode(parts[0]));
+    if(!ok) return null;
+    const p=JSON.parse(new TextDecoder().decode(b64u(parts[0])));
+    if(!p||p.v!==1||(p.k!=='48h'&&p.k!=='forever')||typeof p.e!=='number') return null;
+    return p;
+  }catch(e){ return null; }
+}
+function read(k){ try{ return JSON.parse(localStorage.getItem('mojia.'+k)||'null'); }catch(e){ return null; } }
+function write(k,v){ localStorage.setItem('mojia.'+k,JSON.stringify(v)); }
+function showErr(msg){ $('dWork').hidden=true; $('dErrText').textContent=(typeof msg==='string'&&msg&&msg.length<160)?msg:'Your payment is safe. Check your email for your code, or try again.'; $('dErr').hidden=false; busy=false; }
+
+async function save(d){
+  const p=await verifyToken(d.token);
+  if(!p||p.k!==d.kind||p.e!==d.ends_at) return showErr('We could not check your pass. Your payment is safe. Please contact us.');
+  const old=read('pass')||{};
+  const keep=d.plan==='add'||d.plan==='up';
+  const code=keep?(typeof old.code==='string'?old.code:''):(typeof d.code==='string'?d.code:'');
+  const pass={code:code,kind:p.k,ends_at:p.e,token:d.token,email_masked:String(d.email_masked||'')};
+  const dev=old.device_id||read('device'); if(typeof dev==='string'&&dev) pass.device_id=dev;
+  try{ write('pass',pass); write('allset',{plan:String(d.plan||''),email_masked:pass.email_masked,at:Date.now()}); }
+  catch(e){ return showErr('This browser would not save your pass. Turn off private browsing, then use the code in your email.'); }
+  location.replace('/play/#allset');
+}
+
+async function run(){
+  if(busy) return; busy=true; $('dErr').hidden=true; $('dWork').hidden=false;
+  if(!/^cs_(test|live)_[A-Za-z0-9]{1,200}$/.test(sid)) return showErr('That payment link is not valid. If you paid, check your email for your code.');
+  for(const w of WAITS){
+    if(w) await new Promise(r=>setTimeout(r,w));
+    let res, d={};
+    try{
+      res=await fetch('/.netlify/functions/confirm-session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:sid}),credentials:'same-origin',cache:'no-store'});
+      try{ d=await res.json(); }catch(e){ d={}; }
+    }catch(e){ continue; }
+    if(res.status===402) continue;
+    if(res.ok&&d&&typeof d.token==='string') return save(d);
+    return showErr(d&&d.error);
+  }
+  showErr('Your payment is still going through. Try again in a minute. Your code also comes by email.');
+}
+$('dRetry').addEventListener('click',()=>run());
+run();
+})();
+</script>
+</body>
+</html>

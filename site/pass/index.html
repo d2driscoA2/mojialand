@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F3ECFC">
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/svg+xml" href="/logo/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/logo/icon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/logo/icon-180.png">
+<title>Mojialand checkout</title>
+<style>
+@font-face{font-family:'Nunito';font-style:normal;font-weight:700 900;font-display:swap;src:url('/fonts/nunito-latin.woff2') format('woff2')}
+:root{--purple:#7138D1;--deep:#5122A5;--pink:#FF5FA2;--yellow:#FFC83D;--blue:#4DBCEC;--green:#72D69A;--cream:#FFF8E8;--ink:#30254A;--white:#FFFFFF;--soft:#6B6180;--line:#E9E0F5;--pale:#F3ECFC;--red:#D64545;--shadow:0 4px 12px rgba(0,0,0,.08);color-scheme:light}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;min-height:100%}
+body{background:var(--pale);color:var(--ink);font:700 15px/1.45 Nunito,ui-rounded,system-ui,sans-serif;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}
+button{font-family:inherit}
+button:focus-visible,a:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.hdr{display:flex;justify-content:center;align-items:center;padding:14px 16px 10px}
+.hdr img{width:150px;height:auto;display:block}
+.sheet{margin-top:auto;width:100%;max-width:520px;margin-inline:auto;background:var(--white);border-radius:28px 28px 0 0;padding:18px 16px max(16px,env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:10px;box-shadow:0 -6px 20px rgba(0,0,0,.1);animation:up .35s cubic-bezier(.2,.9,.3,1) both}
+@media (min-width:560px){.sheet{margin-bottom:24px;border-radius:28px}}
+@keyframes up{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.sheet{animation:none}.spin{animation:none!important}}
+.sum{display:flex;justify-content:space-between;gap:12px;font:900 20px/1.2 Nunito,sans-serif;color:var(--ink)}
+.sum span:last-child{color:var(--purple)}
+.sub{margin:0;font-size:12.5px;color:var(--soft)}
+#checkout{min-height:120px;border-radius:14px}
+.loading{display:flex;align-items:center;justify-content:center;gap:10px;min-height:120px;color:var(--soft);font-size:14px}
+.spin{width:22px;height:22px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--purple);animation:rot .8s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+.err{background:var(--cream);border-radius:20px;padding:18px 16px;text-align:center;display:grid;gap:10px}
+.err .e{font-size:36px;line-height:1}
+.err h2{margin:0;font:900 20px/1.2 Nunito,sans-serif;color:var(--deep)}
+.err p{margin:0;font-size:14px;color:var(--soft)}
+.primary{background:var(--purple);color:var(--white);border:0;border-radius:999px;padding:14px;font:900 17px Nunito,sans-serif;cursor:pointer;width:100%;text-decoration:none;display:block;text-align:center}
+.secondary{background:var(--white);border:2px solid var(--purple);color:var(--purple);border-radius:999px;padding:11px;font:900 15px Nunito,sans-serif;cursor:pointer;width:100%;text-decoration:none;display:block;text-align:center}
+.back{background:none;border:0;color:var(--deep);font:800 15px Nunito,sans-serif;padding:10px 16px;cursor:pointer;align-self:center;min-height:44px}
+</style>
+</head>
+<body>
+<header class="hdr"><img src="/logo/wordmark.png" width="150" height="55" alt="Mojialand"></header>
+<main class="sheet" aria-labelledby="coItem">
+  <div class="sum"><span id="coItem">48-hour pass</span><span id="coPrice">$1.50</span></div>
+  <p class="sub">One-time charge to MOJIALAND. Your card goes straight to Stripe. We never see it.</p>
+  <p class="sub">Your email is only for your code and receipt. Private relay emails work fine.</p>
+  <div class="loading" id="coLoading" role="status"><span class="spin" aria-hidden="true"></span>Opening secure checkout…</div>
+  <div id="checkout"></div>
+  <div class="err" id="coError" role="alert" hidden>
+    <div class="e" aria-hidden="true">🦄💭</div>
+    <h2>Checkout didn't open</h2>
+    <p id="coErrorText">Something went wrong on our side. Your card was not charged.</p>
+    <button class="primary" id="coRetry" type="button">Try again</button>
+    <a class="secondary" href="mailto:hello@mojialand.com?subject=Mojialand%20checkout">Contact us</a>
+  </div>
+  <button class="back" id="coCancel" type="button">Cancel</button>
+</main>
+<script src="https://js.stripe.com/dahlia/stripe.js"></script>
+<script>
+(function(){
+'use strict';
+var PLANS={pass:['48-hour pass','$1.50'],life:['Forever','$14.99'],add:['Add 48 hours','$1.50'],up:['Forever upgrade','$13.49']};
+var DEFAULT_ERR='Something went wrong on our side. Your card was not charged.';
+var $=function(id){return document.getElementById(id);};
+var q=new URLSearchParams(location.search);
+var plan=q.get('plan')||'';
+var promo=(q.get('promo')||'').trim().slice(0,40);
+var checkout=null, busy=false;
+if(Object.prototype.hasOwnProperty.call(PLANS,plan)){ $('coItem').textContent=PLANS[plan][0]; $('coPrice').textContent=PLANS[plan][1]; }
+
+function readCode(){ try{ var p=JSON.parse(localStorage.getItem('mojia.pass')||'null'); return p&&typeof p.code==='string'?p.code:''; }catch(e){ return ''; } }
+function drop(){ if(checkout){ try{ checkout.destroy(); }catch(e){} checkout=null; } }
+function showError(msg){ drop(); $('coLoading').hidden=true; $('checkout').hidden=true;
+  $('coErrorText').textContent=(typeof msg==='string'&&msg.length>0&&msg.length<140)?msg:DEFAULT_ERR; $('coError').hidden=false; busy=false; }
+
+async function start(){
+  if(busy) return; busy=true;
+  $('coError').hidden=true; $('coLoading').hidden=false; $('checkout').hidden=false;
+  if(!Object.prototype.hasOwnProperty.call(PLANS,plan)) return showError('That pass link is broken. Go back and pick a pass.');
+  if(typeof window.Stripe!=='function') return showError('Secure checkout could not load. Check your connection and try again.');
+  var body={plan:plan};
+  if(plan==='add'||plan==='up'){ var code=readCode(); if(!code) return showError("That pass can't be changed. Pick a new pass."); body.code=code; }
+  if(promo) body.promo=promo;
+  var res, data={};
+  try{
+    res=await fetch('/.netlify/functions/create-checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),credentials:'same-origin',cache:'no-store'});
+    try{ data=await res.json(); }catch(e){ data={}; }
+  }catch(e){ return showError('We could not reach checkout. Check your connection and try again.'); }
+  if(!res.ok||!data||typeof data.clientSecret!=='string'||typeof data.publishableKey!=='string') return showError(data&&data.error);
+  try{
+    var stripe=window.Stripe(data.publishableKey);
+    var make=stripe.createEmbeddedCheckoutPage||stripe.initEmbeddedCheckout;
+    var secret=data.clientSecret;
+    checkout=await make.call(stripe,{fetchClientSecret:function(){ return Promise.resolve(secret); }});
+    checkout.mount('#checkout');
+    $('coLoading').hidden=true; busy=false;
+  }catch(e){ showError(); }
+}
+$('coRetry').addEventListener('click',function(){ start(); });
+$('coCancel').addEventListener('click',function(){ drop(); location.href='/play/#passes'; });
+start();
+})();
+</script>
+</body>
+</html>

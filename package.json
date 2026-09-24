@@ -1,0 +1,12 @@
+{
+  "name": "mojialand",
+  "private": true,
+  "type": "module",
+  "description": "Mojialand site and Netlify Functions",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "stripe": "^22.6.2"
+  }
+}

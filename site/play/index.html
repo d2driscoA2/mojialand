@@ -429,7 +429,20 @@ body.drawer-open .addbtn{display:none}
 .pw-steps div{display:flex;gap:10px;align-items:center;background:var(--cream);border-radius:14px;padding:8px 10px;font-size:14px;font-weight:800;color:var(--ink)}
 .pw-steps b{flex:none;width:34px;height:34px;border-radius:10px;background:var(--white);display:grid;place-items:center;font-size:18px;box-shadow:var(--shadow)}
 .pw-steps b img{width:26px;height:26px;border-radius:7px;display:block}
-.pw-grown:focus-visible,.pw-choice:focus-visible,.pw-plan:focus-visible,.pw-primary:focus-visible,.pw-secondary:focus-visible,.pw-link:focus-visible,.pw-back:focus-visible,.pw-gurow:focus-visible,.pw-bubble:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+/* all set (after payment) */
+.pw-ok{background:var(--white);align-items:center;text-align:center;justify-content:space-between;gap:18px;padding-top:max(26px,env(safe-area-inset-top,0px));padding-bottom:max(24px,env(safe-area-inset-bottom,0px));overflow-y:auto;overflow-x:hidden}
+.pw-okgroup{display:grid;gap:10px;justify-items:center;width:100%}
+.pw-okfriends{font-size:40px;line-height:1}
+.pw-ok h2{font-family:var(--display);font-weight:900;font-size:25px;line-height:1.15;margin:0;color:var(--ink);text-wrap:balance}
+.pw-ok #pwOkText{margin:0;color:var(--mute);font-size:14px;font-weight:700;max-width:30ch}
+.pw-okhs{align-items:center;text-align:left;width:100%;padding:14px}
+.pw-okhs>div:last-child{padding-bottom:0}
+.pw-okhs .pw-mini{border-bottom:5px solid var(--ink);border-radius:18px}
+.pw-okhs .pw-secondary{width:auto;padding:8px 14px;font-size:14px;margin-top:8px}
+.pw-textbtn{background:none;border:0;color:var(--purple-d);font-family:var(--display);font-weight:800;font-size:14px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;display:flex;gap:6px;align-items:center;padding:8px}
+.pw-next{width:100%;display:grid;gap:6px;justify-items:center;padding-top:14px;border-top:2px dashed var(--line)}
+.pw-eyebrow{font-family:var(--display);font-weight:900;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--mute)}
+.pw-textbtn:focus-visible,.pw-grown:focus-visible,.pw-choice:focus-visible,.pw-plan:focus-visible,.pw-primary:focus-visible,.pw-secondary:focus-visible,.pw-link:focus-visible,.pw-back:focus-visible,.pw-gurow:focus-visible,.pw-bubble:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
 </style>
 
 <div id="app">
@@ -548,6 +561,18 @@ body.drawer-open .addbtn{display:none}
   <div class="pw-links"><button class="pw-link" id="pwCode">Have a code?</button><button class="pw-link" id="pwHelp">Need help?</button></div>
 </section>
 
+<!-- ALL SET (after payment; parent-facing) -->
+<section class="screen hidden pw-ok" id="s-allset">
+  <div class="pw-okgroup">
+    <div class="pw-okfriends" aria-hidden="true">🦄🦈🐶😀🍕</div>
+    <h2 id="pwOkTitle">You're all set for 48 hours</h2>
+    <p id="pwOkText"></p>
+  </div>
+  <div class="pw-hsbig pw-okhs" id="pwOkHS"><div class="pw-mini" id="pwOkMini" aria-hidden="true"></div><div><p class="pw-hst">Mojialand on your Home Screen!</p><p>Add Mojialand to your device. One tap to play, full screen.</p><button class="pw-secondary" id="pwOkHow">Show me how</button></div></div>
+  <button class="pw-textbtn" id="pwOkShare"><span aria-hidden="true">📲</span> Send code to another device</button>
+  <div class="pw-next"><span class="pw-eyebrow">Next</span><button class="pw-primary" id="pwOkBack">▶ Hand it back to your kid</button></div>
+</section>
+
 <!-- WELCOME SPLASH -->
 <main id="splash" class="hidden" aria-label="Welcome to Mojialand">
   <div class="sp-confetti" id="spConfetti" aria-hidden="true"></div>
@@ -599,6 +624,8 @@ body.drawer-open .addbtn{display:none}
 /* Payment settings. Defaults here; a later server call may overwrite them (admin Settings). */
 const SETTINGS={first_visit_minutes:15,daily_minutes:3,daily_reset:'04:00',warning_minutes:10,credit_days:7,devices_per_code:5};
 const PRICES={pass:1.50,add:1.50,life:14.99,up:13.49}; /* shown only behind the parent gate; set in Stripe */
+/* Public key for pass tokens. The build fills it in; null means no pass is valid. A public key only checks, never signs. */
+const PASS_PUBLIC_JWK=/*__PASS_PUBLIC_JWK__*/null;
 var payHook=null; function onScreen(name){ if(payHook) payHook(name); }
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 /* Emoji library: Unicode Animals & Nature, named for a 3-year-old */
@@ -652,7 +679,7 @@ let toastT=null; function toast(text){ const t=$('#toast'); $('#toastText').text
 function confetti(host,x,y,n){ const cols=['#FF6FAE','#4CC9F0','#FFC83D','#8AE234','#9B5DE5']; for(let i=0;i<(n||18);i++){ const c=document.createElement('div'); c.className='confetti'; c.style.left=x+'px'; c.style.top=y+'px'; c.style.background=rnd(cols); c.style.setProperty('--dx',(Math.random()*220-110)+'px'); c.style.setProperty('--dy',(Math.random()*180+40)+'px'); host.appendChild(c); setTimeout(()=>c.remove(),1100);} }
 
 /* ---------- navigation ---------- */
-const screens={home:'#s-home',pattern:'#s-pattern',bounce:'#s-bounce',match:'#s-match',parade:'#s-parade',gate:'#s-gate',rest:'#s-rest',ngate:'#s-ngate',plans:'#s-plans'};
+const screens={home:'#s-home',pattern:'#s-pattern',bounce:'#s-bounce',match:'#s-match',parade:'#s-parade',gate:'#s-gate',rest:'#s-rest',ngate:'#s-ngate',plans:'#s-plans',allset:'#s-allset'};
 let current='home';
 const games={};
 function go(name){ stopDemo(); closeGlass(); if(games[current]&&games[current].leave) games[current].leave(); $$('.screen').forEach(s=>s.classList.add('hidden')); $(screens[name]).classList.remove('hidden'); current=name; onScreen(name); if(games[name]&&games[name].enter) games[name].enter(); if(games[name]&&settings.demos&&!demoDone[name]) setTimeout(()=>showGlass(name),350); }
@@ -882,8 +909,26 @@ const pay=(function(){
 
   /* device id: random, made once, only used later to count devices per code */
   function deviceId(){ let id=store.get('device',''); if(!id){ try{ const b=new Uint8Array(16); crypto.getRandomValues(b); id=[...b].map(x=>x.toString(16).padStart(2,'0')).join(''); store.set('device',id); }catch(e){ id=''; } } return id; }
-  /* pass on the device: {code, kind:'48h'|'forever', ends_at(ms), device_id} */
-  function getPass(){ const p=store.get('pass',null); if(!p||typeof p!=='object'||(p.kind!=='48h'&&p.kind!=='forever')) return null; return {code:String(p.code||''),kind:p.kind,ends_at:Number(p.ends_at)||0,device_id:p.device_id||deviceId()}; }
+  /* pass on the device: {code, kind:'48h'|'forever', ends_at(ms), token, email_masked, device_id}
+     Honored only when its token carries a valid signature (WebCrypto, ECDSA P-256) and matches kind and end time.
+     Checked once per token and cached. No network. */
+  const vcache={token:null,payload:null,pending:null};
+  function b64u(s){ s=s.replace(/-/g,'+').replace(/_/g,'/'); while(s.length%4) s+='='; const bin=atob(s), a=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) a[i]=bin.charCodeAt(i); return a; }
+  async function checkToken(tok){
+    if(!PASS_PUBLIC_JWK||typeof tok!=='string'||!window.crypto||!crypto.subtle) return null;
+    const parts=tok.split('.'); if(parts.length!==2) return null;
+    try{ const key=await crypto.subtle.importKey('jwk',{kty:'EC',crv:'P-256',x:PASS_PUBLIC_JWK.x,y:PASS_PUBLIC_JWK.y,ext:true},{name:'ECDSA',namedCurve:'P-256'},false,['verify']);
+      if(!(await crypto.subtle.verify({name:'ECDSA',hash:'SHA-256'},key,b64u(parts[1]),new TextEncoder().encode(parts[0])))) return null;
+      const p=JSON.parse(new TextDecoder().decode(b64u(parts[0]))); return p&&p.v===1&&(p.k==='48h'||p.k==='forever')&&typeof p.e==='number'?p:null; }catch(e){ return null; } }
+  function verifyStored(){ const p=store.get('pass',null), tok=p&&typeof p==='object'&&typeof p.token==='string'?p.token:null;
+    if(tok===vcache.token) return vcache.pending||Promise.resolve();
+    vcache.token=tok; vcache.payload=null;
+    vcache.pending=checkToken(tok).then(r=>{ if(vcache.token===tok){ vcache.payload=r; vcache.pending=null; paintChips(); } });
+    return vcache.pending; }
+  function getPass(){ const p=store.get('pass',null); if(!p||typeof p!=='object'||(p.kind!=='48h'&&p.kind!=='forever')) return null;
+    if(p.token!==vcache.token){ verifyStored(); return null; }
+    const v=vcache.payload; if(!v||v.k!==p.kind||v.e!==(p.kind==='forever'?0:Number(p.ends_at))) return null;
+    return {code:String(p.code||''),kind:v.k,ends_at:v.e,email_masked:String(p.email_masked||''),device_id:p.device_id||deviceId()}; }
   const passOn=p=>!!p&&(p.kind==='forever'||p.ends_at>Date.now());
   const passEnded=p=>!!p&&p.kind==='48h'&&p.ends_at<=Date.now();
   const inCredit=p=>passEnded(p)&&Date.now()-p.ends_at<SETTINGS.credit_days*DAY;
@@ -976,6 +1021,18 @@ const pay=(function(){
   homeGrid($('#pwMini'),9); homeGrid($('#pwMiniBig'),16);
   function showHow(){ if(installEvt){ const ev=installEvt; installEvt=null; try{ ev.prompt(); const r=ev.userChoice; if(r&&r.then) r.then(()=>buildGU(),()=>{}); }catch(e){ $('#pwOvHS').classList.remove('hidden'); } return; } $('#pwOvHS').classList.remove('hidden'); }
   $('#pwHSbtn').addEventListener('click',()=>{ ctx(); sfx.boop(); showHow(); });
+
+  /* All set: shown once after /pass/done/ saves a verified pass */
+  homeGrid($('#pwOkMini'),9);
+  function showAllset(){ const a=store.get('allset',null); try{ localStorage.removeItem('mojia.allset'); }catch(e){}
+    const p=getPass(); if(!a||typeof a!=='object'||!passOn(p)||!(Date.now()-Number(a.at)<30*MIN)) return false;
+    $('#pwOkTitle').textContent=p.kind==='forever'?'Mojialand is yours for good':(a.plan==='add'?'Added 48 hours':"You're all set for 48 hours");
+    const mail=String(a.email_masked||p.email_masked||'');
+    $('#pwOkText').textContent=(p.kind==='forever'?'Forever pass on.':'Pass on until '+fmtT(p.ends_at)+'.')+(mail?' Code emailed to '+mail+'.':'');
+    $('#pwOkHS').hidden=standalone(); go('allset'); return true; }
+  $('#pwOkHow').addEventListener('click',()=>{ ctx(); sfx.boop(); showHow(); });
+  $('#pwOkShare').addEventListener('click',()=>{ ctx(); sfx.boop(); soon('Send code to another device'); });
+  $('#pwOkBack').addEventListener('click',()=>{ ctx(); sfx.boop(); go('home'); });
   $$('.pw-ov').forEach(ov=>ov.addEventListener('click',e=>{ if(e.target===ov||e.target.closest('[data-pw-close]')){ ov.classList.add('hidden'); } }));
 
   /* Grown-ups additions */
@@ -997,7 +1054,9 @@ const pay=(function(){
     else if(a==='share') soon('Send code to another device'); else if(a==='code') soon('Have a code?'); else if(a==='help') soon('Contact us'); });
 
   function onScreen(name){ if(name==='ngate') newGate(); else if(name==='plans') buildPlans(); else if(name==='gate') buildGU(); if(name!=='rest') $('#pwZeroChip').classList.remove('shake'); $$('.pw-ov').forEach(o=>o.classList.add('hidden')); paintChips(); }
-  function start(){ deviceId(); rollDay(); ackEnd(getPass()); paintChips(); if(blocked()) showRest(); setInterval(tick,1000); }
+  async function start(route){ deviceId(); rollDay(); await verifyStored(); ackEnd(getPass()); paintChips();
+    if(route==='allset'&&showAllset()){} else if(route==='passes') openGate('plans','home'); else if(blocked()) showRest();
+    setInterval(tick,1000); }
   return { onScreen, start, getPass };
 })();
 payHook=pay.onScreen;
@@ -1043,8 +1102,11 @@ const splash=(function(){
   return { show, hide };
 })();
 $('#replaySplash').onclick=()=>{ sfx.boop(); go('home'); splash.show(); };
-splash.show();
-pay.start();
+/* /pass/ sends grown-ups back with #allset (paid) or #passes (cancel): skip the welcome screen, then clear the hash */
+const route=(location.hash||'').slice(1);
+if(route==='allset'||route==='passes'){ try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){} }
+else splash.show();
+pay.start(route);
 
 })();
 </script>

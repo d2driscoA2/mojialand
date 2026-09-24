@@ -130,3 +130,11 @@ select cron.unschedule('mojialand-nightly-cleanup')
 
 select cron.schedule('mojialand-nightly-cleanup', '0 8 * * *',
                      $$select public.nightly_cleanup()$$);
+
+-- Payments step 2 (checkout). Safe to run more than once.
+-- emailed_at: when the code email went out, so a retried webhook never sends twice.
+alter table public.passes add column if not exists emailed_at timestamptz;
+
+-- Rate limiter used by the functions. Counts hits per hashed key per window.
+create or replace function public.rate_hit(p_key text, p_window_seconds int, p_limit int) returns boolean language plpgsql security definer set search_path=public as $$ declare w timestamptz := to_timestamp(floor(extract(epoch from now())/p_window_seconds)*p_window_seconds); n int; begin insert into rate_limits(key,window_start,hits) values(p_key,w,1) on conflict (key,window_start) do update set hits=rate_limits.hits+1 returning hits into n; return n<=p_limit; end $$;
+revoke all on function public.rate_hit(text,int,int) from public, anon, authenticated; grant execute on function public.rate_hit(text,int,int) to service_role;
