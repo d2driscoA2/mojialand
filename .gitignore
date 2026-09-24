@@ -5,3 +5,7 @@ node_modules
 .netlify
 site/_headers
 site/robots.txt
+
+# Secrets: never commit
+.env
+.env.*
