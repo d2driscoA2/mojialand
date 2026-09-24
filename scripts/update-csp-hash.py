@@ -7,9 +7,25 @@ Pages:
   index.html       the Mojialand website (grown-ups: passes, help, legal)
   play/index.html  the game (kid screens: nothing leaves the device)
 """
-import re, hashlib, base64, sys, pathlib
+import re, hashlib, base64, sys, os, pathlib
 
 root = pathlib.Path(__file__).resolve().parent.parent
+
+# Staging mode: the staging Netlify project sets MOJIA_ENV=staging.
+# Same code on both branches; only this setting differs.
+STAGING = os.environ.get('MOJIA_ENV', '').lower() == 'staging'
+BADGE = ('<div aria-hidden="true" style="position:fixed;left:8px;bottom:8px;z-index:99999;'
+         'pointer-events:none;background:#30254A;color:#FFC83D;font:900 12px/1 system-ui,sans-serif;'
+         'letter-spacing:.12em;padding:7px 10px;border-radius:999px;opacity:.9">STAGING</div>')
+
+if STAGING:
+    for rel in ('index.html', 'play/index.html'):
+        f = root / rel
+        h = f.read_text(encoding='utf-8')
+        if 'STAGING</div>' not in h:
+            h = h.replace('</body>', BADGE + '</body>', 1)
+            f.write_text(h, encoding='utf-8')
+    (root / 'robots.txt').write_text('User-agent: *\nDisallow: /\n', encoding='utf-8')
 
 
 def script_hash(rel):
@@ -39,6 +55,8 @@ common = """  Permissions-Policy: camera=(), microphone=(), geolocation=(), paym
   Referrer-Policy: no-referrer
   Strict-Transport-Security: max-age=31536000; includeSubDomains
   Cross-Origin-Opener-Policy: same-origin"""
+if STAGING:
+    common += "\n  X-Robots-Tag: noindex, nofollow"
 
 def block(path, csp, xfo):
     return f"""{path}
@@ -54,4 +72,4 @@ headers = "".join([
     "/fonts/*\n  Cache-Control: public, max-age=31536000, immutable\n",
 ])
 (root / '_headers').write_text(headers, encoding='utf-8')
-print('wrote _headers: game sha256-%s, site sha256-%s' % (game, site))
+print('wrote _headers (%s): game sha256-%s, site sha256-%s' % ('staging' if STAGING else 'production', game, site))
