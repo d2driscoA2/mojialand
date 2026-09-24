@@ -7,11 +7,10 @@ export class DbError extends Error {}
 export async function rest(method, path, { body, prefer } = {}) {
   const base = String(process.env.SUPABASE_URL || '').replace(/\/+$/, '');
   const key = process.env.SUPABASE_SERVICE_KEY;
-  const headers = {
-    apikey: key,
-    Authorization: 'Bearer ' + key,
-    Accept: 'application/json',
-  };
+  // Legacy service_role keys are JWTs and go in both headers. New
+  // sb_secret_ keys are not JWTs and go only in the apikey header.
+  const headers = { apikey: key, Accept: 'application/json' };
+  if (String(key || '').startsWith('eyJ')) headers.Authorization = 'Bearer ' + key;
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   if (prefer) headers.Prefer = prefer;
   let res;
