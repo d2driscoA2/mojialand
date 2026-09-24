@@ -17,8 +17,17 @@ export function makeTokenPayload(pass, env) {
   };
 }
 
+// The private key may be stored as a JWK JSON string (preferred; one line,
+// safe for the Netlify CLI), a PEM, or a base64-encoded PEM.
+export function loadPrivateKey(value) {
+  let v = String(value || '').trim();
+  if (v.startsWith('{')) return crypto.createPrivateKey({ key: JSON.parse(v), format: 'jwk' });
+  if (!v.includes('BEGIN')) v = Buffer.from(v, 'base64').toString('utf8');
+  return crypto.createPrivateKey(v.replace(/\\n/g, '\n'));
+}
+
 export function signToken(payload, privatePem) {
-  const key = crypto.createPrivateKey(privatePem);
+  const key = loadPrivateKey(privatePem);
   const body = b64u(JSON.stringify(payload));
   const sig = crypto.sign('sha256', Buffer.from(body, 'utf8'), { key, dsaEncoding: 'ieee-p1363' });
   return body + '.' + b64u(sig);
