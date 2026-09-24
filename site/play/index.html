@@ -314,13 +314,129 @@ body.drawer-open .addbtn{display:none}
 #splash .sp-cta button:focus-visible,.big:focus-visible,.gamebtn:focus-visible,.pill:focus-visible,.choice:focus-visible,.tile:focus-visible,.mt:focus-visible{outline:3px solid var(--purple-d);outline-offset:2px}
 /* home brand header (v1.4) */
 .homehead{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;padding-top:6px}.homehead .wordmark{width:212px;height:auto;display:block;pointer-events:none}.tagline{display:flex;align-items:center;gap:8px;font-family:var(--display);font-size:11px;font-weight:900;letter-spacing:2px;color:var(--purple-d)}.tagline i{width:6px;height:6px;border-radius:999px;display:block}.watermark{position:absolute;left:50%;top:50%;width:110px;transform:translate(-50%,-50%);opacity:.08;pointer-events:none;user-select:none}#s-home .gamebtn{color:var(--ink)!important}
+/* ---------- payments slice 1: timer chip, time's up, parent gate, pass screen, Grown-ups additions ---------- */
+.pw-chip{white-space:nowrap;display:inline-flex;align-items:center;gap:6px;background:var(--white);border-radius:999px;padding:4px 10px 4px 5px;font-family:var(--display);font-weight:800;font-size:13px;line-height:1.5;color:var(--ink);box-shadow:var(--shadow);pointer-events:none}
+.pw-chip svg{width:22px;height:22px;display:block}
+.pw-chip.pass{background:var(--green);color:var(--ink);padding:5px 11px}
+.pw-chip.pass svg,.pw-chip.zero svg{display:none}
+.pw-chip.low{background:var(--yellow);animation:pwChipPulse 1.4s ease-in-out infinite}
+@keyframes pwChipPulse{50%{box-shadow:0 0 0 5px rgba(255,200,61,.45)}}
+.pw-chip.zero{background:var(--pink);color:#fff;font-size:15px;padding:5px 12px 5px 8px}
+.pw-chip.zero .pw-glass{font-size:18px}
+.pw-chip.zero.shake{animation:pwZshake .6s ease-in-out 2}
+@keyframes pwZshake{20%{transform:rotate(-8deg)}40%{transform:rotate(8deg)}60%{transform:rotate(-5deg)}80%{transform:rotate(5deg)}}
+.homehead .pw-home-chip{position:absolute;top:9px;left:0;z-index:5}
+.homehead .wordmark{width:min(212px,calc(100% - 188px))}
+#s-pattern .bar,#s-bounce .bar,#s-match .bar,#s-parade .bar{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px}
+#s-pattern .bar>.pill,#s-bounce .bar>.pill,#s-match .bar>.pill,#s-parade .bar>.pill{justify-self:start}
+.pw-slot{justify-self:end;display:flex;justify-content:flex-end;min-width:0}
+/* time's up */
+.pw-rest{align-items:center;justify-content:center;text-align:center;gap:12px;background:var(--cream)}
+.pw-resttop{position:absolute;top:max(14px,env(safe-area-inset-top,0px));left:16px}
+.pw-friends{font-size:44px;letter-spacing:-4px;line-height:1;filter:saturate(.8)}
+.pw-zz{font-size:26px;vertical-align:top;margin-right:6px;display:inline-block;animation:pwZz 2s ease-in-out infinite}
+@keyframes pwZz{50%{transform:translateY(-6px);opacity:.6}}
+.pw-bubble{border:0;background:var(--white);border-radius:22px;padding:8px 16px;font-family:var(--display);font-weight:900;font-size:20px;color:var(--purple-d);box-shadow:var(--shadow);display:flex;gap:8px;align-items:center;position:relative;cursor:pointer}
+.pw-bubble::after{content:"";position:absolute;bottom:-8px;left:50%;margin-left:-8px;border:8px solid transparent;border-top-color:var(--white);border-bottom:0}
+.pw-btxt{display:grid;line-height:1.15;text-align:left}
+.pw-btxt small{font-size:15px;color:var(--pink)}
+.pw-walk{display:flex;align-items:center;gap:8px;font-size:52px;line-height:1;width:100%;justify-content:center}
+.pw-walk .kid{display:inline-block;animation:pwWalk 2.4s ease-in-out infinite}
+@keyframes pwWalk{0%,15%{transform:translateX(0)}60%,100%{transform:translateX(34px)}}
+.pw-trail{display:flex;gap:2px;font-size:18px}
+.pw-trail i{font-style:normal;opacity:.15;animation:pwStep 2.4s infinite}
+.pw-trail i:nth-child(2){animation-delay:.3s}.pw-trail i:nth-child(3){animation-delay:.6s}
+@keyframes pwStep{30%,60%{opacity:.9}}
+.pw-point{font-size:40px;line-height:1;animation:pwBob 1s ease-in-out infinite}
+@keyframes pwBob{50%{transform:translateY(8px)}}
+.pw-grown{border:0;border-radius:999px;background:var(--purple);color:var(--white);padding:14px 26px;font-family:var(--display);font-weight:900;font-size:20px;display:flex;gap:10px;align-items:center;cursor:pointer;box-shadow:0 4px 0 var(--purple-d);animation:pwPulse 1.6s ease-in-out infinite}
+.pw-grown .e{font-size:30px;line-height:1}
+@keyframes pwPulse{50%{transform:scale(1.07);box-shadow:0 4px 0 var(--purple-d),0 0 0 10px rgba(113,56,209,.18)}}
+.pw-hint{font-size:12px;font-weight:700;color:var(--mute);margin:0;max-width:34ch}
+/* parent screens */
+.pw-par{background:var(--white);gap:12px;overflow-y:auto;overflow-x:hidden;user-select:text;-webkit-user-select:text}
+.pw-par h2{font-family:var(--display);font-weight:900;font-size:23px;line-height:1.15;margin:0;color:var(--ink);text-wrap:balance}
+.pw-par p{margin:0;color:var(--mute);font-size:14px;font-weight:700;line-height:1.45}
+.pw-back{background:none;border:0;color:var(--purple-d);font-family:var(--display);font-weight:800;font-size:14px;padding:6px 0;cursor:pointer;align-self:flex-start;justify-self:start}
+.pw-choices{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pw-choice{border:2px solid var(--line);border-radius:20px;background:var(--white);padding:14px 8px;font-family:var(--display);font-weight:900;font-size:24px;color:var(--ink);cursor:pointer}
+.pw-choice.wrong{border-color:var(--red);animation:pwShake .3s}
+@keyframes pwShake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.pw-word{font-family:var(--display);font-weight:900;font-size:30px;color:var(--purple);text-align:center;margin:6px 0}
+#s-plans{gap:9px;padding-top:max(12px,env(safe-area-inset-top,0px));padding-bottom:max(12px,env(safe-area-inset-bottom,0px))}
+.pw-plantop{display:grid;grid-template-columns:1fr auto 1fr;align-items:center}
+.pw-plantop img{width:150px;height:auto;display:block}
+.pw-par h2.pw-brandh{font-size:26px;line-height:1.1;color:var(--purple);text-align:center;margin:-2px 0 0}
+.pw-par p.pw-plansub{text-align:center;margin:-6px 0 0}
+#pwCards{display:grid;gap:8px}
+.pw-plan{border:2px solid var(--line);border-radius:22px;padding:9px 12px;display:grid;grid-template-columns:1fr auto;gap:0 10px;cursor:pointer;background:var(--white);text-align:left;color:var(--ink);font:inherit;width:100%}
+.pw-plan[aria-pressed="true"]{border-color:var(--purple);box-shadow:0 0 0 3px var(--purple-l)}
+.pw-plan b{font-weight:900;font-size:17px}
+.pw-plan .price{font-family:var(--display);font-weight:900;font-size:22px;grid-row:span 2;align-self:center;color:var(--purple)}
+.pw-plan small{color:var(--mute);font-size:13px;font-weight:700}
+.pw-plan s{color:var(--mute);font-size:14px;font-weight:700;margin-right:4px}
+.pw-tag{display:inline-block;background:var(--yellow);color:var(--ink);border-radius:8px;font-size:11px;font-weight:900;padding:1px 7px;margin-left:6px;vertical-align:2px}
+.pw-trust{list-style:none;margin:0;padding:8px 10px;background:var(--cream);border-radius:16px;display:grid;gap:4px;font-size:12.5px;font-weight:700;color:var(--ink)}
+.pw-trust li{display:flex;gap:8px;align-items:flex-start;line-height:1.3}
+.pw-trust li span:first-child{flex:none;width:18px;text-align:center}
+.pw-trust b{font-weight:900}
+.pw-par p.pw-why{font-size:12.5px;text-align:center}
+.pw-par p.pw-more{font-size:13px}
+.pw-link{background:none;border:0;color:var(--purple);font-family:var(--display);font-weight:800;font-size:13px;cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px}
+.pw-primary{background:var(--purple);color:var(--white);border:0;border-radius:999px;padding:14px;font-family:var(--display);font-weight:900;font-size:17px;cursor:pointer;width:100%}
+.pw-secondary{background:var(--white);border:2px solid var(--purple);color:var(--purple);border-radius:999px;padding:11px;font-family:var(--display);font-weight:900;font-size:15px;cursor:pointer;width:100%}
+.pw-spacer{flex:1}
+.pw-marks{display:flex;justify-content:center;flex-wrap:wrap;gap:6px}
+.pw-pm{border:1px solid #DDD;border-radius:5px;padding:2px 7px;font:800 10.5px system-ui,sans-serif;color:#555;background:#fff;letter-spacing:.2px}
+.pw-pmby{font-size:11px;color:var(--mute);align-self:center}
+.pw-pmby b{font-weight:900;color:#555}
+.pw-links{display:flex;justify-content:center;gap:16px;flex-wrap:wrap}
+/* grown-ups additions */
+#s-gate{overflow-y:auto;overflow-x:hidden}
+#s-gate>*{flex-shrink:0}
+.pw-status{border-radius:20px;padding:12px 14px;background:var(--cream);display:grid;gap:2px;font-size:13px;color:var(--ink)}
+.pw-status b{font-family:var(--display);font-weight:900;font-size:17px}
+.pw-status span{color:var(--mute)}
+.pw-gulist{display:grid;gap:8px}
+.pw-gurow{display:flex;justify-content:space-between;align-items:center;gap:10px;border:2px solid var(--line);border-radius:16px;padding:12px;font:inherit;font-weight:800;font-size:14px;background:var(--white);cursor:pointer;color:var(--ink);text-align:left;width:100%;min-height:48px}
+.pw-gurow span:last-child{color:var(--purple);white-space:nowrap}
+.pw-gurow.share{border-color:var(--purple);background:var(--purple-l)}
+.pw-hsbig{display:flex;gap:14px;align-items:flex-end;background:linear-gradient(135deg,#F3ECFC,#FFF1C9);border:2px solid var(--purple);border-radius:24px;padding:14px 14px 0;overflow:hidden}
+.pw-hsbig>div:last-child{padding-bottom:14px;min-width:0}
+.pw-hsbig p{margin:0;font-size:13px;font-weight:700;color:var(--ink);line-height:1.4}
+.pw-hsbig .pw-hst{font-family:var(--display);font-weight:900;font-size:18px;line-height:1.15;color:var(--purple-d);margin-bottom:4px}
+.pw-hsbig.done{background:#DDF6E7;border-color:#2E9E62}
+.pw-hsbig.done .pw-hst{color:#1E7A48}
+.pw-hsbig .pw-primary{padding:10px;font-size:15px;margin-top:8px}
+/* mini iPhone home screen */
+.pw-mini{flex:none;width:92px;height:118px;border-radius:18px 18px 0 0;border:5px solid var(--ink);border-bottom:0;background:linear-gradient(160deg,#9CC7F5,#C9B6F2);padding:14px 7px 0;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;align-content:start;position:relative;overflow:hidden}
+.pw-mini::before{content:"9:41";position:absolute;top:2px;left:8px;font:800 7px system-ui,sans-serif;color:#fff}
+.pw-mini::after{content:"";position:absolute;top:3px;left:50%;width:22px;height:5px;margin-left:-11px;border-radius:4px;background:var(--ink)}
+.pw-mini i{display:grid;place-items:center;aspect-ratio:1;border-radius:6px;font-style:normal;font-size:11px;line-height:1}
+.pw-mini i.mj{padding:0;overflow:hidden;box-shadow:0 0 0 2px #fff,0 0 0 4px var(--yellow);animation:pwGlow 1.8s ease-in-out infinite;position:relative}
+.pw-mini i.mj img{width:100%;height:100%;display:block;border-radius:inherit}
+@keyframes pwGlow{50%{box-shadow:0 0 0 2px #fff,0 0 0 6px var(--yellow)}}
+.pw-mini.big{width:100%;max-width:220px;height:auto;aspect-ratio:220/250;margin:0 auto;border-width:7px;border-radius:30px 30px 0 0;padding:26px 14px 0;gap:12px;grid-template-columns:repeat(4,1fr)}
+.pw-mini.big::before{font-size:10px;top:6px;left:16px}
+.pw-mini.big::after{width:44px;height:9px;margin-left:-22px;top:6px}
+.pw-mini.big i{font-size:18px;border-radius:11px}
+/* sheets */
+.pw-ov{position:absolute;inset:0;z-index:1500;background:rgba(48,37,74,.45);display:flex;align-items:flex-end;animation:fadein .2s}
+.pw-ov .pw-card{background:var(--white);width:100%;border-radius:28px 28px 0 0;padding:18px 18px max(18px,env(safe-area-inset-bottom,0px));display:grid;gap:10px;text-align:center}
+.pw-ov h3{margin:0;font-family:var(--display);font-weight:900;font-size:20px;color:var(--ink)}
+.pw-ov p{margin:0;font-size:13.5px;font-weight:700;color:var(--mute)}
+.pw-steps{display:grid;gap:8px;text-align:left}
+.pw-steps div{display:flex;gap:10px;align-items:center;background:var(--cream);border-radius:14px;padding:8px 10px;font-size:14px;font-weight:800;color:var(--ink)}
+.pw-steps b{flex:none;width:34px;height:34px;border-radius:10px;background:var(--white);display:grid;place-items:center;font-size:18px;box-shadow:var(--shadow)}
+.pw-steps b img{width:26px;height:26px;border-radius:7px;display:block}
+.pw-grown:focus-visible,.pw-choice:focus-visible,.pw-plan:focus-visible,.pw-primary:focus-visible,.pw-secondary:focus-visible,.pw-link:focus-visible,.pw-back:focus-visible,.pw-gurow:focus-visible,.pw-bubble:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
 </style>
 
 <div id="app">
 
 <!-- HOME -->
 <section class="screen" id="s-home">
-  <div class="homehead"><button class="pill gear" id="lockBtn" style="position:absolute;top:0;right:0;z-index:5" aria-label="Grown-ups, hold for 3 seconds"><span class="hold"></span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7138D1" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg></button><img class="wordmark" src="/logo/wordmark.png" width="212" height="77" alt="Mojialand" draggable="false"><div class="tagline" aria-hidden="true"><span>PLAY</span><i style="background:var(--pink)"></i><span>CREATE</span><i style="background:var(--yellow)"></i><span>EXPLORE</span><i style="background:var(--blue)"></i><span>TOGETHER</span></div></div>
+  <div class="homehead"><span class="pw-home-chip"><span class="pw-chip" data-chip role="timer"><svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="14" fill="none" stroke="#F3ECFC" stroke-width="6"/><circle class="arc" cx="18" cy="18" r="14" fill="none" stroke="#FFC83D" stroke-width="6" stroke-linecap="round" stroke-dasharray="88" stroke-dashoffset="0" transform="rotate(-90 18 18)"/></svg><span class="t">15:00</span></span></span><button class="pill gear" id="lockBtn" style="position:absolute;top:0;right:0;z-index:5" aria-label="Grown-ups, hold for 3 seconds"><span class="hold"></span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7138D1" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg></button><img class="wordmark" src="/logo/wordmark.png" width="212" height="77" alt="Mojialand" draggable="false"><div class="tagline" aria-hidden="true"><span>PLAY</span><i style="background:var(--pink)"></i><span>CREATE</span><i style="background:var(--yellow)"></i><span>EXPLORE</span><i style="background:var(--blue)"></i><span>TOGETHER</span></div></div>
   
   <div class="stage" id="canvas"><img class="watermark" src="/logo/monogram-watermark.png" alt="" draggable="false"><div class="hint">Tap anywhere to stamp!</div><button class="pill danger" id="clearHome" aria-label="Clear the picture" style="position:absolute;right:12px;top:8px;height:40px;z-index:5"><span class="e" style="font-size:16px">🗑️</span>Clear</button></div>
   <div class="tray" id="tray"></div>
@@ -334,28 +450,28 @@ body.drawer-open .addbtn{display:none}
 
 <!-- PATTERN -->
 <section class="screen hidden" id="s-pattern" data-bg="grape">
-  <div class="bar"><button class="pill gear" data-go="home" aria-label="Back to home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7138D1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg></button><div class="gname"><span class="e">⭐</span>Pattern</div><div style="width:48px"></div></div>
+  <div class="bar"><button class="pill gear" data-go="home" aria-label="Back to home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7138D1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg></button><div class="gname"><span class="e">⭐</span>Pattern</div><div class="pw-slot"><span class="pw-chip" data-chip role="timer"><svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="14" fill="none" stroke="#F3ECFC" stroke-width="6"/><circle class="arc" cx="18" cy="18" r="14" fill="none" stroke="#FFC83D" stroke-width="6" stroke-linecap="round" stroke-dasharray="88" stroke-dashoffset="0" transform="rotate(-90 18 18)"/></svg><span class="t">15:00</span></span></div></div>
   <div class="stage"><div class="pscene" id="pscene"></div><div class="center"><div class="ptitle">What comes next?</div><div class="prow" id="prow"></div><div class="choices" id="pchoices"></div><div class="dots" id="pdots"><i></i><i></i><i></i></div></div></div>
   <div class="btnrow"><button class="big sand" data-demo="pattern"><span class="e">🔁</span>Show me</button><button class="big" id="psay"><span class="e">🔊</span>Say it</button></div>
 </section>
 
 <!-- BOUNCE -->
 <section class="screen hidden" id="s-bounce" data-bg="sky">
-  <div class="bar"><button class="pill gear" data-go="home" aria-label="Back to home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7138D1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg></button><div class="gname"><span class="e">🎈</span>Bounce</div><div style="width:48px"></div></div>
+  <div class="bar"><button class="pill gear" data-go="home" aria-label="Back to home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7138D1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg></button><div class="gname"><span class="e">🎈</span>Bounce</div><div class="pw-slot"><span class="pw-chip" data-chip role="timer"><svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="14" fill="none" stroke="#F3ECFC" stroke-width="6"/><circle class="arc" cx="18" cy="18" r="14" fill="none" stroke="#FFC83D" stroke-width="6" stroke-linecap="round" stroke-dasharray="88" stroke-dashoffset="0" transform="rotate(-90 18 18)"/></svg><span class="t">15:00</span></span></div></div>
   <div class="bwrap"><div class="stage" id="bstage"><canvas id="bcanvas"></canvas></div><div class="vwrap" id="vwrap"><div class="vtray" id="vtray"></div><div class="vmore" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div></div></div>
   <div class="btnrow"><button class="big sand" data-demo="bounce"><span class="e">🔁</span>Show me</button><button class="big danger" id="bclear"><span class="e">🗑️</span>Clear</button></div>
 </section>
 
 <!-- MATCH -->
 <section class="screen hidden" id="s-match" data-bg="pink">
-  <div class="bar"><button class="pill gear" data-go="home" aria-label="Back to home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7138D1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg></button><div class="gname"><span class="e">😊</span>Match</div><div style="width:48px"></div></div>
+  <div class="bar"><button class="pill gear" data-go="home" aria-label="Back to home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7138D1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg></button><div class="gname"><span class="e">😊</span>Match</div><div class="pw-slot"><span class="pw-chip" data-chip role="timer"><svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="14" fill="none" stroke="#F3ECFC" stroke-width="6"/><circle class="arc" cx="18" cy="18" r="14" fill="none" stroke="#FFC83D" stroke-width="6" stroke-linecap="round" stroke-dasharray="88" stroke-dashoffset="0" transform="rotate(-90 18 18)"/></svg><span class="t">15:00</span></span></div></div>
   <div class="stage" style="background:var(--purple-l)"><div class="grid" id="mgrid"></div><div class="reward hidden" id="mreward"></div></div>
   <div class="btnrow"><button class="big sand" data-demo="match"><span class="e">🔁</span>Show me</button><button class="big" id="msay"><span class="e">🔊</span>Say it</button></div>
 </section>
 
 <!-- PARADE -->
 <section class="screen hidden" id="s-parade" data-bg="sun">
-  <div class="bar"><button class="pill gear" data-go="home" aria-label="Back to home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7138D1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg></button><div class="gname"><span class="e">🎉</span>Parade</div><div style="width:48px"></div></div>
+  <div class="bar"><button class="pill gear" data-go="home" aria-label="Back to home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7138D1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg></button><div class="gname"><span class="e">🎉</span>Parade</div><div class="pw-slot"><span class="pw-chip" data-chip role="timer"><svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="14" fill="none" stroke="#F3ECFC" stroke-width="6"/><circle class="arc" cx="18" cy="18" r="14" fill="none" stroke="#FFC83D" stroke-width="6" stroke-linecap="round" stroke-dasharray="88" stroke-dashoffset="0" transform="rotate(-90 18 18)"/></svg><span class="t">15:00</span></span></div></div>
   <div class="stage" id="pstage">
     <div class="field" id="field"></div>
     <div class="cloud" id="c1">☁️</div><div class="cloud" id="c2" style="top:20%">☁️</div>
@@ -378,6 +494,8 @@ body.drawer-open .addbtn{display:none}
 <!-- GATE -->
 <section class="screen hidden" id="s-gate">
   <div class="bar"><button class="pill gear" data-go="home" aria-label="Back to home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7138D1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg></button><div class="gname">Grown-ups</div><div style="width:48px"></div></div>
+  <div class="pw-status" id="pwStatus"></div>
+  <div class="pw-gulist" id="pwGuList"></div>
   <div class="banner"><span class="e">🔒</span><div>Hold for 3 seconds<div style="font-size:12px;font-weight:700;color:var(--purple-d);opacity:.8">This area is for grown-ups.</div></div></div>
   <div class="row"><div><div class="l">Voice</div><div class="s">Speaks emoji names and how-to cards out loud. Off by default.</div></div><button class="sw" id="swVoice" role="switch" aria-checked="false" aria-label="Voice"></button></div>
   <div class="row"><div><div class="l">Sounds</div><div class="s">Boops, chimes, cheers</div></div><button class="sw" id="swSound" role="switch" aria-checked="true" aria-label="Sounds"></button></div>
@@ -386,6 +504,48 @@ body.drawer-open .addbtn{display:none}
   <div class="row"><div><div class="l">Show cards again</div><div class="s">Replay the how-to cards for every game</div></div><button class="small" id="resetDemos">Reset</button></div>
   <div class="row"><div><div class="l">Welcome screen</div><div class="s">Play the welcome screen again</div></div><button class="small" id="replaySplash">Show</button></div>
   <div class="note"><div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="width:28px;height:28px;border-radius:999px;background:var(--purple);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px">✓</span><b style="color:var(--ink);font-size:13px">No accounts · No ads · No tracking</b></div>Nothing leaves your phone. Just a safe, fun place to play, create and explore.<br><span id="voiceInfo"></span></div>
+  <div class="pw-hsbig" id="pwHS"><div class="pw-mini" id="pwMini" aria-hidden="true"></div><div><p class="pw-hst" id="pwHSt">Mojialand on your Home Screen!</p><p id="pwHSbody">Add Mojialand to your Home Screen. Your kids find it next to your other apps, and it opens full screen.</p><button class="pw-primary" id="pwHSbtn">Show me how</button></div></div>
+</section>
+
+<!-- TIME'S UP (kid-facing, no price) -->
+<section class="screen hidden pw-rest" id="s-rest">
+  <div class="pw-resttop"><span class="pw-chip zero" id="pwZeroChip"><span class="pw-glass">⌛</span><span>0:00</span></span></div>
+  <div class="pw-friends" aria-hidden="true"><span class="pw-zz">💤</span>🦄🦈🐶😴🍕</div>
+  <button class="pw-bubble" id="pwBubble" aria-label="Time's up! Go get a grown-up!"><span aria-hidden="true">🔊</span><span class="pw-btxt" aria-hidden="true"><small>Time's up!</small>Go get a grown-up!</span></button>
+  <div class="pw-walk" aria-hidden="true"><span class="kid">🧒</span><span class="pw-trail"><i>👣</i><i>👣</i><i>👣</i></span><span>👩🧔</span></div>
+  <div class="pw-point" aria-hidden="true">👇</div>
+  <button class="pw-grown" id="pwGrown"><span class="e" aria-hidden="true">👩🧔</span>Grown-up</button>
+  <p class="pw-hint" id="pwRestHint">Free play comes back tomorrow. Or a grown-up picks a pass.</p>
+</section>
+
+<!-- PARENT GATE (number word) -->
+<section class="screen hidden pw-par" id="s-ngate">
+  <button class="pw-back" id="pwGateBack">← Back</button>
+  <h2>Grown-ups only</h2>
+  <p>Tap the number written below. Little kids can't read number words, so this keeps purchases in your hands.</p>
+  <div class="pw-word" id="pwWord">forty-seven</div>
+  <div class="pw-choices" id="pwChoices"></div>
+</section>
+
+<!-- PASS SCREEN: KEEP PLAYING -->
+<section class="screen hidden pw-par" id="s-plans">
+  <div class="pw-plantop"><button class="pw-back" id="pwPlansBack">← Not now</button><img src="/logo/wordmark.png" width="150" height="55" alt="Mojialand" draggable="false"><span></span></div>
+  <h2 class="pw-brandh" id="pwPlansTitle">Keep playing!</h2>
+  <p class="pw-plansub" id="pwPlansSub">Pick a pass. No account needed.</p>
+  <div id="pwCards"></div>
+  <ul class="pw-trust">
+    <li><span>🛡️</span><span><b>Nothing collected from your child.</b> Ever. No names, no photos, no voice.</span></li>
+    <li><span>🚫</span><span><b>No ads, no tracking, no chat.</b> No strangers, no pop-ups, nothing to click away to.</span></li>
+    <li><span>📱</span><span id="pwDevLine"><b>One pass, all your devices.</b> Up to 5 phones and tablets in your family.</span></li>
+  </ul>
+  <p class="pw-why">Made by a Michigan family. Your pass keeps ads out. <button class="pw-link" id="pwWhyBtn" aria-expanded="false" aria-controls="pwWhyMore">Why we charge</button></p>
+  <p class="pw-more" id="pwWhyMore" hidden>Many free kids apps pay their bills with ads and data about your child. We won't. Parents who pay keep Mojialand this way for every family.</p>
+  <div class="pw-spacer"></div>
+  <button class="pw-primary" id="pwPay">Pay $1.50</button>
+  <div class="pw-marks" aria-label="Pay with Apple Pay, Google Pay, Visa, Mastercard, or Amex. Payments by Stripe.">
+    <span class="pw-pm">Apple Pay</span><span class="pw-pm">G Pay</span><span class="pw-pm">VISA</span><span class="pw-pm">Mastercard</span><span class="pw-pm">AMEX</span><span class="pw-pmby">by <b>stripe</b></span>
+  </div>
+  <div class="pw-links"><button class="pw-link" id="pwCode">Have a code?</button><button class="pw-link" id="pwHelp">Need help?</button></div>
 </section>
 
 <!-- WELCOME SPLASH -->
@@ -410,6 +570,22 @@ body.drawer-open .addbtn{display:none}
     <div class="sp-cta"><button type="button" id="spGo">Tap to Play</button></div>
   </div>
 </main>
+<div class="pw-ov hidden" id="pwOvHS" role="dialog" aria-label="Mojialand on your Home Screen"><div class="pw-card">
+  <h3>Mojialand on your Home Screen!</h3>
+  <div class="pw-mini big" id="pwMiniBig" aria-hidden="true"></div>
+  <div class="pw-steps">
+    <div><b aria-hidden="true">⬆️</b>In Safari, tap the Share button</div>
+    <div><b aria-hidden="true">➕</b>Tap "Add to Home Screen"</div>
+    <div><b aria-hidden="true"><img src="/logo/icon-180.png" alt=""></b>Tap Add. Mojialand sits with your apps.</div>
+  </div>
+  <p style="font-size:12px">Android and computers show one Install button instead.</p>
+  <button class="pw-secondary" data-pw-close>Got it</button>
+</div></div>
+<div class="pw-ov hidden" id="pwOvSoon" role="dialog" aria-label="Coming soon"><div class="pw-card">
+  <h3 id="pwSoonTitle">Coming soon</h3>
+  <p id="pwSoonText">This part of Mojialand is on the way.</p>
+  <button class="pw-secondary" data-pw-close>OK</button>
+</div></div>
 <div id="toast" class="toast"><span class="ck">✓</span><span id="toastText">You did it!</span></div>
 <div id="hand" class="hidden">👆</div>
 <div id="watch" class="hidden"><span>👀</span>Watch</div>
@@ -420,6 +596,10 @@ body.drawer-open .addbtn{display:none}
 <script>
 (function(){
 'use strict';
+/* Payment settings. Defaults here; a later server call may overwrite them (admin Settings). */
+const SETTINGS={first_visit_minutes:15,daily_minutes:3,daily_reset:'04:00',warning_minutes:10,credit_days:7,devices_per_code:5};
+const PRICES={pass:1.50,add:1.50,life:14.99,up:13.49}; /* shown only behind the parent gate; set in Stripe */
+var payHook=null; function onScreen(name){ if(payHook) payHook(name); }
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 /* Emoji library: Unicode Animals & Nature, named for a 3-year-old */
 const LIB=[
@@ -472,10 +652,10 @@ let toastT=null; function toast(text){ const t=$('#toast'); $('#toastText').text
 function confetti(host,x,y,n){ const cols=['#FF6FAE','#4CC9F0','#FFC83D','#8AE234','#9B5DE5']; for(let i=0;i<(n||18);i++){ const c=document.createElement('div'); c.className='confetti'; c.style.left=x+'px'; c.style.top=y+'px'; c.style.background=rnd(cols); c.style.setProperty('--dx',(Math.random()*220-110)+'px'); c.style.setProperty('--dy',(Math.random()*180+40)+'px'); host.appendChild(c); setTimeout(()=>c.remove(),1100);} }
 
 /* ---------- navigation ---------- */
-const screens={home:'#s-home',pattern:'#s-pattern',bounce:'#s-bounce',match:'#s-match',parade:'#s-parade',gate:'#s-gate'};
+const screens={home:'#s-home',pattern:'#s-pattern',bounce:'#s-bounce',match:'#s-match',parade:'#s-parade',gate:'#s-gate',rest:'#s-rest',ngate:'#s-ngate',plans:'#s-plans'};
 let current='home';
 const games={};
-function go(name){ stopDemo(); closeGlass(); if(games[current]&&games[current].leave) games[current].leave(); $$('.screen').forEach(s=>s.classList.add('hidden')); $(screens[name]).classList.remove('hidden'); current=name; if(games[name]&&games[name].enter) games[name].enter(); if(games[name]&&settings.demos&&!demoDone[name]) setTimeout(()=>showGlass(name),350); }
+function go(name){ stopDemo(); closeGlass(); if(games[current]&&games[current].leave) games[current].leave(); $$('.screen').forEach(s=>s.classList.add('hidden')); $(screens[name]).classList.remove('hidden'); current=name; onScreen(name); if(games[name]&&games[name].enter) games[name].enter(); if(games[name]&&settings.demos&&!demoDone[name]) setTimeout(()=>showGlass(name),350); }
 document.addEventListener('click',e=>{ const b=e.target.closest('[data-go]'); if(b){ ctx(); sfx.boop(); go(b.dataset.go);} const d=e.target.closest('[data-demo]'); if(d){ ctx(); sfx.boop(); showGlass(d.dataset.demo);} });
 
 /* ---------- how-to-play glass cards ---------- */
@@ -691,6 +871,137 @@ games.parade=(function(){
     async demo(tap,stopped){ say('Tap plus to add a friend.'); await tap($('#addBtn')); if(stopped()) return; await wait(300); await tap(drawer.tab(1)); if(stopped()) return; await tap(drawer.firstTile()); if(stopped()) return; await wait(500); await tap($('#dclose')); if(stopped()) return; say('Tap the field. The parade chases the lollipop.'); const fake={getBoundingClientRect(){ const r=stage.getBoundingClientRect(); return {left:r.left+r.width*0.75,top:r.top+r.height*0.45,width:0,height:0}; }, click(){ target={x:W()*0.75,y:H()*0.45}; tgt.style.left=target.x+'px'; tgt.style.top=target.y+'px'; tgt.classList.remove('hidden'); sfx.boop(); }}; await tap(fake); await wait(1600); if(stopped()) return; say('Pause. Tap a friend to say bye.'); await tap(pauseBtn); if(stopped()) return; await wait(600); const last=marchers[marchers.length-1]; if(last) await tap(last.el); await wait(900); if(stopped()) return; await tap(pauseBtn); await wait(600); } };
 })();
 
+/* ---------- PAYMENTS slice 1: free play timer, pass state, chip, time's up, parent gate, pass screen, Grown-ups rows ---------- */
+/* Nothing here talks to the network. Pay only moves the top window to /pass/ on this site. */
+const pay=(function(){
+  const MIN=60e3, HOUR=3600e3, DAY=864e5;
+  const PLAY=new Set(['home','pattern','bounce','match','parade']);
+  const money=v=>'$'+v.toFixed(2);
+  const fmtT=t=>{ try{ return new Date(t).toLocaleString([],{weekday:'short',hour:'numeric',minute:'2-digit'}); }catch(e){ return new Date(t).toString(); } };
+  const splashOn=()=>!$('#splash').classList.contains('hidden');
+
+  /* device id: random, made once, only used later to count devices per code */
+  function deviceId(){ let id=store.get('device',''); if(!id){ try{ const b=new Uint8Array(16); crypto.getRandomValues(b); id=[...b].map(x=>x.toString(16).padStart(2,'0')).join(''); store.set('device',id); }catch(e){ id=''; } } return id; }
+  /* pass on the device: {code, kind:'48h'|'forever', ends_at(ms), device_id} */
+  function getPass(){ const p=store.get('pass',null); if(!p||typeof p!=='object'||(p.kind!=='48h'&&p.kind!=='forever')) return null; return {code:String(p.code||''),kind:p.kind,ends_at:Number(p.ends_at)||0,device_id:p.device_id||deviceId()}; }
+  const passOn=p=>!!p&&(p.kind==='forever'||p.ends_at>Date.now());
+  const passEnded=p=>!!p&&p.kind==='48h'&&p.ends_at<=Date.now();
+  const inCredit=p=>passEnded(p)&&Date.now()-p.ends_at<SETTINGS.credit_days*DAY;
+
+  /* free play: minutes used, first visit done, last reset day (play day starts at daily_reset) */
+  function resetMin(){ const m=/^(\d{1,2}):(\d{2})$/.exec(String(SETTINGS.daily_reset)); return m?(+m[1])*60+(+m[2]):240; }
+  function playDay(t){ const d=new Date(t); if(d.getHours()*60+d.getMinutes()<resetMin()) d.setDate(d.getDate()-1); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
+  function rollDay(){ const day=playDay(Date.now()), last=store.get('freeDay',''); if(last!==day){ if(last) store.set('firstDone',true); store.set('freeDay',day); store.set('freeUsed',0); } return day; }
+  const allowance=()=>(store.get('firstDone',false)?SETTINGS.daily_minutes:SETTINGS.first_visit_minutes)*MIN;
+  const freeLeft=()=>Math.max(0,allowance()-(Number(store.get('freeUsed',0))||0)*MIN);
+  /* a 48-hour pass that ends uses up free play for that play day */
+  function ackEnd(p){ if(!passEnded(p)||store.get('passEndAck',0)===p.ends_at) return; store.set('passEndAck',p.ends_at); store.set('passEndDay',rollDay()); store.set('freeUsed',allowance()/MIN); }
+  function endedToday(){ const p=getPass(); return passEnded(p)&&store.get('passEndAck',0)===p.ends_at&&store.get('passEndDay','')===playDay(Date.now()); }
+  function blocked(){ return !passOn(getPass())&&freeLeft()<=0; }
+
+  /* corner chip */
+  function paintChips(){ const p=getPass(); let cls='pw-chip', txt, arc=null;
+    if(passOn(p)){ cls+=' pass'; if(p.kind==='forever') txt='⭐ Forever'; else { const left=p.ends_at-Date.now(); if(left<=SETTINGS.warning_minutes*MIN){ cls+=' low'; txt='⏳ '+Math.max(1,Math.ceil(left/MIN))+' min'; } else txt='⏳ '+Math.ceil(left/HOUR)+'h left'; } }
+    else { const left=freeLeft(), s=Math.ceil(left/1000); txt=Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); arc=(88*(1-left/allowance())).toFixed(1); }
+    $$('[data-chip]').forEach(c=>{ if(c.className!==cls) c.className=cls; const t=c.querySelector('.t'); if(t.textContent!==txt) t.textContent=txt; c.setAttribute('aria-label',p&&passOn(p)?'Pass: '+txt:'Free play left: '+txt); if(arc!==null) c.querySelector('.arc').setAttribute('stroke-dashoffset',arc); }); }
+
+  /* time's up voice: the only speech that ignores the Voice switch */
+  function sayTimesUp(){ if(!('speechSynthesis' in window)) return; try{ if(speechSynthesis.speaking||speechSynthesis.pending) speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance("Time's up! Go get a grown-up!"); if(voice) u.voice=voice; u.rate=0.9; u.pitch=1.2; u.volume=1; u.onend=u.onerror=()=>{ wake(); setTimeout(wake,120); setTimeout(wake,400); }; speechSynthesis.speak(u); setTimeout(wake,60); }catch(e){} }
+  function wiggle(){ const z=$('#pwZeroChip'); z.classList.remove('shake'); void z.offsetWidth; z.classList.add('shake'); }
+  function showRest(){ $('#pwRestHint').textContent=endedToday()?'The pass ended. Free play comes back tomorrow, or a grown-up adds time.':'Free play comes back tomorrow. Or a grown-up picks a pass.';
+    try{ drawer.close(); }catch(e){} go('rest'); wiggle(); if(!splashOn()) sayTimesUp(); }
+  $('#pwBubble').addEventListener('click',()=>sayTimesUp());
+  /* time's up found on app open sits under the welcome screen; speak once the welcome screen is tapped away */
+  $('#splash').addEventListener('click',()=>{ if(current==='rest') setTimeout(()=>{ wiggle(); sayTimesUp(); },60); });
+
+  /* the clock: counts only while visible, on home or a game, with the welcome screen gone */
+  let last=Date.now();
+  const counting=()=>!document.hidden&&PLAY.has(current)&&!splashOn();
+  function tick(){ const now=Date.now(), dt=Math.max(0,Math.min(now-last,5000)); last=now; rollDay(); const p=getPass(); ackEnd(p);
+    if(!passOn(p)&&counting()){ store.set('freeUsed',Math.min(allowance(),(Number(store.get('freeUsed',0))||0)*MIN+dt)/MIN); }
+    if(PLAY.has(current)&&blocked()) showRest();
+    else if(current==='rest'&&!blocked()) go('home');
+    paintChips(); if(current==='gate') paintStatus(); }
+  document.addEventListener('visibilitychange',()=>{ last=Date.now(); if(!document.hidden) tick(); });
+
+  /* parent gate: number words */
+  const ONES=['','one','two','three','four','five','six','seven','eight','nine'], TENS=['','','twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'];
+  const rint=n=>{ try{ const a=new Uint32Array(1); crypto.getRandomValues(a); return a[0]%n; }catch(e){ return Math.floor(Math.random()*n); } };
+  let gateNext='plans', from='home', plan='pass';
+  function newGate(){ let n; do{ n=21+rint(79); }while(n%10===0); const t=Math.floor(n/10), o=n%10; $('#pwWord').textContent=TENS[t]+'-'+ONES[o];
+    const opts=new Set([n]); const cand=[o*10+t, t*10+((o+5)%9||1), ((t+3)%8+2)*10+o, t*10, n+1, n-1]; for(const c of cand){ if(opts.size>=4) break; if(c>=10&&c<=99&&!opts.has(c)) opts.add(c); }
+    const list=[...opts]; for(let i=list.length-1;i>0;i--){ const j=rint(i+1); [list[i],list[j]]=[list[j],list[i]]; }
+    $('#pwChoices').innerHTML=list.map(v=>'<button class="pw-choice" data-n="'+v+'">'+v+'</button>').join(''); $('#pwChoices').dataset.a=String(n); }
+  $('#pwChoices').addEventListener('click',e=>{ const b=e.target.closest('.pw-choice'); if(!b||$('#pwChoices').dataset.busy) return; ctx();
+    if(b.dataset.n===$('#pwChoices').dataset.a){ sfx.boop(); go(gateNext); }
+    else { sfx.hmm(); b.classList.add('wrong'); $('#pwChoices').dataset.busy='1'; setTimeout(()=>{ delete $('#pwChoices').dataset.busy; newGate(); },450); } });
+  function openGate(next,src,pick){ gateNext=next; from=src; plan=pick||''; go('ngate'); }
+  function back(){ if(blocked()) go('rest'); else go(from==='gate'?'gate':'home'); }
+  $('#pwGrown').addEventListener('click',()=>{ ctx(); sfx.boop(); openGate('plans','rest'); });
+  $('#pwGateBack').addEventListener('click',()=>{ ctx(); sfx.boop(); back(); });
+
+  /* pass screen */
+  function card(key,title,small,tag,strike){ return '<button class="pw-plan" aria-pressed="'+(plan===key)+'" data-plan="'+key+'"><b>'+title+(tag?'<span class="pw-tag">best value</span>':'')+'</b><span class="price">'+(strike?'<s>'+money(PRICES.life)+'</s>':'')+money(PRICES[key])+'</span><small>'+small+'</small></button>'; }
+  function buildPlans(){ const p=getPass(); let html='', keys;
+    $('#pwDevLine').innerHTML='<b>One pass, all your devices.</b> Up to '+SETTINGS.devices_per_code+' phones and tablets in your family.';
+    $('#pwWhyMore').hidden=true; $('#pwWhyBtn').setAttribute('aria-expanded','false');
+    if(passOn(p)&&p.kind==='forever'){ $('#pwPlansTitle').textContent='You have Forever'; $('#pwPlansSub').textContent='Nothing to buy. Enjoy.'; $('#pwCards').innerHTML=''; $('#pwPay').hidden=true; return; }
+    $('#pwPay').hidden=false;
+    if(passOn(p)){ keys=['up','add']; $('#pwPlansTitle').textContent='Add time or keep it forever'; $('#pwPlansSub').textContent='Your pass ends '+fmtT(p.ends_at)+'. Nothing changes unless you pick below.';
+      if(!keys.includes(plan)) plan='up';
+      html=card('up','Forever','Your '+money(PRICES.pass)+' pass counts toward Forever.',true,true)+card('add','Add 48 hours','New end time: '+fmtT(p.ends_at+48*HOUR)+'.'); }
+    else if(inCredit(p)){ keys=['up','pass']; $('#pwPlansTitle').textContent='Welcome back'; $('#pwPlansSub').textContent='Your last pass ended. Your '+money(PRICES.pass)+' still counts toward Forever this week.';
+      if(!keys.includes(plan)) plan='up';
+      html=card('up','Forever','Your last '+money(PRICES.pass)+' counts. Pay once, yours for good.',true,true)+card('pass','48-hour pass','Two more days. Never renews by itself.'); }
+    else { keys=['pass','life']; $('#pwPlansTitle').textContent='Keep playing!'; $('#pwPlansSub').textContent='Pick a pass. No account needed.';
+      if(!keys.includes(plan)) plan='pass';
+      html=card('pass','48-hour pass','Two days of everything.')+card('life','Forever','Pay once, play for good.',true); }
+    $('#pwCards').innerHTML=html; syncPlan(); }
+  function syncPlan(){ $$('#pwCards .pw-plan').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.plan===plan))); $('#pwPay').textContent='Pay '+money(PRICES[plan]); }
+  $('#pwCards').addEventListener('click',e=>{ const b=e.target.closest('.pw-plan'); if(!b) return; plan=b.dataset.plan; syncPlan(); });
+  $('#pwWhyBtn').addEventListener('click',()=>{ const open=$('#pwWhyMore').hidden; $('#pwWhyMore').hidden=!open; $('#pwWhyBtn').setAttribute('aria-expanded',String(open)); });
+  $('#pwPlansBack').addEventListener('click',()=>{ ctx(); sfx.boop(); back(); });
+  $('#pwPay').addEventListener('click',()=>{ const url='/pass/?plan='+encodeURIComponent(plan); try{ if(window.top&&window.top!==window.self){ window.top.location.href=url; return; } }catch(e){} location.href=url; });
+  function soon(title){ $('#pwSoonTitle').textContent='Coming soon'; $('#pwSoonText').textContent=title+' is on the way. It arrives in the next update.'; $('#pwOvSoon').classList.remove('hidden'); }
+  $('#pwCode').addEventListener('click',()=>soon('Have a code?'));
+  $('#pwHelp').addEventListener('click',()=>soon('Help'));
+
+  /* Home Screen */
+  let installEvt=null;
+  const standalone=()=>{ try{ return window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true; }catch(e){ return false; } };
+  window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); installEvt=e; });
+  window.addEventListener('appinstalled',()=>{ installEvt=null; buildGU(); });
+  function homeGrid(el,n){ const apps=['📷','🗓️','☀️','🎵','🗺️','💬','📚','🧮','🎨','⏰','📝','🛒'], bg=['#F7F7F7','#FFFFFF','#FFE08A','#FF8FB0','#9FE0B8','#7ED67E','#FFB36B','#8C8C8C','#FFD1E6','#1F1F1F','#FFF3B0','#8FD3FF']; let h='';
+    for(let i=0;i<n;i++) h+= i===(n>9?5:4) ? '<i class="mj"><img src="/logo/icon-180.png" alt=""></i>' : '<i style="background:'+bg[i%12]+'">'+apps[i%12]+'</i>'; el.innerHTML=h; }
+  homeGrid($('#pwMini'),9); homeGrid($('#pwMiniBig'),16);
+  function showHow(){ if(installEvt){ const ev=installEvt; installEvt=null; try{ ev.prompt(); const r=ev.userChoice; if(r&&r.then) r.then(()=>buildGU(),()=>{}); }catch(e){ $('#pwOvHS').classList.remove('hidden'); } return; } $('#pwOvHS').classList.remove('hidden'); }
+  $('#pwHSbtn').addEventListener('click',()=>{ ctx(); sfx.boop(); showHow(); });
+  $$('.pw-ov').forEach(ov=>ov.addEventListener('click',e=>{ if(e.target===ov||e.target.closest('[data-pw-close]')){ ov.classList.add('hidden'); } }));
+
+  /* Grown-ups additions */
+  function paintStatus(){ const p=getPass(); let h;
+    if(passOn(p)&&p.kind==='forever') h='<b>Forever pass on</b><span>Code '+p.code+'</span>';
+    else if(passOn(p)){ const m=Math.max(0,Math.ceil((p.ends_at-Date.now())/MIN)); h='<b>48-hour pass on</b><span>Ends '+fmtT(p.ends_at)+(m<=60?' ('+m+' min left)':'')+(p.code?' · Code '+p.code:'')+'</span>'; }
+    else { const s=Math.ceil(freeLeft()/1000); h='<b>Free play</b><span>'+SETTINGS.first_visit_minutes+' minutes on the first visit, then '+SETTINGS.daily_minutes+' minutes a day. Resets each morning.</span><span>Left today: '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0')+'</span>'; }
+    const el=$('#pwStatus'); if(el.innerHTML!==h) el.innerHTML=h; }
+  function buildGU(){ paintStatus(); const p=getPass(), rows=[];
+    if(passOn(p)){ rows.push(['📲 Send code to another device','›','share']); if(p.kind==='48h') rows.push(['Add 48 hours',money(PRICES.add),'add'],['Upgrade to Forever',money(PRICES.up),'up']); }
+    else rows.push(['Get a pass',money(PRICES.pass)+' or '+money(PRICES.life),'buy']);
+    rows.push(['Have a code?','›','code'],['Contact us','›','help']);
+    $('#pwGuList').innerHTML=rows.map(r=>'<button class="pw-gurow'+(r[2]==='share'?' share':'')+'" data-a="'+r[2]+'"><span>'+r[0]+'</span><span>'+r[1]+'</span></button>').join('');
+    const on=standalone(), hb=$('#pwHS'); hb.classList.toggle('done',on); $('#pwHSt').textContent=on?'On your Home Screen':'Mojialand on your Home Screen!';
+    $('#pwHSbody').textContent=on?'Mojialand sits next to your other apps on this device. Open it from the icon for full screen play.':'Add Mojialand to your Home Screen. Your kids find it next to your other apps, and it opens full screen.';
+    $('#pwHSbtn').hidden=on; }
+  $('#pwGuList').addEventListener('click',e=>{ const b=e.target.closest('.pw-gurow'); if(!b) return; ctx(); sfx.boop(); const a=b.dataset.a;
+    if(a==='add'||a==='up') openGate('plans','gate',a); else if(a==='buy') openGate('plans','gate','pass');
+    else if(a==='share') soon('Send code to another device'); else if(a==='code') soon('Have a code?'); else if(a==='help') soon('Contact us'); });
+
+  function onScreen(name){ if(name==='ngate') newGate(); else if(name==='plans') buildPlans(); else if(name==='gate') buildGU(); if(name!=='rest') $('#pwZeroChip').classList.remove('shake'); $$('.pw-ov').forEach(o=>o.classList.add('hidden')); paintChips(); }
+  function start(){ deviceId(); rollDay(); ackEnd(getPass()); paintChips(); if(blocked()) showRest(); setInterval(tick,1000); }
+  return { onScreen, start, getPass };
+})();
+payHook=pay.onScreen;
+
 /* ---------- boot ---------- */
 /* iOS unlock: mute switch, audio context, speech */
 const SILENT='data:audio/wav;base64,UklGRrQBAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YZABAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA';
@@ -733,6 +1044,7 @@ const splash=(function(){
 })();
 $('#replaySplash').onclick=()=>{ sfx.boop(); go('home'); splash.show(); };
 splash.show();
+pay.start();
 
 })();
 </script>
