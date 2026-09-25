@@ -330,6 +330,16 @@ test('contact: validates, saves, emails support with reply-to; works when the da
   const m = db.emails.at(-1);
   assert.deepEqual(m.to, ['hello@mojialand.com']); assert.equal(m.reply_to, 'parent@example.com');
   assert.ok(m.subject.startsWith('Mojialand:'));
+  // a pass code identifies the pass even when the contact email differs from the paid email
+  const { code, pass } = await grantPass(paidSession('cs_test_ct1', 'pass'));
+  r = await contact(ev({ email: 'other@example.com', topic: 'pass', message: 'Code not working', code: code.toLowerCase() }));
+  assert.equal(r.statusCode, 200);
+  const saved = db.support_messages.at(-1).message;
+  assert.ok(saved.includes('pass ' + pass.id) && saved.includes('paid with parent@example.com') && saved.includes('cs_test_ct1'), saved);
+  assert.ok(!saved.includes(code) && !saved.includes(code.replace(/-/g, '')), 'full code never stored');
+  assert.ok(db.emails.at(-1).text.includes('pass ' + pass.id));
+  r = await contact(ev({ email: 'other@example.com', message: 'Lost it', code: 'MOJI-AAAA-BBBB-CCCC' }));
+  assert.ok(db.support_messages.at(-1).message.includes('no pass found'));
   db.down = true;
   r = await contact(ev({ email: 'parent@example.com', topic: 'weird', message: 'Still here' }));
   assert.equal(r.statusCode, 200, 'email still goes out');

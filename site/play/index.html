@@ -625,6 +625,7 @@ textarea.pw-in{resize:none;min-height:88px}
   <h3>Contact us</h3>
   <p>Tell us what happened. We write back by email.</p>
   <label class="pw-lbl">Your email<input class="pw-in" type="email" id="pwCEmail" autocomplete="email" inputmode="email" maxlength="254"></label>
+  <label class="pw-lbl">Your pass code (if you have one)<input class="pw-in pw-codein" id="pwCCode" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="24" placeholder="MOJI-XXXX-XXXX-XXXX"></label>
   <label class="pw-lbl">Topic<select class="pw-in" id="pwCTopic"><option value="pass">My pass</option><option value="broken">Something is broken</option><option value="refund">Refund</option><option value="other">Other</option></select></label>
   <label class="pw-lbl">Message<textarea class="pw-in" id="pwCMsg" maxlength="2000" rows="3"></textarea></label>
   <p class="pw-err" id="pwCErr" role="alert"></p>
@@ -1102,13 +1103,13 @@ const pay=(function(){
     b.disabled=false; b.textContent='Turn on Mojialand'; });
 
   /* Contact us: an in-app form, never an email app */
-  function openContact(){ $('#pwCForm').classList.remove('hidden'); $('#pwCDone').classList.add('hidden'); $('#pwCErr').textContent=''; $('#pwOvContact').classList.remove('hidden'); }
+  function openContact(){ const sp=store.get('pass',null); $('#pwCCode').value=sp&&typeof sp.code==='string'?sp.code:''; $('#pwCForm').classList.remove('hidden'); $('#pwCDone').classList.add('hidden'); $('#pwCErr').textContent=''; $('#pwOvContact').classList.remove('hidden'); }
   $('#pwCSend').addEventListener('click',async()=>{ const email=$('#pwCEmail').value.trim(), message=$('#pwCMsg').value.trim(), b=$('#pwCSend');
     if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)){ $('#pwCErr').textContent='Please check your email address.'; return; }
     if(message.length<2){ $('#pwCErr').textContent='Please tell us a little about it.'; return; }
     b.disabled=true; b.textContent='Sending…'; $('#pwCErr').textContent='';
     const g=graceInfo();
-    try{ const res=await fetch('/.netlify/functions/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,topic:$('#pwCTopic').value,message:message,session_id:g?g.sid:''}),credentials:'same-origin',cache:'no-store'});
+    try{ const res=await fetch('/.netlify/functions/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,topic:$('#pwCTopic').value,message:message,code:$('#pwCCode').value.trim(),session_id:g?g.sid:''}),credentials:'same-origin',cache:'no-store'});
       let d={}; try{ d=await res.json(); }catch(e){}
       if(res.ok){ $('#pwCForm').classList.add('hidden'); $('#pwCDone').classList.remove('hidden'); $('#pwCMsg').value=''; }
       else $('#pwCErr').textContent=d&&typeof d.error==='string'&&d.error.length<160?d.error:'We could not send that. Please try again.';

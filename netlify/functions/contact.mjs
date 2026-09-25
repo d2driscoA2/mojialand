@@ -3,10 +3,11 @@
 // Succeeds if either the save or the email works, so a parent is never stuck.
 import { guard } from './_lib/env.mjs';
 import { json, fail, readJson, clientIp } from './_lib/http.mjs';
-import { rateHit, addSupportMessage, safeErr } from './_lib/db.mjs';
+import { rateHit, addSupportMessage, getPassBy, safeErr } from './_lib/db.mjs';
+import { normalizeCode, codeHash, codeLast4 } from './_lib/codes.mjs';
 import { sendEmail } from './_lib/email.mjs';
 
-const REQUIRED = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY'];
+const REQUIRED = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY', 'RESTORE_CODE_PEPPER'];
 const TOPICS = { pass: 'My pass', broken: 'Something is broken', refund: 'Refund', other: 'Other' };
 const EMAIL_RE = /^[^\s@<>"]{1,64}@[^\s@<>"]{1,185}\.[A-Za-z]{2,24}$/;
 const SID_RE = /^cs_(test|live)_[A-Za-z0-9]{1,200}$/;
@@ -23,13 +24,30 @@ export const handler = async (event) => {
   const topic = TOPICS[input.topic] ? input.topic : 'other';
   const message = String(input.message || '').trim().slice(0, 2000);
   const sid = SID_RE.test(String(input.session_id || '')) ? input.session_id : '';
+  const code = normalizeCode(input.code);
   if (!EMAIL_RE.test(email) || email.length > 254) return fail(400, 'Please check your email address.');
   if (message.length < 2) return fail(400, 'Please tell us a little about it.');
 
   const ip = clientIp(event);
   if (!(await rateHit('contact', ip, 5, 3600, { failOpen: true }))) return fail(429, 'Too many messages. Please try again later.');
 
-  const body = message + (sid ? '\n\nPayment: ' + sid : '');
+  // The pass behind the code, so the admin can find it without the full code.
+  // Only the last 4 characters of the code are kept.
+  let passLine = '';
+  if (code) {
+    passLine = 'Code ending ' + codeLast4(code) + ': ';
+    try {
+      const pass = await getPassBy('code_hash', codeHash(process.env.RESTORE_CODE_PEPPER, code));
+      passLine += pass
+        ? 'pass ' + pass.id + ', ' + pass.kind + ', ' + pass.status + (pass.ends_at ? ', ends ' + pass.ends_at : '')
+          + (pass.email ? ', paid with ' + pass.email : '') + (pass.stripe_session_id ? ', ' + pass.stripe_session_id : '')
+        : 'no pass found for this code';
+    } catch (e) {
+      passLine += 'lookup failed';
+      console.error('contact: pass lookup failed (' + safeErr(e) + ')');
+    }
+  }
+  const body = message + (sid ? '\n\nPayment: ' + sid : '') + (passLine ? '\n\n' + passLine : '');
   let saved = false;
   let mailed = false;
   try {

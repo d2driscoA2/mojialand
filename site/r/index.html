@@ -84,6 +84,7 @@ textarea{resize:vertical;min-height:96px}
     <h2 id="cTitle">Contact us</h2>
     <p>Tell us what happened. We write back by email.</p>
     <label>Your email<input type="email" id="cEmail" autocomplete="email" inputmode="email" maxlength="254" required></label>
+    <label>Your pass code (if you have one)<input class="codein" id="cCode" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="24" placeholder="MOJI-XXXX-XXXX-XXXX"></label>
     <label>Topic<select id="cTopic"><option value="pass">My pass</option><option value="broken">Something is broken</option><option value="refund">Refund</option><option value="other">Other</option></select></label>
     <label>Message<textarea id="cMsg" maxlength="2000" rows="4" required></textarea></label>
     <p class="err" id="cErr" role="alert"></p>
@@ -167,7 +168,7 @@ if(fromLink) redeem(fromLink); else show('rForm');
 
 /* Contact form: stays in Mojialand, no email app. */
 let lastFocus=null;
-function openContact(){ lastFocus=document.activeElement; $('cForm').hidden=false; $('cDone').hidden=true; $('cErr').textContent=''; $('cSheet').hidden=false; setTimeout(()=>$('cEmail').focus(),50); }
+function openContact(){ lastFocus=document.activeElement; if(!$('cCode').value) $('cCode').value=($('rCode')?$('rCode').value:''); $('cForm').hidden=false; $('cDone').hidden=true; $('cErr').textContent=''; $('cSheet').hidden=false; setTimeout(()=>$('cEmail').focus(),50); }
 function closeContact(){ $('cSheet').hidden=true; if(lastFocus&&lastFocus.focus) lastFocus.focus(); }
 document.querySelectorAll('[data-contact]').forEach(b=>b.addEventListener('click',openContact));
 document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',closeContact));
@@ -179,7 +180,7 @@ $('cSend').addEventListener('click',async()=>{
   if(message.length<2){ $('cErr').textContent='Please tell us a little about it.'; $('cMsg').focus(); return; }
   $('cSend').disabled=true; $('cSend').textContent='Sending…'; $('cErr').textContent='';
   try{
-    const res=await fetch('/.netlify/functions/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,topic:$('cTopic').value,message:message,session_id:''}),credentials:'same-origin',cache:'no-store'});
+    const res=await fetch('/.netlify/functions/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,topic:$('cTopic').value,message:message,code:$('cCode').value.trim(),session_id:''}),credentials:'same-origin',cache:'no-store'});
     let d={}; try{ d=await res.json(); }catch(e){}
     if(res.ok){ $('cForm').hidden=true; $('cDone').hidden=false; $('cMsg').value=''; }
     else $('cErr').textContent=(d&&typeof d.error==='string'&&d.error.length<160)?d.error:'We could not send that. Please try again.';

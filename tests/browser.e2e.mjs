@@ -278,6 +278,7 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await page.screenshot({ path: path.join(SHOTS, 'done-contact-390.png') });
   let sent = null;
   await page.route('**/.netlify/functions/contact', (r) => { sent = r.request().postDataJSON(); r.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' }); });
+  check('done: contact form has a pass code field', await page.isVisible('#cCode'));
   await page.fill('#cEmail', 'parent@example.com'); await page.fill('#cMsg', 'Paid, pass not on');
   await page.click('#cSend');
   await page.waitForSelector('#cDone:not([hidden])');
@@ -362,8 +363,10 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   const ans = await page.getAttribute('#pwChoices', 'data-a');
   await page.click('#pwChoices [data-n="' + ans + '"]');
   await page.waitForSelector('#s-plans:not(.hidden)');
+  await page.evaluate(() => localStorage.setItem('mojia.pass', JSON.stringify({ code: 'MOJI-SAVE-DCOD-E234', kind: '48h', ends_at: 1 })));
   await page.click('#pwHelp');
   check('game: Contact us opens a form, not an email app', await page.isVisible('#pwOvContact') && await page.isVisible('#pwCEmail'));
+  check('game: contact form prefills the saved pass code', (await page.inputValue('#pwCCode')) === 'MOJI-SAVE-DCOD-E234');
   await page.waitForTimeout(400); await page.screenshot({ path: path.join(SHOTS, 'play-contact-390.png') });
   await page.click('#pwOvContact #pwCForm [data-pw-close]');
   await page.click('#pwCode');
@@ -399,6 +402,26 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   check('website no CSP violations', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
   await a.scrollIntoViewIfNeeded();
   await page.locator('footer').screenshot({ path: path.join(SHOTS, 'website-footer.png') });
+  await ctx.close();
+}
+
+// 9b. website play window: phones go straight to /play/; desktop X sits outside the game frame
+{
+  const { ctx, page } = await newPage();
+  await page.goto(base + '/');
+  await page.click('[data-play]');
+  await page.waitForURL('**/play/**');
+  check('website on a phone: Play opens /play/ full screen (no overlay, no X)', new URL(page.url()).pathname === '/play/');
+  await ctx.close();
+}
+{
+  const { ctx, page } = await newPage({ viewport: { width: 1280, height: 900 }, isMobile: false, hasTouch: false, deviceScaleFactor: 1 });
+  await page.goto(base + '/');
+  await page.click('[data-play]');
+  await page.waitForSelector('#player:not([hidden])');
+  const r = await page.evaluate(() => { const x = document.querySelector('#closePlayer').getBoundingClientRect(), d = document.querySelector('.device').getBoundingClientRect(); return { x, d, sep: x.left >= d.right || x.bottom <= d.top }; });
+  check('website desktop: X does not overlap the game frame', r.sep, JSON.stringify(r));
+  await page.screenshot({ path: path.join(SHOTS, 'website-player-desktop.png') });
   await ctx.close();
 }
 

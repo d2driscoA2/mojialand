@@ -33,6 +33,7 @@ p{margin:0;color:var(--soft);font-size:14px;max-width:32ch}
 .primary{background:var(--purple);color:var(--white);border:0;border-radius:999px;padding:14px;font:900 17px Nunito,sans-serif;cursor:pointer;width:100%;text-decoration:none;display:block}
 .secondary{background:var(--white);border:2px solid var(--purple);color:var(--purple);border-radius:999px;padding:11px;font:900 15px Nunito,sans-serif;cursor:pointer;width:100%;text-decoration:none;display:block}
 .textbtn{background:none;border:0;color:var(--deep);font:800 15px Nunito,sans-serif;cursor:pointer;text-decoration:underline;text-underline-offset:3px;padding:10px;min-height:44px}
+.codein{font:900 17px/1.2 ui-monospace,Menlo,Consolas,monospace;letter-spacing:1px;text-transform:uppercase}
 .codebox{margin:0;font:900 19px/1.2 ui-monospace,Menlo,Consolas,monospace;letter-spacing:1px;background:#F3ECFC;color:var(--deep);border-radius:16px;padding:14px 8px;width:100%;user-select:all;-webkit-user-select:all}
 .sheet{position:fixed;inset:0;z-index:50;background:rgba(48,37,74,.45);display:flex;align-items:flex-end;justify-content:center;padding:0}
 .sheet .card{border-radius:28px 28px 0 0;max-width:520px;padding:20px 18px max(20px,env(safe-area-inset-bottom,0px));text-align:left;justify-items:stretch}
@@ -82,6 +83,7 @@ textarea{resize:vertical;min-height:96px}
     <h2 id="cTitle">Contact us</h2>
     <p>Tell us what happened. We write back by email.</p>
     <label>Your email<input type="email" id="cEmail" autocomplete="email" inputmode="email" maxlength="254" required></label>
+    <label>Your pass code (if you have one)<input class="codein" id="cCode" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="24" placeholder="MOJI-XXXX-XXXX-XXXX"></label>
     <label>Topic<select id="cTopic"><option value="pass">My pass</option><option value="broken">Something is broken</option><option value="refund">Refund</option><option value="other">Other</option></select></label>
     <label>Message<textarea id="cMsg" maxlength="2000" rows="4" required></textarea></label>
     <p class="err" id="cErr" role="alert"></p>
@@ -167,7 +169,7 @@ async function run(){
 
 /* Contact form: stays in Mojialand, no email app. */
 let lastFocus=null;
-function openContact(){ lastFocus=document.activeElement; $('cForm').hidden=false; $('cDone').hidden=true; $('cErr').textContent=''; $('cSheet').hidden=false; setTimeout(()=>$('cEmail').focus(),50); }
+function openContact(){ lastFocus=document.activeElement; if(!$('cCode').value) $('cCode').value=(function(){ const sp=read('pass'); return sp&&typeof sp.code==='string'?sp.code:''; })(); $('cForm').hidden=false; $('cDone').hidden=true; $('cErr').textContent=''; $('cSheet').hidden=false; setTimeout(()=>$('cEmail').focus(),50); }
 function closeContact(){ $('cSheet').hidden=true; if(lastFocus&&lastFocus.focus) lastFocus.focus(); }
 document.querySelectorAll('[data-contact]').forEach(b=>b.addEventListener('click',openContact));
 document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',closeContact));
@@ -179,7 +181,7 @@ $('cSend').addEventListener('click',async()=>{
   if(message.length<2){ $('cErr').textContent='Please tell us a little about it.'; $('cMsg').focus(); return; }
   $('cSend').disabled=true; $('cSend').textContent='Sending…'; $('cErr').textContent='';
   try{
-    const res=await fetch('/.netlify/functions/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,topic:$('cTopic').value,message:message,session_id:SID_RE.test(sid)?sid:''}),credentials:'same-origin',cache:'no-store'});
+    const res=await fetch('/.netlify/functions/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,topic:$('cTopic').value,message:message,code:$('cCode').value.trim(),session_id:SID_RE.test(sid)?sid:''}),credentials:'same-origin',cache:'no-store'});
     let d={}; try{ d=await res.json(); }catch(e){}
     if(res.ok){ $('cForm').hidden=true; $('cDone').hidden=false; $('cMsg').value=''; }
     else $('cErr').textContent=(d&&typeof d.error==='string'&&d.error.length<160)?d.error:'We could not send that. Please try again.';
