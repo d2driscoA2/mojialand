@@ -423,6 +423,13 @@ body.drawer-open .addbtn{display:none}
 /* sheets */
 .pw-ov{position:absolute;inset:0;z-index:1500;background:rgba(48,37,74,.45);display:flex;align-items:flex-end;animation:fadein .2s}
 .pw-ov .pw-card{background:var(--white);width:100%;border-radius:28px 28px 0 0;padding:18px 18px max(18px,env(safe-area-inset-bottom,0px));display:grid;gap:10px;text-align:center}
+.pw-in{font:700 16px/1.35 var(--body);color:var(--ink);background:var(--white);border:2px solid var(--line);border-radius:14px;padding:11px 12px;width:100%;user-select:text;-webkit-user-select:text;box-sizing:border-box}
+.pw-in:focus{outline:3px solid var(--blue);outline-offset:1px;border-color:var(--purple)}
+.pw-codein{font:900 19px/1.2 ui-monospace,Menlo,Consolas,monospace;letter-spacing:1px;text-transform:uppercase;text-align:center}
+textarea.pw-in{resize:none;min-height:88px}
+.pw-lbl{display:grid;gap:5px;font-size:13.5px;font-weight:800;color:var(--ink);text-align:left}
+.pw-err{color:#B3261E!important}
+.pw-err:empty{display:none}
 .pw-ov h3{margin:0;font-family:var(--display);font-weight:900;font-size:20px;color:var(--ink)}
 .pw-ov p{margin:0;font-size:13.5px;font-weight:700;color:var(--mute)}
 .pw-steps{display:grid;gap:8px;text-align:left}
@@ -605,6 +612,28 @@ body.drawer-open .addbtn{display:none}
   </div>
   <p style="font-size:12px">Android and computers show one Install button instead.</p>
   <button class="pw-secondary" data-pw-close>Got it</button>
+</div></div>
+<div class="pw-ov hidden" id="pwOvCode" role="dialog" aria-label="Have a code?"><div class="pw-card">
+  <h3>Have a code?</h3>
+  <p>Type the code from your Mojialand email.</p>
+  <input class="pw-in pw-codein" id="pwCodeIn" aria-label="Code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="24" placeholder="MOJI-XXXX-XXXX-XXXX">
+  <p class="pw-err" id="pwCodeErr" role="alert"></p>
+  <button class="pw-primary" id="pwCodeGo">Turn on Mojialand</button>
+  <button class="pw-secondary" data-pw-close>Cancel</button>
+</div></div>
+<div class="pw-ov hidden" id="pwOvContact" role="dialog" aria-label="Contact us"><div class="pw-card" id="pwCForm">
+  <h3>Contact us</h3>
+  <p>Tell us what happened. We write back by email.</p>
+  <label class="pw-lbl">Your email<input class="pw-in" type="email" id="pwCEmail" autocomplete="email" inputmode="email" maxlength="254"></label>
+  <label class="pw-lbl">Topic<select class="pw-in" id="pwCTopic"><option value="pass">My pass</option><option value="broken">Something is broken</option><option value="refund">Refund</option><option value="other">Other</option></select></label>
+  <label class="pw-lbl">Message<textarea class="pw-in" id="pwCMsg" maxlength="2000" rows="3"></textarea></label>
+  <p class="pw-err" id="pwCErr" role="alert"></p>
+  <button class="pw-primary" id="pwCSend">Send</button>
+  <button class="pw-secondary" data-pw-close>Cancel</button>
+</div><div class="pw-card hidden" id="pwCDone">
+  <h3>💌 Message sent</h3>
+  <p>Thanks. We write back to you by email.</p>
+  <button class="pw-primary" data-pw-close>OK</button>
 </div></div>
 <div class="pw-ov hidden" id="pwOvSoon" role="dialog" aria-label="Coming soon"><div class="pw-card">
   <h3 id="pwSoonTitle">Coming soon</h3>
@@ -930,6 +959,10 @@ const pay=(function(){
     const v=vcache.payload; if(!v||v.k!==p.kind||v.e!==(p.kind==='forever'?0:Number(p.ends_at))) return null;
     return {code:String(p.code||''),kind:v.k,ends_at:v.e,email_masked:String(p.email_masked||''),device_id:p.device_id||deviceId()}; }
   const passOn=p=>!!p&&(p.kind==='forever'||p.ends_at>Date.now());
+  /* grace: paid, but the pass did not arrive yet. Free minutes until it does; the game keeps asking the server. */
+  const SID_RE=/^cs_(test|live)_[A-Za-z0-9]{1,200}$/;
+  function graceInfo(){ const g=store.get('grace',null); return g&&typeof g==='object'&&SID_RE.test(String(g.sid||''))&&typeof g.until==='number'?g:null; }
+  const graceOn=()=>{ const g=graceInfo(); return !!g&&g.until>Date.now()&&!passOn(getPass()); };
   const passEnded=p=>!!p&&p.kind==='48h'&&p.ends_at<=Date.now();
   const inCredit=p=>passEnded(p)&&Date.now()-p.ends_at<SETTINGS.credit_days*DAY;
 
@@ -942,11 +975,12 @@ const pay=(function(){
   /* a 48-hour pass that ends uses up free play for that play day */
   function ackEnd(p){ if(!passEnded(p)||store.get('passEndAck',0)===p.ends_at) return; store.set('passEndAck',p.ends_at); store.set('passEndDay',rollDay()); store.set('freeUsed',allowance()/MIN); }
   function endedToday(){ const p=getPass(); return passEnded(p)&&store.get('passEndAck',0)===p.ends_at&&store.get('passEndDay','')===playDay(Date.now()); }
-  function blocked(){ return !passOn(getPass())&&freeLeft()<=0; }
+  function blocked(){ return !passOn(getPass())&&!graceOn()&&freeLeft()<=0; }
 
   /* corner chip */
   function paintChips(){ const p=getPass(); let cls='pw-chip', txt, arc=null;
-    if(passOn(p)){ cls+=' pass'; if(p.kind==='forever') txt='⭐ Forever'; else { const left=p.ends_at-Date.now(); if(left<=SETTINGS.warning_minutes*MIN){ cls+=' low'; txt='⏳ '+Math.max(1,Math.ceil(left/MIN))+' min'; } else txt='⏳ '+Math.ceil(left/HOUR)+'h left'; } }
+    if(!passOn(p)&&graceOn()){ cls+=' pass'; txt='⏳ '+Math.max(1,Math.ceil((graceInfo().until-Date.now())/MIN))+' min'; }
+    else if(passOn(p)){ cls+=' pass'; if(p.kind==='forever') txt='⭐ Forever'; else { const left=p.ends_at-Date.now(); if(left<=SETTINGS.warning_minutes*MIN){ cls+=' low'; txt='⏳ '+Math.max(1,Math.ceil(left/MIN))+' min'; } else txt='⏳ '+Math.ceil(left/HOUR)+'h left'; } }
     else { const left=freeLeft(), s=Math.ceil(left/1000); txt=Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); arc=(88*(1-left/allowance())).toFixed(1); }
     $$('[data-chip]').forEach(c=>{ if(c.className!==cls) c.className=cls; const t=c.querySelector('.t'); if(t.textContent!==txt) t.textContent=txt; c.setAttribute('aria-label',p&&passOn(p)?'Pass: '+txt:'Free play left: '+txt); if(arc!==null) c.querySelector('.arc').setAttribute('stroke-dashoffset',arc); }); }
 
@@ -963,10 +997,10 @@ const pay=(function(){
   let last=Date.now();
   const counting=()=>!document.hidden&&PLAY.has(current)&&!splashOn();
   function tick(){ const now=Date.now(), dt=Math.max(0,Math.min(now-last,5000)); last=now; rollDay(); const p=getPass(); ackEnd(p);
-    if(!passOn(p)&&counting()){ store.set('freeUsed',Math.min(allowance(),(Number(store.get('freeUsed',0))||0)*MIN+dt)/MIN); }
+    if(!passOn(p)&&!graceOn()&&counting()){ store.set('freeUsed',Math.min(allowance(),(Number(store.get('freeUsed',0))||0)*MIN+dt)/MIN); }
     if(PLAY.has(current)&&blocked()) showRest();
     else if(current==='rest'&&!blocked()) go('home');
-    paintChips(); if(current==='gate') paintStatus(); }
+    paintChips(); if(current==='gate') paintStatus(); syncGrace(); }
   document.addEventListener('visibilitychange',()=>{ last=Date.now(); if(!document.hidden) tick(); });
 
   /* parent gate: number words */
@@ -1008,8 +1042,8 @@ const pay=(function(){
   $('#pwPlansBack').addEventListener('click',()=>{ ctx(); sfx.boop(); back(); });
   $('#pwPay').addEventListener('click',()=>{ const url='/pass/?plan='+encodeURIComponent(plan); try{ if(window.top&&window.top!==window.self){ window.top.location.href=url; return; } }catch(e){} location.href=url; });
   function soon(title){ $('#pwSoonTitle').textContent='Coming soon'; $('#pwSoonText').textContent=title+' is on the way. It arrives in the next update.'; $('#pwOvSoon').classList.remove('hidden'); }
-  $('#pwCode').addEventListener('click',()=>soon('Have a code?'));
-  $('#pwHelp').addEventListener('click',()=>soon('Help'));
+  $('#pwCode').addEventListener('click',()=>openCode());
+  $('#pwHelp').addEventListener('click',()=>openContact());
 
   /* Home Screen */
   let installEvt=null;
@@ -1026,8 +1060,8 @@ const pay=(function(){
   homeGrid($('#pwOkMini'),9);
   function showAllset(){ const a=store.get('allset',null); try{ localStorage.removeItem('mojia.allset'); }catch(e){}
     const p=getPass(); if(!a||typeof a!=='object'||!passOn(p)||!(Date.now()-Number(a.at)<30*MIN)) return false;
-    $('#pwOkTitle').textContent=p.kind==='forever'?'Mojialand is yours for good':(a.plan==='add'?'Added 48 hours':"You're all set for 48 hours");
-    const mail=String(a.email_masked||p.email_masked||'');
+    $('#pwOkTitle').textContent=a.plan==='redeem'?'Mojialand is on!':p.kind==='forever'?'Mojialand is yours for good':(a.plan==='add'?'Added 48 hours':"You're all set for 48 hours");
+    const mail=a.plan==='redeem'?'':String(a.email_masked||p.email_masked||'');
     $('#pwOkText').textContent=(p.kind==='forever'?'Forever pass on.':'Pass on until '+fmtT(p.ends_at)+'.')+(mail?' Code emailed to '+mail+'.':'');
     $('#pwOkHS').hidden=standalone(); go('allset'); return true; }
   $('#pwOkHow').addEventListener('click',()=>{ ctx(); sfx.boop(); showHow(); });
@@ -1035,10 +1069,57 @@ const pay=(function(){
   $('#pwOkBack').addEventListener('click',()=>{ ctx(); sfx.boop(); go('home'); });
   $$('.pw-ov').forEach(ov=>ov.addEventListener('click',e=>{ if(e.target===ov||e.target.closest('[data-pw-close]')){ ov.classList.add('hidden'); } }));
 
+  /* save a pass the server signed (confirm-session or redeem-code) */
+  async function savePass(d,plan){ const v=await checkToken(d&&d.token); if(!v||v.k!==d.kind||v.e!==d.ends_at) return false;
+    const old=store.get('pass',null)||{}; const code=typeof d.code==='string'&&d.code?d.code:(typeof old.code==='string'?old.code:'');
+    try{ localStorage.setItem('mojia.pass',JSON.stringify({code:code,kind:v.k,ends_at:v.e,token:d.token,email_masked:String(d.email_masked||''),device_id:deviceId()})); }catch(e){ return false; }
+    try{ localStorage.removeItem('mojia.grace'); }catch(e){}
+    await verifyStored(); paintChips(); if(current==='gate') buildGU(); return true; }
+  /* grace retry: every 30 seconds while the app is open, for up to 7 days */
+  let syncing=false, lastSync=0;
+  async function syncGrace(){ const g=graceInfo(); if(!g||syncing||Date.now()-lastSync<30000) return; lastSync=Date.now();
+    if(Date.now()-Number(g.at||0)>7*DAY||passOn(getPass())){ try{ localStorage.removeItem('mojia.grace'); }catch(e){} return; }
+    syncing=true;
+    try{ const res=await fetch('/.netlify/functions/confirm-session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:g.sid,device_id:deviceId()}),credentials:'same-origin',cache:'no-store'});
+      let d={}; try{ d=await res.json(); }catch(e){}
+      if(res.status===200&&d&&typeof d.token==='string') await savePass(d);
+      else if(res.status===400||res.status===404||res.status===409){ try{ localStorage.removeItem('mojia.grace'); }catch(e){} }
+    }catch(e){}
+    syncing=false; }
+
+  /* Have a code? */
+  function normCode(v){ const s=String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,''); const m=/^(MOJI|GIFT)([A-Z2-9]{8,16})$/.exec(s); if(!m||m[2].length%4) return ''; return m[1]+'-'+m[2].match(/.{4}/g).join('-'); }
+  function openCode(){ $('#pwCodeIn').value=''; $('#pwCodeErr').textContent=''; $('#pwOvCode').classList.remove('hidden'); setTimeout(()=>$('#pwCodeIn').focus(),60); }
+  $('#pwCodeIn').addEventListener('keydown',e=>{ if(e.key==='Enter') $('#pwCodeGo').click(); });
+  $('#pwCodeGo').addEventListener('click',async()=>{ const c=normCode($('#pwCodeIn').value), b=$('#pwCodeGo');
+    if(!c){ $('#pwCodeErr').textContent='Codes look like MOJI-XXXX-XXXX-XXXX.'; return; }
+    b.disabled=true; b.textContent='Turning on…'; $('#pwCodeErr').textContent='';
+    try{ const res=await fetch('/.netlify/functions/redeem-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:c,device_id:deviceId()}),credentials:'same-origin',cache:'no-store'});
+      let d={}; try{ d=await res.json(); }catch(e){}
+      if(res.status===200&&d&&typeof d.token==='string'&&await savePass(d)){ $('#pwOvCode').classList.add('hidden'); store.set('allset',{plan:'redeem',email_masked:'',at:Date.now()}); showAllset(); }
+      else $('#pwCodeErr').textContent=d&&typeof d.error==='string'&&d.error.length<200?d.error:'We could not turn the pass on. Please try again.';
+    }catch(e){ $('#pwCodeErr').textContent='No connection. Please try again.'; }
+    b.disabled=false; b.textContent='Turn on Mojialand'; });
+
+  /* Contact us: an in-app form, never an email app */
+  function openContact(){ $('#pwCForm').classList.remove('hidden'); $('#pwCDone').classList.add('hidden'); $('#pwCErr').textContent=''; $('#pwOvContact').classList.remove('hidden'); }
+  $('#pwCSend').addEventListener('click',async()=>{ const email=$('#pwCEmail').value.trim(), message=$('#pwCMsg').value.trim(), b=$('#pwCSend');
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)){ $('#pwCErr').textContent='Please check your email address.'; return; }
+    if(message.length<2){ $('#pwCErr').textContent='Please tell us a little about it.'; return; }
+    b.disabled=true; b.textContent='Sending…'; $('#pwCErr').textContent='';
+    const g=graceInfo();
+    try{ const res=await fetch('/.netlify/functions/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,topic:$('#pwCTopic').value,message:message,session_id:g?g.sid:''}),credentials:'same-origin',cache:'no-store'});
+      let d={}; try{ d=await res.json(); }catch(e){}
+      if(res.ok){ $('#pwCForm').classList.add('hidden'); $('#pwCDone').classList.remove('hidden'); $('#pwCMsg').value=''; }
+      else $('#pwCErr').textContent=d&&typeof d.error==='string'&&d.error.length<160?d.error:'We could not send that. Please try again.';
+    }catch(e){ $('#pwCErr').textContent='No connection. Please try again.'; }
+    b.disabled=false; b.textContent='Send'; });
+
   /* Grown-ups additions */
   function paintStatus(){ const p=getPass(); let h;
     if(passOn(p)&&p.kind==='forever') h='<b>Forever pass on</b><span>Code '+p.code+'</span>';
     else if(passOn(p)){ const m=Math.max(0,Math.ceil((p.ends_at-Date.now())/MIN)); h='<b>48-hour pass on</b><span>Ends '+fmtT(p.ends_at)+(m<=60?' ('+m+' min left)':'')+(p.code?' · Code '+p.code:'')+'</span>'; }
+    else if(graceOn()){ const m=Math.max(1,Math.ceil((graceInfo().until-Date.now())/MIN)); h='<b>Your pass is on its way</b><span>Payment received. Free play for '+m+' more min while it arrives. Your code also comes by email.</span>'; }
     else { const s=Math.ceil(freeLeft()/1000); h='<b>Free play</b><span>'+SETTINGS.first_visit_minutes+' minutes on the first visit, then '+SETTINGS.daily_minutes+' minutes a day. Resets each morning.</span><span>Left today: '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0')+'</span>'; }
     const el=$('#pwStatus'); if(el.innerHTML!==h) el.innerHTML=h; }
   function buildGU(){ paintStatus(); const p=getPass(), rows=[];
@@ -1051,7 +1132,7 @@ const pay=(function(){
     $('#pwHSbtn').hidden=on; }
   $('#pwGuList').addEventListener('click',e=>{ const b=e.target.closest('.pw-gurow'); if(!b) return; ctx(); sfx.boop(); const a=b.dataset.a;
     if(a==='add'||a==='up') openGate('plans','gate',a); else if(a==='buy') openGate('plans','gate','pass');
-    else if(a==='share') soon('Send code to another device'); else if(a==='code') soon('Have a code?'); else if(a==='help') soon('Contact us'); });
+    else if(a==='share') soon('Send code to another device'); else if(a==='code') openCode(); else if(a==='help') openContact(); });
 
   function onScreen(name){ if(name==='ngate') newGate(); else if(name==='plans') buildPlans(); else if(name==='gate') buildGU(); if(name!=='rest') $('#pwZeroChip').classList.remove('shake'); $$('.pw-ov').forEach(o=>o.classList.add('hidden')); paintChips(); }
   async function start(route){ deviceId(); rollDay(); await verifyStored(); ackEnd(getPass()); paintChips();

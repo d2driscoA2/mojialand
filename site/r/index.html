@@ -8,7 +8,7 @@
 <link rel="icon" type="image/svg+xml" href="/logo/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/logo/icon-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/logo/icon-180.png">
-<title>Mojialand pass</title>
+<title>Turn on Mojialand</title>
 <style>
 @font-face{font-family:'Nunito';font-style:normal;font-weight:700 900;font-display:swap;src:url('/fonts/nunito-latin.woff2') format('woff2')}
 :root{--purple:#7138D1;--deep:#5122A5;--yellow:#FFC83D;--blue:#4DBCEC;--cream:#FFF8E8;--ink:#30254A;--white:#FFFFFF;--soft:#6B6180;--line:#E9E0F5;color-scheme:light}
@@ -45,37 +45,39 @@ textarea{resize:vertical;min-height:96px}
 .err{color:#B3261E!important;font-size:14px;min-height:0}
 .err:empty{display:none}
 .sent{font-size:40px;text-align:center}
+.codein{font:900 19px/1.2 ui-monospace,Menlo,Consolas,monospace;letter-spacing:1px;text-transform:uppercase;text-align:center}
 </style>
 </head>
 <body>
 <img class="wm" src="/logo/wordmark.png" width="170" height="62" alt="Mojialand">
-<main class="card" id="dWork" role="status">
+<main class="card" id="rWork" role="status">
   <div class="friends" aria-hidden="true"><span>🦄</span><span>🦈</span><span>🐶</span><span>😀</span><span>🍕</span></div>
-  <h1>Turning your pass on…</h1>
-  <p id="dWorkText">This takes a few seconds. Please keep this page open.</p>
+  <h1>Turning Mojialand on…</h1>
+  <p>This takes a few seconds.</p>
   <div class="bar" aria-hidden="true"><i></i></div>
 </main>
-<main class="card" id="dGrace" role="status" hidden>
-  <div class="friends" aria-hidden="true">🎉🦄</div>
-  <h1 id="dGraceTitle">Payment received</h1>
-  <p id="dGraceText">Keep playing. Your pass is on its way and turns on by itself. Your code also comes by email.</p>
-  <a class="primary" href="/play/">Back to Mojialand</a>
-  <button class="textbtn" type="button" data-contact>Need help? Contact us</button>
-</main>
-<main class="card" id="dSave" role="alert" hidden>
+<main class="card" id="rForm" hidden>
   <div class="friends" aria-hidden="true">🔑</div>
-  <h1>Your pass is ready</h1>
-  <p id="dSaveText">This browser would not save it. Turn off private browsing, then open Grown-ups in Mojialand, tap Have a code? and type this code.</p>
-  <p class="codebox" id="dSaveCode"></p>
-  <a class="primary" href="/play/">Back to Mojialand</a>
-  <button class="textbtn" type="button" data-contact>Need help? Contact us</button>
+  <h1>Have a code?</h1>
+  <p id="rFormText">Type the code from your Mojialand email.</p>
+  <input class="codein" id="rCode" aria-label="Code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="24" placeholder="MOJI-XXXX-XXXX-XXXX">
+  <p class="err" id="rErr" role="alert"></p>
+  <button class="primary" type="button" id="rGo">Turn on Mojialand</button>
+  <a class="textbtn" href="/play/">Back to Mojialand</a>
 </main>
-<main class="card" id="dErr" role="alert" hidden>
+<main class="card" id="rStop" role="alert" hidden>
   <div class="friends" aria-hidden="true">🦄💭</div>
-  <h1 id="dErrTitle">We could not find this payment</h1>
-  <p id="dErrText">If you paid, your code comes by email. You can also send us a message.</p>
+  <h1 id="rStopTitle">This code is on 5 devices</h1>
+  <p id="rStopText">Send us a message and we will move it for you.</p>
   <a class="primary" href="/play/">Back to Mojialand</a>
   <button class="textbtn" type="button" data-contact>Contact us</button>
+</main>
+<main class="card" id="rSave" role="alert" hidden>
+  <div class="friends" aria-hidden="true">🔑</div>
+  <h1>Almost there</h1>
+  <p>This browser would not save the pass. Turn off private browsing, then open this link again.</p>
+  <a class="primary" href="/play/">Back to Mojialand</a>
+  <button class="textbtn" type="button" data-contact>Need help? Contact us</button>
 </main>
 <div class="sheet" id="cSheet" role="dialog" aria-modal="true" aria-labelledby="cTitle" hidden>
   <div class="card" id="cForm">
@@ -100,11 +102,7 @@ textarea{resize:vertical;min-height:96px}
 'use strict';
 const PASS_PUBLIC_JWK=/*__PASS_PUBLIC_JWK__*/null;
 const $=id=>document.getElementById(id);
-const sid=new URLSearchParams(location.search).get('session_id')||'';
-const SID_RE=/^cs_(test|live)_[A-Za-z0-9]{1,200}$/;
-const WAITS=[0,1000,1500,2000,2500,3000,3500,4000,4000,4000,4000];
-const GRACE_MIN=60;
-
+const sid='';
 function b64u(s){ s=s.replace(/-/g,'+').replace(/_/g,'/'); while(s.length%4) s+='='; const bin=atob(s), a=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) a[i]=bin.charCodeAt(i); return a; }
 async function verifyToken(tok){
   if(!PASS_PUBLIC_JWK||typeof tok!=='string') return null;
@@ -122,48 +120,50 @@ function read(k){ try{ return JSON.parse(localStorage.getItem('mojia.'+k)||'null
 function write(k,v){ localStorage.setItem('mojia.'+k,JSON.stringify(v)); }
 function deviceId(){ let id=read('device'); if(typeof id==='string'&&/^[0-9a-f]{32}$/.test(id)) return id;
   try{ const b=new Uint8Array(16); crypto.getRandomValues(b); id=[...b].map(x=>x.toString(16).padStart(2,'0')).join(''); write('device',id); return id; }catch(e){ return ''; } }
-function show(id){ ['dWork','dGrace','dSave','dErr'].forEach(x=>{ $(x).hidden=x!==id; }); }
-function showErr(title,msg){ $('dErrTitle').textContent=title; $('dErrText').textContent=msg; show('dErr'); }
-
-/* Payment went through (or may have), but the pass is not on yet: free minutes now, the game keeps retrying. */
-function grace(paid){
-  $('dGraceTitle').textContent=paid?'Payment received':'Your payment is going through';
-  try{ const g=read('grace'); if(!g||g.sid!==sid) write('grace',{sid:sid,until:Date.now()+GRACE_MIN*60000,at:Date.now()}); }
-  catch(e){ $('dGraceText').textContent='Your pass is on its way. Your code comes by email. Type it in Grown-ups, Have a code?'; }
-  show('dGrace');
-}
+function show(id){ ['rWork','rForm','rStop','rSave'].forEach(x=>{ $(x).hidden=x!==id; }); }
+/* MOJIABCDEFGHJKMN or MOJI-ABCD-EFGH-JKMN -> MOJI-ABCD-EFGH-JKMN */
+function norm(v){ const s=String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,''); const m=/^(MOJI|GIFT)([A-Z2-9]{8,16})$/.exec(s); if(!m||m[2].length%4) return ''; return m[1]+'-'+m[2].match(/.{4}/g).join('-'); }
+const rank=p=>p.k==='forever'?Infinity:p.e;
 
 async function save(d){
   const p=await verifyToken(d.token);
-  if(!p||p.k!==d.kind||p.e!==d.ends_at) return grace(true);
-  const old=read('pass')||{};
-  const code=typeof d.code==='string'&&d.code?d.code:(typeof old.code==='string'?old.code:'');
-  const pass={code:code,kind:p.k,ends_at:p.e,token:d.token,email_masked:String(d.email_masked||''),device_id:deviceId()};
-  try{ write('pass',pass); write('allset',{plan:String(d.plan||''),email_masked:pass.email_masked,at:Date.now()}); try{ localStorage.removeItem('mojia.grace'); }catch(e){} }
-  catch(e){ $('dSaveCode').textContent=code; $('dSaveCode').hidden=!code; show('dSave'); return; }
+  if(!p||p.k!==d.kind||p.e!==d.ends_at){ formErr(d.code,'Something went wrong on our side. Please try again.'); return; }
+  const old=read('pass'); const oldP=old&&typeof old.token==='string'?await verifyToken(old.token):null;
+  if(oldP&&rank(oldP)>=rank(p)&&(oldP.k==='forever'||oldP.e>Date.now())){ location.replace('/play/'); return; }
+  try{ write('pass',{code:d.code,kind:p.k,ends_at:p.e,token:d.token,email_masked:String(d.email_masked||''),device_id:deviceId()}); write('allset',{plan:'redeem',email_masked:'',at:Date.now()}); }
+  catch(e){ show('rSave'); return; }
   location.replace('/play/#allset');
 }
+function formErr(code,msg){ if(code) $('rCode').value=code; $('rErr').textContent=msg||''; show('rForm'); }
+function stop(title,msg){ $('rStopTitle').textContent=title; $('rStopText').textContent=msg; show('rStop'); }
 
-async function run(){
-  show('dWork');
-  if(!SID_RE.test(sid)) return showErr('We could not find this payment','This link is not complete. If you paid, your code comes by email.');
-  const dev=deviceId(); let paid=false;
-  const slow=setTimeout(()=>{ $('dWorkText').textContent='Still working. This can take up to 30 seconds.'; },8000);
-  for(const w of WAITS){
+async function redeem(code){
+  show('rWork');
+  const dev=deviceId();
+  if(!dev){ show('rSave'); return; }
+  for(const w of [0,1500,3000]){
     if(w) await new Promise(r=>setTimeout(r,w));
     let res, d={};
     try{
-      res=await fetch('/.netlify/functions/confirm-session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:sid,device_id:dev}),credentials:'same-origin',cache:'no-store'});
+      res=await fetch('/.netlify/functions/redeem-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code,device_id:dev}),credentials:'same-origin',cache:'no-store'});
       try{ d=await res.json(); }catch(e){ d={}; }
     }catch(e){ continue; }
-    if(res.ok&&res.status===200&&d&&typeof d.token==='string'){ clearTimeout(slow); return save(d); }
-    if(res.status===202) paid=true;
-    if(res.status===400||res.status===404){ clearTimeout(slow); return showErr('We could not find this payment','If you paid, your code comes by email. You can also send us a message.'); }
-    if(res.status===409){ clearTimeout(slow); return showErr('This pass is not active','Send us a message and we will sort it out.'); }
+    const msg=d&&typeof d.error==='string'&&d.error.length<200?d.error:'';
+    if(res.status===200&&d&&typeof d.token==='string') return save(d);
+    if(res.status===409) return stop('This code is on 5 devices',msg||'Send us a message and we will move it for you.');
+    if(res.status===403||res.status===410) return stop('This code does not work',msg||'Send us a message and we will sort it out.');
+    if(res.status===400||res.status===404||res.status===429) return formErr(code,msg||'We could not find that code.');
   }
-  clearTimeout(slow);
-  grace(paid);
+  formErr(code,'We could not reach Mojialand. Check your connection and try again.');
 }
+
+$('rGo').addEventListener('click',()=>{ const c=norm($('rCode').value); if(!c){ $('rErr').textContent='Codes look like MOJI-XXXX-XXXX-XXXX.'; $('rCode').focus(); return; } redeem(c); });
+$('rCode').addEventListener('keydown',e=>{ if(e.key==='Enter') $('rGo').click(); });
+
+/* The code rides in the link from the email. Take it out of the address bar and history right away. */
+let fromLink=''; try{ fromLink=norm(decodeURIComponent(location.pathname.replace(/^\/r\/?/,''))); }catch(e){}
+try{ history.replaceState(null,'','/r/'); }catch(e){}
+if(fromLink) redeem(fromLink); else show('rForm');
 
 /* Contact form: stays in Mojialand, no email app. */
 let lastFocus=null;
@@ -179,7 +179,7 @@ $('cSend').addEventListener('click',async()=>{
   if(message.length<2){ $('cErr').textContent='Please tell us a little about it.'; $('cMsg').focus(); return; }
   $('cSend').disabled=true; $('cSend').textContent='Sending…'; $('cErr').textContent='';
   try{
-    const res=await fetch('/.netlify/functions/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,topic:$('cTopic').value,message:message,session_id:SID_RE.test(sid)?sid:''}),credentials:'same-origin',cache:'no-store'});
+    const res=await fetch('/.netlify/functions/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,topic:$('cTopic').value,message:message,session_id:''}),credentials:'same-origin',cache:'no-store'});
     let d={}; try{ d=await res.json(); }catch(e){}
     if(res.ok){ $('cForm').hidden=true; $('cDone').hidden=false; $('cMsg').value=''; }
     else $('cErr').textContent=(d&&typeof d.error==='string'&&d.error.length<160)?d.error:'We could not send that. Please try again.';
@@ -187,7 +187,6 @@ $('cSend').addEventListener('click',async()=>{
   $('cSend').disabled=false; $('cSend').textContent='Send';
 });
 
-run();
 })();
 </script>
 </body>

@@ -54,6 +54,7 @@ function serve(site) {
     let p = decodeURIComponent(u.pathname);
     let f = path.join(site, p);
     if (!f.startsWith(site)) { res.writeHead(403).end(); return; }
+    if (/^\/r\/[^/]+$/.test(p)) f = path.join(site, 'r', 'index.html'); // _redirects: /r/*  /r/index.html  200
     if (p.endsWith('/')) f = path.join(f, 'index.html');
     if (!fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404).end('not found'); return; }
     const h = {};
@@ -96,7 +97,7 @@ async function newPage(opts = {}) {
 }
 
 // one inline script per built page
-for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/done/index.html']) {
+for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/done/index.html', 'r/index.html']) {
   const n = (fs.readFileSync(path.join(site, rel), 'utf8').match(/<script>/g) || []).length;
   check('one inline script: ' + rel, n === 1, String(n));
 }
@@ -148,7 +149,7 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await page.route('**/.netlify/functions/create-checkout', (r) => { calls++; r.fulfill({ status: 502, contentType: 'application/json', body: '{"error":"Checkout could not start. Please try again."}' }); });
   await page.goto(base + '/pass/?plan=life');
   await page.waitForSelector('#coError:not([hidden])');
-  check('/pass/ Stripe blocked: error state', await page.isVisible('#coRetry') && await page.isVisible('a[href^="mailto:hello@mojialand.com"]'));
+  check('/pass/ Stripe blocked: error state', await page.isVisible('#coRetry') && await page.isVisible('#coError a[href="/play/#passes"]') && (await page.locator('a[href^="mailto:"]').count()) === 0);
   check('/pass/ Stripe blocked: no checkout request made', calls === 0);
   check('/pass/ life shows Forever $14.99', (await page.textContent('#coItem')) === 'Forever' && (await page.textContent('#coPrice')) === '$14.99');
   await page.screenshot({ path: path.join(SHOTS, 'pass-error-stripe-blocked-390.png') });
@@ -223,7 +224,7 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await page.goto(base + '/pass/done/?session_id=cs_test_up1');
   await page.waitForSelector('#s-allset:not(.hidden)', { timeout: 15000 });
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('mojia.pass')));
-  check('up: keeps existing code and device id', saved.code === 'MOJI-KEEP-THIS-CODE' && saved.device_id === 'dev-123' && saved.kind === 'forever', JSON.stringify(saved).slice(0, 100));
+  check('up: keeps existing code; saves a device id', saved.code === 'MOJI-KEEP-THIS-CODE' && /^[0-9a-f]{32}$/.test(saved.device_id) && saved.kind === 'forever', JSON.stringify(saved).slice(0, 100));
   check('up: "Mojialand is yours for good"', (await page.textContent('#pwOkTitle')) === 'Mojialand is yours for good');
   await page.screenshot({ path: path.join(SHOTS, 'allset-forever-390.png') });
   await page.click('#pwOkBack');
@@ -238,9 +239,10 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   const bad = tamper(token);
   await page.route('**/.netlify/functions/confirm-session', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 'MOJI-TEST-CODE-2345', kind: 'forever', ends_at: 0, token: bad, email_masked: 'x', plan: 'life' }) }));
   await page.goto(base + '/pass/done/?session_id=cs_test_bad');
-  await page.waitForSelector('#dErr:not([hidden])');
-  check('done: tampered token refused, nothing saved', (await page.evaluate(() => localStorage.getItem('mojia.pass'))) === null);
-  await page.screenshot({ path: path.join(SHOTS, 'done-error-390.png') });
+  await page.waitForSelector('#dGrace:not([hidden])');
+  check('done: tampered token refused, nothing saved, grace instead', (await page.evaluate(() => localStorage.getItem('mojia.pass'))) === null
+    && (await page.evaluate(() => JSON.parse(localStorage.getItem('mojia.grace')).sid)) === 'cs_test_bad');
+  await page.evaluate(() => localStorage.removeItem('mojia.grace'));
   await page.evaluate(([bad]) => { localStorage.setItem('mojia.pass', JSON.stringify({ code: 'MOJI-TEST-CODE-2345', kind: 'forever', ends_at: 0, token: bad })); localStorage.setItem('mojia.allset', JSON.stringify({ plan: 'life', email_masked: 'x', at: Date.now() })); }, [bad]);
   await page.goto(base + '/play/#allset');
   await page.waitForTimeout(800);
@@ -253,6 +255,124 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await page.evaluate(([tok, e]) => localStorage.setItem('mojia.pass', JSON.stringify({ code: 'X', kind: '48h', ends_at: e, token: tok })), [token, payload.e]);
   await page.reload(); await page.waitForTimeout(800);
   check('play: valid stored pass honored', /48h left/.test(await page.locator('#s-home [data-chip]').textContent()));
+  await ctx.close();
+}
+
+// 7b. server keeps failing after payment: quiet retries, then free minutes; the game finishes the job
+{
+  const { ctx, page } = await newPage();
+  const { token, payload } = tokenFor('48h', Date.now() + 48 * 3600e3);
+  let n = 0, ok = false;
+  await page.route('**/.netlify/functions/confirm-session', (r) => { n++;
+    if (!ok) return r.fulfill({ status: n % 2 ? 202 : 500, contentType: 'application/json', body: n % 2 ? '{"status":"paid_pending"}' : '{"error":"x"}' });
+    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 'MOJI-LATE-CODE-2345', kind: '48h', ends_at: payload.e, token, email_masked: 'p•••@example.com', plan: 'pass' }) }); });
+  await page.goto(base + '/pass/done/?session_id=cs_test_slow1');
+  await page.waitForSelector('#dGrace:not([hidden])', { timeout: 45000 });
+  check('done: retried quietly about 30 seconds', n >= 10, String(n));
+  check('done: "Payment received" with one Back button', (await page.textContent('#dGraceTitle')) === 'Payment received'
+    && (await page.locator('#dGrace a.primary').count()) === 1 && (await page.locator('#dGrace a.primary').getAttribute('href')) === '/play/');
+  check('done: no mailto anywhere', (await page.locator('a[href^="mailto:"]').count()) === 0);
+  await page.screenshot({ path: path.join(SHOTS, 'done-grace-390.png') });
+  await page.click('#dGrace [data-contact]');
+  check('done: contact form opens in page', await page.isVisible('#cSheet') && await page.isVisible('#cEmail'));
+  await page.screenshot({ path: path.join(SHOTS, 'done-contact-390.png') });
+  let sent = null;
+  await page.route('**/.netlify/functions/contact', (r) => { sent = r.request().postDataJSON(); r.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' }); });
+  await page.fill('#cEmail', 'parent@example.com'); await page.fill('#cMsg', 'Paid, pass not on');
+  await page.click('#cSend');
+  await page.waitForSelector('#cDone:not([hidden])');
+  check('done: contact sends email, message and payment id', sent && sent.email === 'parent@example.com' && sent.session_id === 'cs_test_slow1', JSON.stringify(sent));
+  await page.click('#cDone [data-close]');
+  ok = true;
+  await page.click('#dGrace a.primary');
+  await page.waitForURL('**/play/**');
+  await page.waitForFunction(() => { const c = document.querySelector('#s-home [data-chip]'); return c && /48h left/.test(c.textContent); }, null, { timeout: 15000 });
+  const saved = await page.evaluate(() => [JSON.parse(localStorage.getItem('mojia.pass')), localStorage.getItem('mojia.grace')]);
+  check('play: background retry turns the pass on and clears grace', saved[0] && saved[0].code === 'MOJI-LATE-CODE-2345' && saved[1] === null);
+  check('no CSP violations (grace flow)', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
+  await ctx.close();
+}
+
+// 7c. grace chip while waiting; free play does not run down
+{
+  const { ctx, page } = await newPage();
+  await page.addInitScript(() => { localStorage.setItem('mojia.grace', JSON.stringify({ sid: 'cs_test_wait1', until: Date.now() + 60 * 60e3, at: Date.now() })); localStorage.setItem('mojia.freeUsed', '999'); localStorage.setItem('mojia.firstDone', 'true'); });
+  await page.route('**/.netlify/functions/confirm-session', (r) => r.fulfill({ status: 202, contentType: 'application/json', body: '{"status":"paid_pending"}' }));
+  await page.goto(base + '/play/');
+  await page.waitForTimeout(900);
+  const chip = (await page.locator('#s-home [data-chip]').textContent()).trim();
+  check('grace: chip shows minutes, not blocked', /min/.test(chip) && await page.isHidden('#s-rest'), chip);
+  await ctx.close();
+}
+
+// 7d. /pass/done/ with an unknown payment: clear message, Back and Contact us
+{
+  const { ctx, page } = await newPage();
+  await page.route('**/.netlify/functions/confirm-session', (r) => r.fulfill({ status: 404, contentType: 'application/json', body: '{"error":"We could not find that payment."}' }));
+  await page.goto(base + '/pass/done/?session_id=cs_test_nope1');
+  await page.waitForSelector('#dErr:not([hidden])');
+  check('done 404: Back to Mojialand and in-page Contact us', await page.isVisible('#dErr a[href="/play/"]') && await page.isVisible('#dErr [data-contact]'));
+  await page.screenshot({ path: path.join(SHOTS, 'done-error-390.png') });
+  await ctx.close();
+}
+
+// 7e. /r/CODE from the email button: turns the pass on, strips the code from the address bar
+{
+  const { ctx, page } = await newPage();
+  const { token, payload } = tokenFor('48h', Date.now() + 20 * 3600e3);
+  let body = null;
+  await page.route('**/.netlify/functions/redeem-code', (r) => { body = r.request().postDataJSON(); r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 'MOJI-ABCD-EFGH-JKMN', kind: '48h', ends_at: payload.e, token, email_masked: 'p•••@example.com' }) }); });
+  const hist = [];
+  page.on('framenavigated', (f) => { if (f === page.mainFrame()) hist.push(f.url()); });
+  await page.goto(base + '/r/MOJIABCDEFGHJKMN');
+  await page.waitForSelector('#s-allset:not(.hidden)', { timeout: 15000 });
+  check('/r/: sends normalized code and device id', body && body.code === 'MOJI-ABCD-EFGH-JKMN' && /^[0-9a-f]{32}$/.test(body.device_id), JSON.stringify(body));
+  check('/r/: All set says "Mojialand is on!"', (await page.textContent('#pwOkTitle')) === 'Mojialand is on!');
+  check('/r/: no email line on this device', !/emailed/.test(await page.textContent('#pwOkText')));
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('mojia.pass')));
+  check('/r/: pass saved with code', saved.code === 'MOJI-ABCD-EFGH-JKMN' && saved.token === token);
+  await page.screenshot({ path: path.join(SHOTS, 'r-allset-390.png') });
+  check('/r/: no CSP violations', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
+  await ctx.close();
+}
+{
+  const { ctx, page } = await newPage();
+  await page.route('**/.netlify/functions/redeem-code', (r) => r.fulfill({ status: 409, contentType: 'application/json', body: '{"error":"This code is on 5 devices already. Contact us to move it to a new device."}' }));
+  await page.goto(base + '/r/MOJIABCDEFGHJKMN');
+  await page.waitForSelector('#rStop:not([hidden])');
+  check('/r/: code gone from the address bar', new URL(page.url()).pathname === '/r/');
+  check('/r/ 409: device limit message and contact', /5 devices/.test(await page.textContent('#rStopText')) && await page.isVisible('#rStop [data-contact]'));
+  await page.screenshot({ path: path.join(SHOTS, 'r-limit-390.png') });
+  await page.goto(base + '/r/');
+  await page.waitForSelector('#rForm:not([hidden])');
+  await page.fill('#rCode', 'moji abcd');
+  await page.click('#rGo');
+  check('/r/ no code: form with format hint', /MOJI-XXXX/.test(await page.textContent('#rErr')));
+  await page.screenshot({ path: path.join(SHOTS, 'r-form-390.png') });
+  await ctx.close();
+}
+
+// 7f. Have a code? and Contact us inside the game (behind the grown-up gate)
+{
+  const { ctx, page } = await newPage();
+  const { token, payload } = tokenFor('forever');
+  await page.route('**/.netlify/functions/redeem-code', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 'GIFT-ABCD-EFGH-JKMN', kind: 'forever', ends_at: payload.e, token, email_masked: '' }) }));
+  await page.goto(base + '/play/#passes');
+  await page.waitForSelector('#s-ngate:not(.hidden)');
+  const ans = await page.getAttribute('#pwChoices', 'data-a');
+  await page.click('#pwChoices [data-n="' + ans + '"]');
+  await page.waitForSelector('#s-plans:not(.hidden)');
+  await page.click('#pwHelp');
+  check('game: Contact us opens a form, not an email app', await page.isVisible('#pwOvContact') && await page.isVisible('#pwCEmail'));
+  await page.waitForTimeout(400); await page.screenshot({ path: path.join(SHOTS, 'play-contact-390.png') });
+  await page.click('#pwOvContact #pwCForm [data-pw-close]');
+  await page.click('#pwCode');
+  await page.fill('#pwCodeIn', 'gift-abcd-efgh-jkmn');
+  await page.waitForTimeout(400); await page.screenshot({ path: path.join(SHOTS, 'play-code-390.png') });
+  await page.click('#pwCodeGo');
+  await page.waitForSelector('#s-allset:not(.hidden)');
+  check('game: Have a code? turns Forever on', (await page.textContent('#pwOkTitle')) === 'Mojialand is on!');
+  check('game: no CSP violations (code + contact)', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
   await ctx.close();
 }
 

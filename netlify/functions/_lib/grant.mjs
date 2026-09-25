@@ -7,6 +7,12 @@ const HOUR = 3600e3;
 
 export class GrantError extends Error {}
 
+// Add and upgrade keep the original code. Paid codes come from the first
+// session ID, so the code can be made again without ever storing it.
+function sameCode(pass, pepper) {
+  return pass.source === 'stripe' && pass.stripe_session_id ? deriveCode(pepper, pass.stripe_session_id) : null;
+}
+
 export async function grantPass(session) {
   if (!session || session.payment_status !== 'paid') throw new GrantError('not paid');
   const plan = session.metadata && session.metadata.plan;
@@ -47,7 +53,7 @@ export async function grantPass(session) {
     if (!(await claimEvent(guardId, session.id))) {
       // Already applied. Read again so the caller sees the updated row.
       await new Promise((r) => setTimeout(r, 300));
-      return { plan, pass: (await getPassBy('id', passId)) || pass, code: null };
+      return { plan, pass: (await getPassBy('id', passId)) || pass, code: sameCode(pass, pepper) };
     }
     try {
       let patch;
@@ -59,7 +65,7 @@ export async function grantPass(session) {
       }
       const rows = await patchPass('id=eq.' + encodeURIComponent(passId), patch);
       if (!rows.length) throw new GrantError('pass update failed');
-      return { plan, pass: rows[0], code: null };
+      return { plan, pass: rows[0], code: sameCode(pass, pepper) };
     } catch (e) {
       await releaseEvent(guardId); // let a retry apply it
       throw e;

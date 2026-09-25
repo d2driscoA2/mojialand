@@ -38,12 +38,13 @@ export function setEnv(extra = {}) {
 
 // In-memory PostgREST covering the calls the functions make.
 export function fakeDb() {
-  const db = { passes: [], stripe_events: [], rate: new Map(), emails: [], calls: [], rateLimit: Infinity };
+  const db = { passes: [], stripe_events: [], devices: [], support_messages: [], rate: new Map(), emails: [], calls: [], rateLimit: Infinity };
   const parseFilters = (qs) => {
     const f = [];
     for (const part of qs.split('&')) {
       const [k, v] = part.split('=');
       if (!v || ['select', 'limit', 'on_conflict'].includes(k)) continue;
+      if (v.startsWith('neq.')) { f.push((r) => String(r[k]) !== decodeURIComponent(v.slice(4))); continue; }
       if (v.startsWith('eq.')) f.push((r) => String(r[k]) === decodeURIComponent(v.slice(3)));
       else if (v === 'is.null') f.push((r) => r[k] == null);
     }
@@ -63,6 +64,7 @@ export function fakeDb() {
     const [, table, qs] = m;
     const body = opts.body ? JSON.parse(opts.body) : undefined;
     const prefer = (opts.headers && opts.headers.Prefer) || '';
+    if (db.down) return reply(503, { message: 'down' });
     if (table === 'rpc/rate_hit') {
       const n = (db.rate.get(body.p_key) || 0) + 1;
       db.rate.set(body.p_key, n);
@@ -72,10 +74,15 @@ export function fakeDb() {
     const rows = db[table];
     if (!rows) throw new Error('unknown table ' + table);
     const match = parseFilters(qs);
-    if (method === 'GET') return reply(200, rows.filter(match).slice(0, 1));
+    if (method === 'GET') {
+      const lim = /(?:^|&)limit=(\d+)/.exec(qs);
+      const hit = rows.filter(match);
+      return reply(200, lim ? hit.slice(0, Number(lim[1])) : hit);
+    }
     if (method === 'POST') {
-      const uniq = table === 'passes' ? ['stripe_session_id', 'code_hash', 'id'] : ['event_id'];
-      if (rows.some((r) => uniq.some((k) => body[k] != null && r[k] === body[k]))) {
+      const uniq = table === 'passes' ? ['stripe_session_id', 'code_hash', 'id'] : table === 'stripe_events' ? ['event_id'] : [];
+      const dupDevice = table === 'devices' && rows.some((r) => r.pass_id === body.pass_id && r.device_id_hash === body.device_id_hash);
+      if (dupDevice || rows.some((r) => uniq.some((k) => body[k] != null && r[k] === body[k]))) {
         if (!prefer.includes('ignore-duplicates')) return reply(409, { message: 'duplicate' });
         return reply(prefer.includes('return=representation') ? 200 : 201, prefer.includes('return=representation') ? [] : undefined);
       }

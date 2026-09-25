@@ -35,8 +35,9 @@ export async function rest(method, path, { body, prefer } = {}) {
 const enc = encodeURIComponent;
 
 // Rate limit. The key is a hash; raw addresses are never stored.
-// Returns true when the call is allowed. Fails closed if the database is down.
-export async function rateHit(fnName, ip, limit, windowSeconds) {
+// Returns true when the call is allowed. Fails closed if the database is down,
+// unless failOpen is set (for calls that must still work in an outage).
+export async function rateHit(fnName, ip, limit, windowSeconds, { failOpen = false } = {}) {
   const salt = process.env.RATE_SALT || process.env.RESTORE_CODE_PEPPER || '';
   const key = sha256hex(salt + ip + ':' + fnName);
   try {
@@ -46,7 +47,7 @@ export async function rateHit(fnName, ip, limit, windowSeconds) {
     return data === true;
   } catch {
     console.error(fnName + ': rate limit check failed');
-    return false;
+    return failOpen;
   }
 }
 
@@ -88,4 +89,36 @@ export async function getSetting(key, fallback) {
     /* fall back */
   }
   return fallback;
+}
+
+// Devices per pass. Stores only a hash of the random device value.
+export const DEVICE_RE = /^[0-9a-f]{32}$/;
+
+export async function addDevice(pass, deviceId) {
+  if (!DEVICE_RE.test(String(deviceId || ''))) return { ok: true, counted: false };
+  const pepper = process.env.RESTORE_CODE_PEPPER || '';
+  const h = sha256hex(pepper + ':dev:' + deviceId);
+  const pid = enc(pass.id);
+  const { data: mine } = await rest('GET', 'devices?pass_id=eq.' + pid + '&device_id_hash=eq.' + h + '&select=id&limit=1');
+  if (Array.isArray(mine) && mine.length) return { ok: true, counted: true };
+  const { data: all } = await rest('GET', 'devices?pass_id=eq.' + pid + '&select=id');
+  const limit = Number(pass.device_limit) || 5;
+  if (Array.isArray(all) && all.length >= limit) return { ok: false, limit };
+  await rest('POST', 'devices?on_conflict=pass_id,device_id_hash', {
+    body: { pass_id: pass.id, device_id_hash: h },
+    prefer: 'resolution=ignore-duplicates,return=minimal',
+  });
+  return { ok: true, counted: true };
+}
+
+export async function addSupportMessage(row) {
+  await rest('POST', 'support_messages', { body: row, prefer: 'return=minimal' });
+}
+
+// A short, safe description of an error for the logs. Never includes env values.
+export function safeErr(e) {
+  if (!e) return 'unknown';
+  const kind = e.type || e.name || 'Error';
+  const msg = String(e.message || '').replace(/(sk|rk|pk|whsec|re|sb_secret)_[A-Za-z0-9_]+/g, '[key]').slice(0, 140);
+  return kind + (msg ? ': ' + msg : '');
 }

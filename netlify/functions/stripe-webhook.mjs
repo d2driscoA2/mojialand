@@ -1,7 +1,7 @@
 // Stripe webhook. Verifies the signature on the raw body, handles each event once.
 import { guard } from './_lib/env.mjs';
 import { json, fail, header, rawBody, originFromUrl } from './_lib/http.mjs';
-import { claimEvent, releaseEvent, patchPass } from './_lib/db.mjs';
+import { claimEvent, releaseEvent, patchPass, safeErr } from './_lib/db.mjs';
 import { grantPass } from './_lib/grant.mjs';
 import { getStripe } from './_lib/stripe.mjs';
 import { buildEmail, sendEmail } from './_lib/email.mjs';
@@ -95,7 +95,7 @@ export const handler = async (event) => {
     }
     return json(200, { received: true });
   } catch (e) {
-    console.error('stripe-webhook: failed ' + evt.id + ' (' + (e && (e.type || e.name)) + ')');
+    console.error('stripe-webhook: failed ' + evt.id + ' (' + safeErr(e) + ')');
     await releaseEvent(evt.id); // Stripe retries; grantPass is idempotent
     return fail(500, 'Try again.');
   }
