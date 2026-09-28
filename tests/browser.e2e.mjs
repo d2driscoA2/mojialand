@@ -127,6 +127,13 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await page.goto(base + '/pass/?plan=pass');
   await page.waitForSelector('#checkout >> text=Apple Pay');
   check('/pass/ sheet: item and price', (await page.textContent('#coItem')) === '48-hour pass' && (await page.textContent('#coPrice')) === '$1.50');
+  await page.goto(base + '/play/#passes'); await page.waitForSelector('#s-ngate:not(.hidden)');
+  { const ans = await page.getAttribute('#pwChoices', 'data-a'); await page.click('#pwChoices [data-n="' + ans + '"]'); }
+  await page.waitForSelector('#s-plans:not(.hidden)');
+  check('pass screen CTA names the pass', (await page.textContent('#pwPay')) === 'Start 48 hours · $1.50', await page.textContent('#pwPay'));
+  await page.click('[data-plan="life"]');
+  check('pass screen CTA for Forever', (await page.textContent('#pwPay')) === 'Get Forever · $14.99');
+  await page.goto(base + '/pass/?plan=pass'); await page.waitForSelector('#checkout >> text=Apple Pay');
   check('/pass/ sends only the plan', JSON.stringify(body) === '{"plan":"pass"}', JSON.stringify(body));
   check('/pass/ wordmark visible', await page.isVisible('header img[src="/logo/wordmark.png"]'));
   check('/pass/ no CSP violations', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
@@ -455,6 +462,8 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await page.reload(); await page.waitForTimeout(800);
   const href = await page.getAttribute('link[rel="manifest"]', 'href');
   check('manifest link carries the pass token and code', href === '/.netlify/functions/manifest?r=' + encodeURIComponent(token) + '&c=MOJI-HAND-OFFF-2345', href);
+  check('page address carries the pass too', new URL(page.url()).search === '?restore=' + encodeURIComponent(token) + '&code=MOJI-HAND-OFFF-2345', page.url());
+  check('body is fixed so the app never scrolls under the status bar', (await page.evaluate(() => getComputedStyle(document.body).position)) === 'fixed');
   await ctx.close();
 }
 {
@@ -464,7 +473,7 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await page.waitForFunction(() => { const c = document.querySelector('#s-home [data-chip]'); return c && /h left/.test(c.textContent); }, null, { timeout: 8000 });
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('mojia.pass')));
   check('restore: pass saved from the address', saved && saved.token === token && saved.code === 'MOJI-HAND-OFFF-2345');
-  check('restore: token removed from the address bar', new URL(page.url()).search === '');
+  check('restore: address keeps the pass for Home Screen adds', new URL(page.url()).search.startsWith('?restore='));
   const badTok = tamper(token);
   await page.evaluate(() => localStorage.clear());
   await page.goto(base + '/play/?restore=' + encodeURIComponent(badTok));

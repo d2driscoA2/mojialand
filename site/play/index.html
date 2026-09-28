@@ -32,7 +32,8 @@
   --display:'Nunito','Arial Rounded MT Bold',system-ui,sans-serif; --body:'Nunito',system-ui,sans-serif;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
-html,body{height:100%;margin:0;overflow:hidden;background:var(--cream);color:var(--ink);font-family:var(--body);font-weight:700;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{position:fixed;inset:0;width:100%;background:var(--cream);color:var(--ink);font-family:var(--body);font-weight:700;touch-action:manipulation;user-select:none;-webkit-user-select:none}
 #app{height:100%;max-width:480px;margin:0 auto;position:relative;background:var(--cream)}
 .screen{position:absolute;inset:0;display:flex;flex-direction:column;gap:14px;padding:max(14px,env(safe-area-inset-top,0px)) 16px max(14px,env(safe-area-inset-bottom,0px))}
 .screen[data-bg]{background:var(--cream);color:var(--ink)}
@@ -46,9 +47,9 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--cream);color:var
 .pill.danger{border-color:#FFC2D6;color:var(--red);background:var(--red-l)}
 .pill .hold{position:absolute;left:0;top:0;bottom:0;width:0;background:rgba(113,56,209,.25);pointer-events:none}
 .gear{width:48px;height:48px;padding:0;justify-content:center;border-color:var(--line)}
-.pill.grown{height:48px;padding:0 12px 0 10px;border-color:var(--line);flex-direction:row;gap:6px}
-.pill.grown .gl{font-family:var(--display);font-weight:900;font-size:12px;color:var(--purple-d);letter-spacing:.02em}
-@media (max-width:360px){.pill.grown .gl{display:none}.pill.grown{width:48px;padding:0;justify-content:center}}
+.pill.grown{height:auto;min-height:48px;width:64px;padding:4px 0 2px;border:0;background:none;box-shadow:none;flex-direction:column;gap:1px;justify-content:center;overflow:visible}
+.pill.grown svg{width:24px;height:24px}
+.pill.grown .gl{font-family:var(--display);font-weight:900;font-size:10px;color:var(--purple-d);letter-spacing:.02em;line-height:1}
 .stage{flex:1;min-height:0;border-radius:var(--r);background:var(--white);position:relative;overflow:hidden;border:2px solid var(--line);box-shadow:var(--shadow)}
 .btnrow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .btnrow.three{grid-template-columns:1fr 1fr 1fr;gap:10px}
@@ -1055,7 +1056,7 @@ const pay=(function(){
       if(!keys.includes(plan)) plan='pass';
       html=card('pass','48-hour pass','Two days of everything.')+card('life','Forever','Pay once, play for good.',true); }
     $('#pwCards').innerHTML=html; syncPlan(); }
-  function syncPlan(){ $$('#pwCards .pw-plan').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.plan===plan))); $('#pwPay').textContent='Pay '+money(PRICES[plan]); }
+  function syncPlan(){ $$('#pwCards .pw-plan').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.plan===plan))); $('#pwPay').textContent={pass:'Start 48 hours',life:'Get Forever',add:'Add 48 hours',up:'Upgrade to Forever'}[plan]+' · '+money(PRICES[plan]); }
   $('#pwCards').addEventListener('click',e=>{ const b=e.target.closest('.pw-plan'); if(!b) return; plan=b.dataset.plan; syncPlan(); });
   $('#pwWhyBtn').addEventListener('click',()=>{ const open=$('#pwWhyMore').hidden; $('#pwWhyMore').hidden=!open; $('#pwWhyBtn').setAttribute('aria-expanded',String(open)); });
   $('#pwPlansBack').addEventListener('click',()=>{ ctx(); sfx.boop(); back(); });
@@ -1092,11 +1093,14 @@ const pay=(function(){
      the manifest link points at a copy whose start_url carries the pass, so the Home Screen app opens with it. */
   function syncManifest(){ const link=document.querySelector('link[rel="manifest"]'); if(!link) return; const p=store.get('pass',null);
     const href=p&&typeof p==='object'&&typeof p.token==='string'&&vcache.payload&&vcache.token===p.token?'/.netlify/functions/manifest?r='+encodeURIComponent(p.token)+(p.code?'&c='+encodeURIComponent(String(p.code)):''):'/manifest.webmanifest';
-    if(link.getAttribute('href')!==href) link.setAttribute('href',href); }
+    if(link.getAttribute('href')!==href) link.setAttribute('href',href);
+    /* the page address carries the pass too, in case the Home Screen app starts from the page address instead of start_url */
+    try{ const want=href==='/manifest.webmanifest'?'':'?restore='+encodeURIComponent(p.token)+(p.code?'&code='+encodeURIComponent(String(p.code)):''); if(location.search!==want) history.replaceState(null,'',location.pathname+want+location.hash); }catch(e){} }
+  let dbgRestore='none';
   /* the Home Screen app opens /play/?restore=TOKEN&code=CODE the first time: save it, then clean the address */
   async function restoreFromUrl(){ let q; try{ q=new URLSearchParams(location.search); }catch(e){ return; } const tok=q.get('restore'); if(!tok) return;
     try{ history.replaceState(null,'',location.pathname+location.hash); }catch(e){}
-    const v=await checkToken(tok); if(!v) return; const code=normCode(q.get('code')||'');
+    const v=await checkToken(tok); if(!v){ dbgRestore='bad'; return; } dbgRestore='ok'; const code=normCode(q.get('code')||'');
     const old=store.get('pass',null); const oldV=old&&typeof old.token==='string'?await checkToken(old.token):null;
     const rank=x=>x.k==='forever'?Infinity:x.e; if(oldV&&rank(oldV)>=rank(v)) return;
     try{ localStorage.setItem('mojia.pass',JSON.stringify({code:code,kind:v.k,ends_at:v.e,token:tok,email_masked:'',device_id:deviceId()})); }catch(e){} }
@@ -1152,7 +1156,8 @@ const pay=(function(){
     if(passOn(p)&&p.kind==='forever') h='<b>Forever pass on</b><span>Code '+p.code+'</span>';
     else if(passOn(p)){ const m=Math.max(0,Math.ceil((p.ends_at-Date.now())/MIN)); h='<b>48-hour pass on</b><span>Ends '+fmtT(p.ends_at)+(m<=60?' ('+m+' min left)':'')+(p.code?' · Code '+p.code:'')+'</span>'; }
     else if(graceOn()){ const m=Math.max(1,Math.ceil((graceInfo().until-Date.now())/MIN)); h='<b>Your pass is on its way</b><span>Payment received. Free play for '+m+' more min while it arrives. Your code also comes by email.</span>'; }
-    else { const s=Math.ceil(freeLeft()/1000); h='<b>Free play</b><span>'+SETTINGS.first_visit_minutes+' minutes on the first visit, then '+SETTINGS.daily_minutes+' minutes a day. Resets each morning.</span><span>Left today: '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0')+'</span>'; }
+    else { const s=Math.ceil(freeLeft()/1000); h='<b>Free play</b><span>'+SETTINGS.first_visit_minutes+' minutes on the first visit, then '+SETTINGS.daily_minutes+' minutes a day. Resets each morning.</span><span>Left today: '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0')+'</span>'+(standalone()?'<span>Paid already? Open your pass email and tap the button, or tap Have a code? below.</span>':''); }
+    if(/displayedux\.com$|netlify\.app$/.test(location.hostname)){ const lk=document.querySelector('link[rel="manifest"]'); h+='<span style="opacity:.6">Staging check: '+(standalone()?'Home Screen app':'browser')+' · opened with pass in address: '+dbgRestore+' · manifest carries pass: '+(lk&&/functions\/manifest/.test(lk.getAttribute('href')||'')?'yes':'no')+'</span>'; }
     const el=$('#pwStatus'); if(el.innerHTML!==h) el.innerHTML=h; }
   function buildGU(){ paintStatus(); const p=getPass(), rows=[];
     if(passOn(p)){ rows.push(['📲 Send code to another device','›','share']); if(p.kind==='48h') rows.push(['Add 48 hours',money(PRICES.add),'add'],['Upgrade to Forever',money(PRICES.up),'up']); }
