@@ -188,5 +188,21 @@ begin
   delete from rate_limits      where window_start < now() - interval '1 day';
   delete from admin_codes      where expires_at < now() - interval '1 day';
   delete from admin_sessions   where expires_at < now();
+  delete from handoffs         where expires_at < now();
 end;
 $$;
+
+-- Home Screen handoff. When a pass is on in Safari, the game parks a signed
+-- pass token here under a scrambled key made from the network address and
+-- browser type. The Home Screen app (separate storage on iPhone) claims it
+-- within 30 minutes. Rows die on claim or by the nightly cleanup.
+create table if not exists public.handoffs (
+  key_hash   text primary key,
+  token      text not null,
+  code       text,
+  expires_at timestamptz not null,
+  created_at timestamptz not null default now()
+);
+alter table public.handoffs enable row level security;
+revoke all on public.handoffs from anon, authenticated;
+grant select, insert, update, delete on public.handoffs to service_role;

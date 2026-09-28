@@ -17,6 +17,7 @@ import { handler as adminLogin } from '../netlify/functions/admin-login.mjs';
 import { handler as adminApi } from '../netlify/functions/admin-api.mjs';
 import { handler as redeemFn } from '../netlify/functions/redeem-code.mjs';
 import { handler as settingsFn } from '../netlify/functions/settings.mjs';
+import { handler as handoff } from '../netlify/functions/handoff.mjs';
 
 let db, stripe;
 beforeEach(() => {
@@ -464,4 +465,23 @@ test('settings: public read of play settings only', async () => {
   assert.equal(r.statusCode, 200);
   assert.deepEqual(JSON.parse(r.body), { daily_minutes: 3, daily_reset: '04:00' });
   assert.equal((await settingsFn(ev({}))).statusCode, 405);
+});
+
+test('handoff: Safari offers, the Home Screen app on the same phone claims once; other phones get nothing', async () => {
+  const { pass, code } = await grantPass(paidSession('cs_test_ho1', 'pass'));
+  const tok = signToken(makeTokenPayload(pass, 'staging'), process.env.PASS_SIGNING_PRIVATE_KEY);
+  const safari = { 'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1' };
+  const app = { 'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148' };
+  assert.equal((await handoff(ev({ action: 'offer', token: 'nope', code }, safari))).statusCode, 400);
+  let r = await handoff(ev({ action: 'offer', token: tok, code }, safari));
+  assert.equal(r.statusCode, 200); assert.equal(db.handoffs.length, 1);
+  assert.ok(!JSON.stringify(db.handoffs).includes('203.0.113.9'), 'address stored only as a hash');
+  r = await handoff(ev({ action: 'claim', device_id: 'c'.repeat(32) }, { ...app, 'x-nf-client-connection-ip': '198.51.100.7' }));
+  assert.equal(r.statusCode, 404, 'another phone gets nothing');
+  r = await handoff(ev({ action: 'claim', device_id: 'c'.repeat(32) }, app));
+  assert.equal(r.statusCode, 200);
+  const d = JSON.parse(r.body);
+  assert.equal(d.token, tok); assert.equal(d.code, code); assert.equal(d.kind, '48h');
+  assert.equal(db.devices.length, 1);
+  assert.equal((await handoff(ev({ action: 'claim', device_id: 'c'.repeat(32) }, app))).statusCode, 404, 'claimed once');
 });

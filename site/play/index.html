@@ -52,6 +52,12 @@ body{position:fixed;inset:0;width:100%;background:var(--cream);color:var(--ink);
 .pill.grown .gl{font-family:var(--display);font-weight:900;font-size:10px;color:var(--purple-d);letter-spacing:.02em;line-height:1}
 .stage{flex:1;min-height:0;border-radius:var(--r);background:var(--white);position:relative;overflow:hidden;border:2px solid var(--line);box-shadow:var(--shadow)}
 .btnrow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+/* v1.11: small help row under each game so the stage gets the height */
+.helprow{display:flex;justify-content:center;align-items:center;gap:6px;flex-wrap:wrap;min-height:44px}
+.helpbtn{background:none;border:0;color:var(--purple-d);font-family:var(--display);font-weight:800;font-size:14px;cursor:pointer;min-height:44px;padding:0 10px;display:inline-flex;align-items:center;gap:5px;text-decoration:underline;text-underline-offset:3px}
+.helpbtn.act{text-decoration:none;border:2px solid var(--line);border-radius:999px;background:var(--white);padding:0 16px;box-shadow:var(--shadow)}
+.helpbtn.danger{color:var(--red);border-color:#FFC2D6;background:var(--red-l)}
+.helpbtn:focus-visible{outline:3px solid var(--purple-d);outline-offset:2px}
 .btnrow.three{grid-template-columns:1fr 1fr 1fr;gap:10px}
 .btnrow.three .big{font-size:15px}
 .big{height:80px;border:2px solid transparent;border-radius:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-family:var(--display);font-weight:900;font-size:16px;color:#fff;background:var(--purple);cursor:pointer;box-shadow:var(--shadow);transition:transform .08s}
@@ -483,21 +489,21 @@ textarea.pw-in{resize:none;min-height:88px}
 <section class="screen hidden" id="s-pattern" data-bg="grape">
   <div class="bar"><button class="pill gear" data-go="home" aria-label="Back to home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7138D1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg></button><div class="gname"><span class="e">⭐</span>Pattern</div><div class="pw-slot"><span class="pw-chip" data-chip role="timer"><svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="14" fill="none" stroke="#F3ECFC" stroke-width="6"/><circle class="arc" cx="18" cy="18" r="14" fill="none" stroke="#FFC83D" stroke-width="6" stroke-linecap="round" stroke-dasharray="88" stroke-dashoffset="0" transform="rotate(-90 18 18)"/></svg><span class="t">15:00</span></span></div></div>
   <div class="stage"><div class="pscene" id="pscene"></div><div class="center"><div class="ptitle">What comes next?</div><div class="prow" id="prow"></div><div class="choices" id="pchoices"></div><div class="dots" id="pdots"><i></i><i></i><i></i></div></div><div class="reward hidden" id="preward"></div></div>
-  <div class="btnrow"><button class="big sand" data-demo="pattern"><span class="e">🔁</span>Show me</button><button class="big" id="psay"><span class="e">🔊</span>Say it</button></div>
+  <div class="helprow"><button class="helpbtn" data-demo="pattern"><span aria-hidden="true">❓</span>How to play</button><button class="helpbtn" id="psay"><span aria-hidden="true">🔊</span>Say it</button></div>
 </section>
 
 <!-- BOUNCE -->
 <section class="screen hidden" id="s-bounce" data-bg="sky">
   <div class="bar"><button class="pill gear" data-go="home" aria-label="Back to home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7138D1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg></button><div class="gname"><span class="e">🎈</span>Bounce</div><div class="pw-slot"><span class="pw-chip" data-chip role="timer"><svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="14" fill="none" stroke="#F3ECFC" stroke-width="6"/><circle class="arc" cx="18" cy="18" r="14" fill="none" stroke="#FFC83D" stroke-width="6" stroke-linecap="round" stroke-dasharray="88" stroke-dashoffset="0" transform="rotate(-90 18 18)"/></svg><span class="t">15:00</span></span></div></div>
   <div class="bwrap"><div class="stage" id="bstage"><canvas id="bcanvas"></canvas></div><div class="vwrap" id="vwrap"><div class="vtray" id="vtray"></div><div class="vmore" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div></div></div>
-  <div class="btnrow"><button class="big sand" data-demo="bounce"><span class="e">🔁</span>Show me</button><button class="big danger" id="bclear"><span class="e">🗑️</span>Clear</button></div>
+  <div class="helprow"><button class="helpbtn" data-demo="bounce"><span aria-hidden="true">❓</span>How to play</button><button class="helpbtn act danger" id="bclear"><span aria-hidden="true">🗑️</span>Clear</button></div>
 </section>
 
 <!-- MATCH -->
 <section class="screen hidden" id="s-match" data-bg="pink">
   <div class="bar"><button class="pill gear" data-go="home" aria-label="Back to home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7138D1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg></button><div class="gname"><span class="e">😊</span>Match</div><div class="pw-slot"><span class="pw-chip" data-chip role="timer"><svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="14" fill="none" stroke="#F3ECFC" stroke-width="6"/><circle class="arc" cx="18" cy="18" r="14" fill="none" stroke="#FFC83D" stroke-width="6" stroke-linecap="round" stroke-dasharray="88" stroke-dashoffset="0" transform="rotate(-90 18 18)"/></svg><span class="t">15:00</span></span></div></div>
   <div class="stage" style="background:var(--purple-l)"><div class="grid" id="mgrid"></div><div class="reward hidden" id="mreward"></div></div>
-  <div class="btnrow"><button class="big sand" data-demo="match"><span class="e">🔁</span>Show me</button><button class="big" id="msay"><span class="e">🔊</span>Say it</button></div>
+  <div class="helprow"><button class="helpbtn" data-demo="match"><span aria-hidden="true">❓</span>How to play</button><button class="helpbtn" id="msay"><span aria-hidden="true">🔊</span>Say it</button></div>
 </section>
 
 <!-- PARADE -->
@@ -512,7 +518,7 @@ textarea.pw-in{resize:none;min-height:88px}
     <div id="target" class="target hidden">🍭</div>
     <button class="addbtn" id="addBtn" aria-label="Add a character"><b>+</b>Add</button>
   </div>
-  <div class="btnrow three"><button class="big sand" data-demo="parade"><span class="e">🔁</span>Show me</button><button class="big" id="ppause" aria-pressed="false"><span class="e">⏸️</span>Pause</button><button class="big danger" id="pclear"><span class="e">🗑️</span>Clear</button></div>
+  <div class="helprow"><button class="helpbtn" data-demo="parade"><span aria-hidden="true">❓</span>How to play</button><button class="helpbtn act" id="ppause" aria-pressed="false"><span aria-hidden="true">⏸️</span>Pause</button><button class="helpbtn act danger" id="pclear"><span aria-hidden="true">🗑️</span>Clear</button></div>
 </section>
 
 <!-- EMOJI PICKER (shared) -->
@@ -1094,9 +1100,24 @@ const pay=(function(){
   function syncManifest(){ const link=document.querySelector('link[rel="manifest"]'); if(!link) return; const p=store.get('pass',null);
     const href=p&&typeof p==='object'&&typeof p.token==='string'&&vcache.payload&&vcache.token===p.token?'/.netlify/functions/manifest?r='+encodeURIComponent(p.token)+(p.code?'&c='+encodeURIComponent(String(p.code)):''):'/manifest.webmanifest';
     if(link.getAttribute('href')!==href) link.setAttribute('href',href);
+    offerHandoff();
     /* the page address carries the pass too, in case the Home Screen app starts from the page address instead of start_url */
     try{ const want=href==='/manifest.webmanifest'?'':'?restore='+encodeURIComponent(p.token)+(p.code?'&code='+encodeURIComponent(String(p.code)):''); if(location.search!==want) history.replaceState(null,'',location.pathname+want+location.hash); }catch(e){} }
-  let dbgRestore='none';
+  let dbgRestore='none', dbgClaim='not tried';
+  /* Home Screen handoff, third channel: Safari parks the pass on the server for 30 minutes; the Home Screen app claims it. */
+  const isStandalone=()=>{ try{ return window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true; }catch(e){ return false; } };
+  function offerHandoff(){ const p=store.get('pass',null); if(!p||typeof p.token!=='string'||!vcache.payload||vcache.token!==p.token||isStandalone()) return;
+    const last=store.get('offered',null); if(last&&last.token===p.token&&Date.now()-Number(last.at)<10*MIN) return;
+    store.set('offered',{token:p.token,at:Date.now()});
+    fetch('/.netlify/functions/handoff',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'offer',token:p.token,code:p.code||''}),credentials:'same-origin',cache:'no-store'}).catch(()=>{}); }
+  let claiming=false, lastClaim=0;
+  async function claimHandoff(){ if(!isStandalone()||passOn(getPass())||claiming||Date.now()-lastClaim<60000) return false; claiming=true; lastClaim=Date.now();
+    try{ const res=await fetch('/.netlify/functions/handoff',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'claim',device_id:deviceId()}),credentials:'same-origin',cache:'no-store'});
+      let d={}; try{ d=await res.json(); }catch(e){}
+      if(res.status===200&&d&&typeof d.token==='string'&&await savePass(d)){ dbgClaim='ok'; store.set('allset',{plan:'redeem',email_masked:'',at:Date.now()}); claiming=false; return true; }
+      dbgClaim=res.status===404?'nothing waiting':'failed '+res.status;
+    }catch(e){ dbgClaim='no connection'; }
+    claiming=false; return false; }
   /* the Home Screen app opens /play/?restore=TOKEN&code=CODE the first time: save it, then clean the address */
   async function restoreFromUrl(){ let q; try{ q=new URLSearchParams(location.search); }catch(e){ return; } const tok=q.get('restore'); if(!tok) return;
     try{ history.replaceState(null,'',location.pathname+location.hash); }catch(e){}
@@ -1157,7 +1178,7 @@ const pay=(function(){
     else if(passOn(p)){ const m=Math.max(0,Math.ceil((p.ends_at-Date.now())/MIN)); h='<b>48-hour pass on</b><span>Ends '+fmtT(p.ends_at)+(m<=60?' ('+m+' min left)':'')+(p.code?' · Code '+p.code:'')+'</span>'; }
     else if(graceOn()){ const m=Math.max(1,Math.ceil((graceInfo().until-Date.now())/MIN)); h='<b>Your pass is on its way</b><span>Payment received. Free play for '+m+' more min while it arrives. Your code also comes by email.</span>'; }
     else { const s=Math.ceil(freeLeft()/1000); h='<b>Free play</b><span>'+SETTINGS.first_visit_minutes+' minutes on the first visit, then '+SETTINGS.daily_minutes+' minutes a day. Resets each morning.</span><span>Left today: '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0')+'</span>'+(standalone()?'<span>Paid already? Open your pass email and tap the button, or tap Have a code? below.</span>':''); }
-    if(/displayedux\.com$|netlify\.app$/.test(location.hostname)){ const lk=document.querySelector('link[rel="manifest"]'); h+='<span style="opacity:.6">Staging check: '+(standalone()?'Home Screen app':'browser')+' · opened with pass in address: '+dbgRestore+' · manifest carries pass: '+(lk&&/functions\/manifest/.test(lk.getAttribute('href')||'')?'yes':'no')+'</span>'; }
+    if(/displayedux\.com$|netlify\.app$/.test(location.hostname)){ const lk=document.querySelector('link[rel="manifest"]'); h+='<span style="opacity:.6">Staging check: '+(standalone()?'Home Screen app':'browser')+' · opened with pass in address: '+dbgRestore+' · manifest carries pass: '+(lk&&/functions\/manifest/.test(lk.getAttribute('href')||'')?'yes':'no')+' · server handoff: '+dbgClaim+'</span>'; }
     const el=$('#pwStatus'); if(el.innerHTML!==h) el.innerHTML=h; }
   function buildGU(){ paintStatus(); const p=getPass(), rows=[];
     if(passOn(p)){ rows.push(['📲 Send code to another device','›','share']); if(p.kind==='48h') rows.push(['Add 48 hours',money(PRICES.add),'add'],['Upgrade to Forever',money(PRICES.up),'up']); }
@@ -1171,8 +1192,8 @@ const pay=(function(){
     if(a==='add'||a==='up') openGate('plans','gate',a); else if(a==='buy') openGate('plans','gate','pass');
     else if(a==='share') soon('Send code to another device'); else if(a==='code') openCode(); else if(a==='help') openContact(); });
 
-  function onScreen(name){ if(name==='ngate') newGate(); else if(name==='plans') buildPlans(); else if(name==='gate') buildGU(); if(name!=='rest') $('#pwZeroChip').classList.remove('shake'); $$('.pw-ov').forEach(o=>o.classList.add('hidden')); paintChips(); }
-  async function start(route){ deviceId(); rollDay(); await restoreFromUrl(); await verifyStored(); ackEnd(getPass()); paintChips();
+  function onScreen(name){ if(name==='ngate'){ newGate(); claimHandoff().then(ok=>{ if(ok) showAllset(); }); } else if(name==='plans') buildPlans(); else if(name==='gate') buildGU(); if(name!=='rest') $('#pwZeroChip').classList.remove('shake'); $$('.pw-ov').forEach(o=>o.classList.add('hidden')); paintChips(); }
+  async function start(route){ deviceId(); rollDay(); await restoreFromUrl(); await verifyStored(); if(await claimHandoff()) route='allset'; ackEnd(getPass()); paintChips();
     if(route==='allset'&&showAllset()){} else if(route==='passes') openGate('plans','home'); else if(blocked()) showRest();
     setInterval(tick,1000); }
   return { onScreen, start, getPass, openGate };

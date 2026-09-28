@@ -482,6 +482,39 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await ctx.close();
 }
 
+// 9d2. Home Screen handoff through the server: Safari offers, the standalone app claims
+{
+  const { ctx, page } = await newPage();
+  const { token, payload } = tokenFor('48h', Date.now() + 30 * 3600e3);
+  const offers = [];
+  await page.route('**/.netlify/functions/handoff', (r) => { const b = r.request().postDataJSON(); offers.push(b); r.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' }); });
+  await page.evaluate(() => 0).catch(() => {});
+  await page.goto(base + '/play/');
+  await page.evaluate(([tok, e]) => localStorage.setItem('mojia.pass', JSON.stringify({ code: 'MOJI-HAND-OFFF-2345', kind: '48h', ends_at: e, token: tok })), [token, payload.e]);
+  await page.reload(); await page.waitForTimeout(900);
+  check('safari: offers the pass to the server once', offers.length === 1 && offers[0].action === 'offer' && offers[0].token === token && offers[0].code === 'MOJI-HAND-OFFF-2345', JSON.stringify(offers).slice(0, 80));
+  await page.reload(); await page.waitForTimeout(700);
+  check('safari: no second offer within 10 minutes', offers.length === 1);
+  await ctx.close();
+}
+{
+  const { ctx, page } = await newPage();
+  await page.emulateMedia({ media: null });
+  await page.addInitScript(() => { Object.defineProperty(navigator, 'standalone', { get: () => true }); });
+  const { token, payload } = tokenFor('48h', Date.now() + 30 * 3600e3);
+  const claims = [];
+  await page.route('**/.netlify/functions/handoff', (r) => { const b = r.request().postDataJSON(); claims.push(b);
+    if (b.action === 'claim') return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 'MOJI-HAND-OFFF-2345', kind: '48h', ends_at: payload.e, token, email_masked: '' }) });
+    r.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' }); });
+  await page.goto(base + '/play/');
+  await page.waitForSelector('#s-allset:not(.hidden)', { timeout: 8000 });
+  check('home screen app: claims the pass on first open and shows Mojialand is on', claims.some((c) => c.action === 'claim' && /^[0-9a-f]{32}$/.test(c.device_id)) && (await page.textContent('#pwOkTitle')) === 'Mojialand is on!');
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('mojia.pass')));
+  check('home screen app: pass saved from the claim', saved && saved.token === token && saved.code === 'MOJI-HAND-OFFF-2345');
+  check('home screen app: never offers back', !claims.some((c) => c.action === 'offer'));
+  await ctx.close();
+}
+
 // 9e. Pattern: a badge after each place, like Match
 {
   const { ctx, page } = await newPage();
