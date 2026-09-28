@@ -425,6 +425,75 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await ctx.close();
 }
 
+// 9c. Grown-ups: one tap on the gear opens the number gate; the label is visible
+{
+  const { ctx, page } = await newPage();
+  await page.goto(base + '/play/#passes');
+  await page.waitForSelector('#s-ngate:not(.hidden)');
+  await page.click('#pwGateBack');
+  await page.waitForSelector('#s-home:not(.hidden)');
+  check('home: gear shows a "Grown-ups" label', (await page.textContent('#lockBtn .gl')).trim() === 'Grown-ups' && await page.isVisible('#lockBtn .gl'));
+  await page.click('#lockBtn');
+  await page.waitForSelector('#s-ngate:not(.hidden)');
+  check('home: one tap on Grown-ups opens the number gate', await page.isVisible('#s-ngate'));
+  const ans = await page.getAttribute('#pwChoices', 'data-a');
+  await page.click('#pwChoices [data-n="' + ans + '"]');
+  await page.waitForSelector('#s-gate:not(.hidden)');
+  check('number gate leads to Grown-ups', await page.isVisible('#s-gate'));
+  await page.screenshot({ path: path.join(SHOTS, 'home-grownups-label-390.png') });
+  await ctx.close();
+}
+
+// 9d. Home Screen handoff: manifest link carries the pass; /play/?restore= saves it
+{
+  const { ctx, page } = await newPage();
+  const { token, payload } = tokenFor('48h', Date.now() + 40 * 3600e3);
+  await page.goto(base + '/play/');
+  await page.waitForTimeout(500);
+  check('manifest link is the plain file with no pass', (await page.getAttribute('link[rel="manifest"]', 'href')) === '/manifest.webmanifest');
+  await page.evaluate(([tok, e]) => localStorage.setItem('mojia.pass', JSON.stringify({ code: 'MOJI-HAND-OFFF-2345', kind: '48h', ends_at: e, token: tok })), [token, payload.e]);
+  await page.reload(); await page.waitForTimeout(800);
+  const href = await page.getAttribute('link[rel="manifest"]', 'href');
+  check('manifest link carries the pass token and code', href === '/.netlify/functions/manifest?r=' + encodeURIComponent(token) + '&c=MOJI-HAND-OFFF-2345', href);
+  await ctx.close();
+}
+{
+  const { ctx, page } = await newPage(); // a fresh "Home Screen app" with empty storage
+  const { token } = tokenFor('48h', Date.now() + 40 * 3600e3);
+  await page.goto(base + '/play/?restore=' + encodeURIComponent(token) + '&code=MOJI-HAND-OFFF-2345');
+  await page.waitForFunction(() => { const c = document.querySelector('#s-home [data-chip]'); return c && /h left/.test(c.textContent); }, null, { timeout: 8000 });
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('mojia.pass')));
+  check('restore: pass saved from the address', saved && saved.token === token && saved.code === 'MOJI-HAND-OFFF-2345');
+  check('restore: token removed from the address bar', new URL(page.url()).search === '');
+  const badTok = tamper(token);
+  await page.evaluate(() => localStorage.clear());
+  await page.goto(base + '/play/?restore=' + encodeURIComponent(badTok));
+  await page.waitForTimeout(800);
+  check('restore: tampered token ignored', (await page.evaluate(() => localStorage.getItem('mojia.pass'))) === null);
+  await ctx.close();
+}
+
+// 9e. Pattern: a badge after each place, like Match
+{
+  const { ctx, page } = await newPage();
+  await page.addInitScript(() => { localStorage.setItem('mojia.demos', 'false'); localStorage.setItem('mojia.welcomed', 'true'); });
+  await page.goto(base + '/play/');
+  await page.click('#splash');
+  await page.click('[data-go="pattern"]');
+  await page.waitForSelector('#s-pattern:not(.hidden)');
+  await page.waitForTimeout(800);
+  for (let i = 0; i < 3; i++) {
+    await page.waitForSelector('#pchoices .choice[data-ok="1"]');
+    await page.click('#pchoices .choice[data-ok="1"]');
+    await page.waitForTimeout(1300);
+  }
+  await page.waitForSelector('#preward:not(.hidden)', { timeout: 5000 });
+  const txt = await page.textContent('#preward');
+  check('pattern: bronze medal after the first place', /bronze medal/.test(txt) && (await page.locator('#preward .shelf span.got').count()) === 1, txt.slice(0, 60));
+  await page.screenshot({ path: path.join(SHOTS, 'pattern-reward-390.png') });
+  await ctx.close();
+}
+
 // 10. play normal load: splash, no foreign requests, no CSP errors
 {
   const { ctx, page } = await newPage();

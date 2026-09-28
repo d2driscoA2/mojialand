@@ -12,6 +12,7 @@ import { handler as confirmSession } from '../netlify/functions/confirm-session.
 import { handler as webhook } from '../netlify/functions/stripe-webhook.mjs';
 import { handler as redeem } from '../netlify/functions/redeem-code.mjs';
 import { handler as contact } from '../netlify/functions/contact.mjs';
+import { handler as manifest } from '../netlify/functions/manifest.mjs';
 
 let db, stripe;
 beforeEach(() => {
@@ -343,4 +344,18 @@ test('contact: validates, saves, emails support with reply-to; works when the da
   db.down = true;
   r = await contact(ev({ email: 'parent@example.com', topic: 'weird', message: 'Still here' }));
   assert.equal(r.statusCode, 200, 'email still goes out');
+});
+
+test('manifest: plain without a token; start_url carries a well-formed token and code', async () => {
+  const get = (q) => manifest({ httpMethod: 'GET', headers: {}, queryStringParameters: q });
+  let r = await get({});
+  assert.equal(r.statusCode, 200); assert.equal(r.headers['Content-Type'], 'application/manifest+json');
+  let m = JSON.parse(r.body);
+  assert.equal(m.start_url, '/play/'); assert.equal(m.scope, '/'); assert.equal(m.display, 'standalone');
+  const tok = signToken(makeTokenPayload({ id: 'p1', kind: '48h', ends_at: new Date(Date.now() + 3600e3).toISOString() }, 'staging'), process.env.PASS_SIGNING_PRIVATE_KEY);
+  r = await get({ r: tok, c: 'moji-abcd-efgh-jkmn' });
+  m = JSON.parse(r.body);
+  assert.equal(m.start_url, '/play/?restore=' + encodeURIComponent(tok) + '&code=MOJI-ABCD-EFGH-JKMN');
+  r = await get({ r: '<script>', c: 'x' });
+  assert.equal(JSON.parse(r.body).start_url, '/play/');
 });

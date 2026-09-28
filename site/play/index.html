@@ -46,6 +46,9 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--cream);color:var
 .pill.danger{border-color:#FFC2D6;color:var(--red);background:var(--red-l)}
 .pill .hold{position:absolute;left:0;top:0;bottom:0;width:0;background:rgba(113,56,209,.25);pointer-events:none}
 .gear{width:48px;height:48px;padding:0;justify-content:center;border-color:var(--line)}
+.pill.grown{height:48px;padding:0 12px 0 10px;border-color:var(--line);flex-direction:row;gap:6px}
+.pill.grown .gl{font-family:var(--display);font-weight:900;font-size:12px;color:var(--purple-d);letter-spacing:.02em}
+@media (max-width:360px){.pill.grown .gl{display:none}.pill.grown{width:48px;padding:0;justify-content:center}}
 .stage{flex:1;min-height:0;border-radius:var(--r);background:var(--white);position:relative;overflow:hidden;border:2px solid var(--line);box-shadow:var(--shadow)}
 .btnrow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .btnrow.three{grid-template-columns:1fr 1fr 1fr;gap:10px}
@@ -184,7 +187,7 @@ body.drawer-open .addbtn{display:none}
 #s-pattern .center{z-index:2}
 #s-pattern .ptitle{padding:6px 14px;border-radius:999px;background:rgba(255,255,255,.8);color:var(--purple-d)}
 /* match reward */
-.reward{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:rgba(237,230,251,.92);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);animation:fadein .3s}
+.reward{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:0 16px;background:rgba(237,230,251,.92);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);animation:fadein .3s}
 .reward .badge{font-size:110px;line-height:1;animation:badgepop .7s cubic-bezier(.34,1.56,.64,1)}
 @keyframes badgepop{0%{transform:scale(.2) rotate(-20deg);opacity:0}100%{transform:scale(1) rotate(0);opacity:1}}
 .reward .lvl{font-family:var(--display);font-weight:900;font-size:30px;color:var(--purple)}
@@ -456,7 +459,7 @@ textarea.pw-in{resize:none;min-height:88px}
 
 <!-- HOME -->
 <section class="screen" id="s-home">
-  <div class="homehead"><span class="pw-home-chip"><span class="pw-chip" data-chip role="timer"><svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="14" fill="none" stroke="#F3ECFC" stroke-width="6"/><circle class="arc" cx="18" cy="18" r="14" fill="none" stroke="#FFC83D" stroke-width="6" stroke-linecap="round" stroke-dasharray="88" stroke-dashoffset="0" transform="rotate(-90 18 18)"/></svg><span class="t">15:00</span></span></span><button class="pill gear" id="lockBtn" style="position:absolute;top:0;right:0;z-index:5" aria-label="Grown-ups, hold for 3 seconds"><span class="hold"></span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7138D1" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg></button><img class="wordmark" src="/logo/wordmark.png" width="212" height="77" alt="Mojialand" draggable="false"><div class="tagline" aria-hidden="true"><span>PLAY</span><i style="background:var(--pink)"></i><span>CREATE</span><i style="background:var(--yellow)"></i><span>EXPLORE</span><i style="background:var(--blue)"></i><span>TOGETHER</span></div></div>
+  <div class="homehead"><span class="pw-home-chip"><span class="pw-chip" data-chip role="timer"><svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="14" fill="none" stroke="#F3ECFC" stroke-width="6"/><circle class="arc" cx="18" cy="18" r="14" fill="none" stroke="#FFC83D" stroke-width="6" stroke-linecap="round" stroke-dasharray="88" stroke-dashoffset="0" transform="rotate(-90 18 18)"/></svg><span class="t">15:00</span></span></span><button class="pill grown" id="lockBtn" style="position:absolute;top:0;right:0;z-index:5" aria-label="Grown-ups"><span class="hold"></span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7138D1" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg><span class="gl">Grown-ups</span></button><img class="wordmark" src="/logo/wordmark.png" width="212" height="77" alt="Mojialand" draggable="false"><div class="tagline" aria-hidden="true"><span>PLAY</span><i style="background:var(--pink)"></i><span>CREATE</span><i style="background:var(--yellow)"></i><span>EXPLORE</span><i style="background:var(--blue)"></i><span>TOGETHER</span></div></div>
   
   <div class="stage" id="canvas"><img class="watermark" src="/logo/monogram-watermark.png" alt="" draggable="false"><div class="hint">Tap anywhere to stamp!</div><button class="pill danger" id="clearHome" aria-label="Clear the picture" style="position:absolute;right:12px;top:8px;height:40px;z-index:5"><span class="e" style="font-size:16px">🗑️</span>Clear</button></div>
   <div class="tray" id="tray"></div>
@@ -471,7 +474,7 @@ textarea.pw-in{resize:none;min-height:88px}
 <!-- PATTERN -->
 <section class="screen hidden" id="s-pattern" data-bg="grape">
   <div class="bar"><button class="pill gear" data-go="home" aria-label="Back to home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7138D1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg></button><div class="gname"><span class="e">⭐</span>Pattern</div><div class="pw-slot"><span class="pw-chip" data-chip role="timer"><svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="14" fill="none" stroke="#F3ECFC" stroke-width="6"/><circle class="arc" cx="18" cy="18" r="14" fill="none" stroke="#FFC83D" stroke-width="6" stroke-linecap="round" stroke-dasharray="88" stroke-dashoffset="0" transform="rotate(-90 18 18)"/></svg><span class="t">15:00</span></span></div></div>
-  <div class="stage"><div class="pscene" id="pscene"></div><div class="center"><div class="ptitle">What comes next?</div><div class="prow" id="prow"></div><div class="choices" id="pchoices"></div><div class="dots" id="pdots"><i></i><i></i><i></i></div></div></div>
+  <div class="stage"><div class="pscene" id="pscene"></div><div class="center"><div class="ptitle">What comes next?</div><div class="prow" id="prow"></div><div class="choices" id="pchoices"></div><div class="dots" id="pdots"><i></i><i></i><i></i></div></div><div class="reward hidden" id="preward"></div></div>
   <div class="btnrow"><button class="big sand" data-demo="pattern"><span class="e">🔁</span>Show me</button><button class="big" id="psay"><span class="e">🔊</span>Say it</button></div>
 </section>
 
@@ -516,7 +519,7 @@ textarea.pw-in{resize:none;min-height:88px}
   <div class="bar"><button class="pill gear" data-go="home" aria-label="Back to home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7138D1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg></button><div class="gname">Grown-ups</div><div style="width:48px"></div></div>
   <div class="pw-status" id="pwStatus"></div>
   <div class="pw-gulist" id="pwGuList"></div>
-  <div class="banner"><span class="e">🔒</span><div>Hold for 3 seconds<div style="font-size:12px;font-weight:700;color:var(--purple-d);opacity:.8">This area is for grown-ups.</div></div></div>
+  <div class="banner"><span class="e">🔒</span><div>Grown-ups only<div style="font-size:12px;font-weight:700;color:var(--purple-d);opacity:.8">A number question keeps kids out. Tap Grown-ups on the home screen to get here.</div></div></div>
   <div class="row"><div><div class="l">Voice</div><div class="s">Speaks emoji names and how-to cards out loud. Off by default.</div></div><button class="sw" id="swVoice" role="switch" aria-checked="false" aria-label="Voice"></button></div>
   <div class="row"><div><div class="l">Sounds</div><div class="s">Boops, chimes, cheers</div></div><button class="sw" id="swSound" role="switch" aria-checked="true" aria-label="Sounds"></button></div>
   <div class="row"><div><div class="l">Sound check</div><div class="s" id="sndInfo">Tap to play a chime</div></div><button class="small" id="sndTest">Test</button></div>
@@ -575,7 +578,7 @@ textarea.pw-in{resize:none;min-height:88px}
     <h2 id="pwOkTitle">You're all set for 48 hours</h2>
     <p id="pwOkText"></p>
   </div>
-  <div class="pw-hsbig pw-okhs" id="pwOkHS"><div class="pw-mini" id="pwOkMini" aria-hidden="true"></div><div><p class="pw-hst">Mojialand on your Home Screen!</p><p>Add Mojialand to your device. One tap to play, full screen.</p><button class="pw-secondary" id="pwOkHow">Show me how</button></div></div>
+  <div class="pw-hsbig pw-okhs" id="pwOkHS"><div class="pw-mini" id="pwOkMini" aria-hidden="true"></div><div><p class="pw-hst">Mojialand on your Home Screen!</p><p>Add Mojialand to your device. One tap to play, full screen. Your pass comes with it.</p><button class="pw-secondary" id="pwOkHow">Show me how</button></div></div>
   <button class="pw-textbtn" id="pwOkShare"><span aria-hidden="true">📲</span> Send code to another device</button>
   <div class="pw-next"><span class="pw-eyebrow">Next</span><button class="pw-primary" id="pwOkBack">▶ Hand it back to your kid</button></div>
 </section>
@@ -608,9 +611,10 @@ textarea.pw-in{resize:none;min-height:88px}
   <div class="pw-steps">
     <div><b aria-hidden="true">⬆️</b>In Safari, tap the Share button</div>
     <div><b aria-hidden="true">➕</b>Tap "Add to Home Screen"</div>
+    <div><b aria-hidden="true">🔛</b>Keep "Open as Web App" switched on</div>
     <div><b aria-hidden="true"><img src="/logo/icon-180.png" alt=""></b>Tap Add. Mojialand sits with your apps.</div>
   </div>
-  <p style="font-size:12px">Android and computers show one Install button instead.</p>
+  <p style="font-size:12px">Your pass comes along with it. Android and computers show one Install button instead.</p>
   <button class="pw-secondary" data-pw-close>Got it</button>
 </div></div>
 <div class="pw-ov hidden" id="pwOvCode" role="dialog" aria-label="Have a code?"><div class="pw-card">
@@ -777,8 +781,8 @@ moreTile.onclick=()=>{ ctx(); sfx.boop(); drawer.open(e=>{ stampEmoji=e; say(nam
 function flyOff(els,host){ const r=host.getBoundingClientRect(); const cxp=r.width/2, cyp=r.height/2; els.forEach((el,i)=>{ const x=parseFloat(el.style.left)||cxp, y=parseFloat(el.style.top)||cyp; let dx=x-cxp, dy=y-cyp; const d=Math.hypot(dx,dy)||1; dx/=d; dy/=d; const far=Math.max(r.width,r.height)*1.2; el.style.pointerEvents='none'; el.animate([{transform:'translate(-50%,-50%) scale(1) rotate(0deg)',opacity:1,offset:0},{transform:'translate(-50%,-50%) scale(1.15) rotate('+(dx*8)+'deg)',opacity:1,offset:0.25},{transform:'translate(calc(-50% + '+(dx*far)+'px), calc(-50% + '+(dy*far)+'px)) scale(.4) rotate('+(dx*40)+'deg)',opacity:0,offset:1}],{duration:720,delay:i*28,easing:'cubic-bezier(.45,0,.2,1)',fill:'forwards'}); setTimeout(()=>el.remove(),760+i*28); }); }
 $('#clearHome').onclick=ev=>{ ev.stopPropagation(); ctx(); const st=$$('#canvas .stamp'); if(!st.length) return; sfx.poof(); flyOff(st,$('#canvas')); };
 $('#canvas').addEventListener('pointerdown',ev=>{ if(ev.target.closest('#clearHome')) return; ctx(); const r=ev.currentTarget.getBoundingClientRect(); const s=document.createElement('div'); s.className='stamp'; s.textContent=stampEmoji; s.style.left=(ev.clientX-r.left)+'px'; s.style.top=(ev.clientY-r.top)+'px'; ev.currentTarget.appendChild(s); sfx.boop(); if(ev.currentTarget.querySelectorAll('.stamp').length%6===0) say(nameOf(stampEmoji)); });
-/* hold-to-open lock */
-(function(){ const b=$('#lockBtn'), bar=b.querySelector('.hold'); let t=null, start=0, raf=null; function tick(){ const p=Math.min(1,(Date.now()-start)/3000); bar.style.width=(p*100)+'%'; if(p<1) raf=requestAnimationFrame(tick); } function down(e){ e.preventDefault(); start=Date.now(); tick(); t=setTimeout(()=>{ bar.style.width='0'; go('gate'); },3000); } function up(){ clearTimeout(t); cancelAnimationFrame(raf); bar.style.width='0'; } b.addEventListener('pointerdown',down); ['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,up)); })();
+/* Grown-ups: one tap opens the number-word gate (the real lock). No hold. */
+$('#lockBtn').addEventListener('click',()=>{ ctx(); sfx.boop(); pay.openGate('gate','home'); });
 
 /* ---------- GATE ---------- */
 function bindSwitch(id,key){ const s=$(id); s.setAttribute('aria-checked',String(settings[key])); s.onclick=()=>{ settings[key]=!settings[key]; s.setAttribute('aria-checked',String(settings[key])); store.set(key,settings[key]); sfx.boop(); }; }
@@ -799,13 +803,18 @@ games.pattern=(function(){
   ];
   function setScene(i){ i=i%SCENES.length; if(i===curScene) return; curScene=i; const sc=SCENES[i]; scene.style.background=sc.bg; scene.innerHTML='<div class="path"></div>'; sc.sky.forEach((e,k)=>{ const d=document.createElement('span'); d.className='d'; d.textContent=e; d.style.fontSize=(k?22+Math.random()*8:36)+'px'; d.style.left=(8+k*(80/sc.sky.length)+Math.random()*10)+'%'; d.style.top=(4+Math.random()*10)+'%'; scene.appendChild(d); }); sc.ground.forEach((e,k)=>{ const d=document.createElement('span'); d.className='d'; d.textContent=e; const big=k%2===0; d.style.fontSize=(big?36+Math.random()*10:22+Math.random()*8)+'px'; d.style.left=(2+k*(92/sc.ground.length)+Math.random()*4)+'%'; d.style.bottom=(big?2+Math.random()*4:10+Math.random()*8)+'%'; scene.appendChild(d); }); $$('#pscene .d').forEach((d,k)=>d.animate([{opacity:0,transform:'translateY(10px)'},{opacity:1,transform:'translateY(0)'}],{duration:500,delay:k*40,fill:'both'})); }
   const LEVELS=[ {shape:'AB',show:4,opts:2}, {shape:'AAB',show:5,opts:3}, {shape:'ABC',show:5,opts:3}, {shape:'ABB',show:5,opts:3}, {shape:'ABCD',show:6,opts:4}, {shape:'AABB',show:6,opts:4} ];
+  /* awards, same shelf as Match: one badge for each place finished */
+  const preward=$('#preward'); const PBADGES=['🥉','🥈','🥇','🏆','👑','🌈'], PNAMES=['bronze medal','silver medal','gold medal','trophy','crown','rainbow'];
+  function showPReward(done){ const t=Math.min(PBADGES.length-1,done); const shelf=PBADGES.map((b,i)=>'<span class="'+(i<=t?'got':'')+'" style="animation-delay:'+(i*80)+'ms">'+b+'</span>').join(''); const last=done>=LEVELS.length-1;
+    preward.innerHTML='<div class="badge">'+PBADGES[t]+'</div><div class="lvl">You won a '+PNAMES[t]+'!</div><div class="shelf">'+shelf+'</div><div class="newf">'+(last?'You are the champion!':'New place next!')+'</div>';
+    say(last?'You won a '+PNAMES[t]+'! You are the champion!':'You won a '+PNAMES[t]+'! New place next!'); preward.classList.remove('hidden'); }
   function level(){ return LEVELS[Math.min(LEVELS.length-1,Math.floor(streak/3))]; }
   function round(){ busy=false; const L=level(); setScene(Math.floor(streak/3)); const letters=[...new Set(L.shape.split(''))]; const pool=[...HERO,'⭐','🐸','🦋'].sort(()=>Math.random()-0.5); const map={}; letters.forEach((l,i)=>map[l]=pool[i]);
     const full=[]; for(let i=0;i<=L.show;i++) full.push(map[L.shape[i%L.shape.length]]); seq=full.slice(0,L.show); answer=full[L.show];
     const cells=L.show+1; const size=cells>6?44:54; prow.innerHTML=''; seq.forEach(e=>{ const d=document.createElement('div'); d.className='pc'; d.style.width=d.style.height=size+'px'; d.style.fontSize=Math.round(size*0.6)+'px'; d.textContent=e; prow.appendChild(d); }); const slot=document.createElement('div'); slot.className='pc slot'; slot.id='pslot'; slot.style.width=slot.style.height=size+'px'; slot.style.fontSize=Math.round(size*0.6)+'px'; prow.appendChild(slot);
     let opts=letters.map(l=>map[l]); while(opts.length<L.opts){ const x=pool[opts.length]; if(!opts.includes(x)) opts.push(x); } opts=opts.slice(0,L.opts).sort(()=>Math.random()-0.5);
     const cw=opts.length>2?96:120; choices.innerHTML=''; opts.forEach(e=>{ const c=document.createElement('button'); c.className='choice'; c.textContent=e; c.dataset.e=e; c.setAttribute('aria-label',nameOf(e)); c.style.width=c.style.height=cw+'px'; c.style.fontSize=Math.round(cw*0.55)+'px'; c.dataset.ok=e===answer?'1':'0'; c.onclick=()=>pick(c); choices.appendChild(c); }); idleArm(()=>choices.querySelector('[data-e="'+answer+'"]'),{slow:true,glowAt:10000,handAt:18000}); const dots=$$('#pdots i'); dots.forEach((d,i)=>d.classList.toggle('on',i<(streak%3))); }
-  async function pick(c){ if(busy) return; ctx(); const e=c.dataset.e; if(e===answer){ busy=true; idleClear(); const slot=$('#pslot'); slot.classList.remove('slot'); slot.textContent=e; slot.style.background='#FFF0F7'; slot.animate([{transform:'scale(1)'},{transform:'scale(1.3)'},{transform:'scale(1)'}],{duration:400}); sfx.chime(); say(nameOf(e)); toast('Nice one!'); const r=slot.getBoundingClientRect(), st=$('#s-pattern .stage').getBoundingClientRect(); confetti($('#s-pattern .stage'),r.left-st.left+r.width/2,r.top-st.top+r.height/2,14); streak++; const leveledUp=streak%3===0&&Math.floor(streak/3)<LEVELS.length; await wait(1100); if(leveledUp){ sfx.cheer(); say('Ooh, a new place and a new pattern!'); toast('New place!'); const stg=$('#s-pattern .stage').getBoundingClientRect(); for(let k=0;k<3;k++) setTimeout(()=>confetti($('#s-pattern .stage'),Math.random()*stg.width,stg.height*0.3,14),k*150); await wait(900); } round(); } else { sfx.hmm(); c.classList.remove('wobble'); c.offsetHeight; c.classList.add('wobble'); idleArm(()=>choices.querySelector('[data-e="'+answer+'"]'),{slow:true,glowAt:8000,handAt:14000}); } }
+  async function pick(c){ if(busy) return; ctx(); const e=c.dataset.e; if(e===answer){ busy=true; idleClear(); const slot=$('#pslot'); slot.classList.remove('slot'); slot.textContent=e; slot.style.background='#FFF0F7'; slot.animate([{transform:'scale(1)'},{transform:'scale(1.3)'},{transform:'scale(1)'}],{duration:400}); sfx.chime(); say(nameOf(e)); toast('Nice one!'); const r=slot.getBoundingClientRect(), st=$('#s-pattern .stage').getBoundingClientRect(); confetti($('#s-pattern .stage'),r.left-st.left+r.width/2,r.top-st.top+r.height/2,14); streak++; const leveledUp=streak%3===0&&Math.floor(streak/3)<=LEVELS.length; await wait(1100); if(leveledUp){ sfx.cheer(); const done=Math.floor(streak/3)-1; const stg=$('#s-pattern .stage').getBoundingClientRect(); for(let k=0;k<6;k++) setTimeout(()=>confetti($('#s-pattern .stage'),Math.random()*stg.width,stg.height*0.3,16),k*140); await wait(400); showPReward(done); await wait(3200); preward.classList.add('hidden'); } round(); } else { sfx.hmm(); c.classList.remove('wobble'); c.offsetHeight; c.classList.add('wobble'); idleArm(()=>choices.querySelector('[data-e="'+answer+'"]'),{slow:true,glowAt:8000,handAt:14000}); } }
   $('#psay').onclick=()=>{ ctx(); sfx.boop(); say(seq.map(nameOf).join(', ')+', ...'); };
   return { enter(){ round(); }, leave(){ idleClear(); }, async demo(tap,stopped){ say('Watch me. '+seq.map(nameOf).join(', ')); await wait(600); if(stopped()) return; await tap(choices.querySelector('[data-e="'+answer+'"]')); await wait(1200); } };
 })();
@@ -953,7 +962,7 @@ const pay=(function(){
   function verifyStored(){ const p=store.get('pass',null), tok=p&&typeof p==='object'&&typeof p.token==='string'?p.token:null;
     if(tok===vcache.token) return vcache.pending||Promise.resolve();
     vcache.token=tok; vcache.payload=null;
-    vcache.pending=checkToken(tok).then(r=>{ if(vcache.token===tok){ vcache.payload=r; vcache.pending=null; paintChips(); } });
+    vcache.pending=checkToken(tok).then(r=>{ if(vcache.token===tok){ vcache.payload=r; vcache.pending=null; paintChips(); syncManifest(); } });
     return vcache.pending; }
   function getPass(){ const p=store.get('pass',null); if(!p||typeof p!=='object'||(p.kind!=='48h'&&p.kind!=='forever')) return null;
     if(p.token!==vcache.token){ verifyStored(); return null; }
@@ -1070,6 +1079,19 @@ const pay=(function(){
   $('#pwOkBack').addEventListener('click',()=>{ ctx(); sfx.boop(); go('home'); });
   $$('.pw-ov').forEach(ov=>ov.addEventListener('click',e=>{ if(e.target===ov||e.target.closest('[data-pw-close]')){ ov.classList.add('hidden'); } }));
 
+  /* Home Screen handoff: an iPhone Home Screen app has its own storage. While a pass is on this device,
+     the manifest link points at a copy whose start_url carries the pass, so the Home Screen app opens with it. */
+  function syncManifest(){ const link=document.querySelector('link[rel="manifest"]'); if(!link) return; const p=store.get('pass',null);
+    const href=p&&typeof p==='object'&&typeof p.token==='string'&&vcache.payload&&vcache.token===p.token?'/.netlify/functions/manifest?r='+encodeURIComponent(p.token)+(p.code?'&c='+encodeURIComponent(String(p.code)):''):'/manifest.webmanifest';
+    if(link.getAttribute('href')!==href) link.setAttribute('href',href); }
+  /* the Home Screen app opens /play/?restore=TOKEN&code=CODE the first time: save it, then clean the address */
+  async function restoreFromUrl(){ let q; try{ q=new URLSearchParams(location.search); }catch(e){ return; } const tok=q.get('restore'); if(!tok) return;
+    try{ history.replaceState(null,'',location.pathname+location.hash); }catch(e){}
+    const v=await checkToken(tok); if(!v) return; const code=normCode(q.get('code')||'');
+    const old=store.get('pass',null); const oldV=old&&typeof old.token==='string'?await checkToken(old.token):null;
+    const rank=x=>x.k==='forever'?Infinity:x.e; if(oldV&&rank(oldV)>=rank(v)) return;
+    try{ localStorage.setItem('mojia.pass',JSON.stringify({code:code,kind:v.k,ends_at:v.e,token:tok,email_masked:'',device_id:deviceId()})); }catch(e){} }
+
   /* save a pass the server signed (confirm-session or redeem-code) */
   async function savePass(d,plan){ const v=await checkToken(d&&d.token); if(!v||v.k!==d.kind||v.e!==d.ends_at) return false;
     const old=store.get('pass',null)||{}; const code=typeof d.code==='string'&&d.code?d.code:(typeof old.code==='string'?old.code:'');
@@ -1136,10 +1158,10 @@ const pay=(function(){
     else if(a==='share') soon('Send code to another device'); else if(a==='code') openCode(); else if(a==='help') openContact(); });
 
   function onScreen(name){ if(name==='ngate') newGate(); else if(name==='plans') buildPlans(); else if(name==='gate') buildGU(); if(name!=='rest') $('#pwZeroChip').classList.remove('shake'); $$('.pw-ov').forEach(o=>o.classList.add('hidden')); paintChips(); }
-  async function start(route){ deviceId(); rollDay(); await verifyStored(); ackEnd(getPass()); paintChips();
+  async function start(route){ deviceId(); rollDay(); await restoreFromUrl(); await verifyStored(); ackEnd(getPass()); paintChips();
     if(route==='allset'&&showAllset()){} else if(route==='passes') openGate('plans','home'); else if(blocked()) showRest();
     setInterval(tick,1000); }
-  return { onScreen, start, getPass };
+  return { onScreen, start, getPass, openGate };
 })();
 payHook=pay.onScreen;
 
