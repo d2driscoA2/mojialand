@@ -504,6 +504,12 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await page.goto(base + '/play/');
   await page.waitForTimeout(600);
   check('play normal load shows welcome screen', await page.isVisible('#splash'));
+  check('welcome screen shows the 3D logo', (await page.getAttribute('#splash img.sp-word', 'src')) === '/logo/logo-3d-1000.webp' && await page.isVisible('#splash img.sp-word'));
+  await page.screenshot({ path: path.join(SHOTS, 'welcome-3d-390.png') });
+  check('Welcome screen switch is gone', (await page.locator('#replaySplash').count()) === 0);
+  const order = await page.evaluate(() => [...document.querySelectorAll('#s-gate > *')].map((e) => e.id || e.className.split(' ')[0]));
+  const ix = (k) => order.indexOf(k);
+  check('Grown-ups order: pass rows, Home Screen, settings, promise last', ix('pwGuList') < ix('pwHS') && ix('pwHS') < ix('banner') && ix('note') === order.length - 1, order.join(','));
   check('play: zero third-party requests', page.reqs.every((u) => u.startsWith(base) || u.startsWith('data:')));
   check('play: no CSP violations', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
   await ctx.close();

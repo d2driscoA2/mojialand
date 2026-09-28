@@ -282,7 +282,7 @@ body.drawer-open .addbtn{display:none}
 #splash .sp-star2{left:88%;top:26%;font-size:11cqw}
 #splash .sp-cloud{position:absolute;left:2%;right:2%;bottom:0;height:22%;z-index:5}
 #splash .sp-cloud i{position:absolute;bottom:0;border-radius:50%;background:radial-gradient(circle at 40% 30%,#fff 55%,#EFE9F7 100%);box-shadow:0 1.5cqw 2.5cqw rgba(81,34,165,.10)}
-#splash .sp-word{color:var(--purple);font-weight:900;font-size:calc(var(--W) * .155);line-height:1;letter-spacing:-.025em;white-space:nowrap}
+#splash .sp-word{display:block;width:calc(var(--W) * .92);height:auto;margin:0 auto;pointer-events:none;filter:drop-shadow(0 6px 14px rgba(81,34,165,.18))}
 #splash .sp-i{position:relative;display:inline-block}
 #splash .sp-burst{position:absolute;left:50%;top:-.02em;width:0;height:0}
 #splash .sp-burst i{position:absolute;left:-.045em;bottom:0;width:.09em;height:.24em;border-radius:999px;transform-origin:50% 190%}
@@ -298,7 +298,7 @@ body.drawer-open .addbtn{display:none}
   #splash .sp-stage{--W:min(44cqw,80cqh,560px);grid-template-columns:auto auto;grid-template-rows:minmax(0,1fr) auto auto minmax(0,1fr);grid-template-areas:". ." "hero text" "hero cta" ". .";column-gap:calc(var(--W) * .1);row-gap:calc(var(--W) * .08)}
   #splash .sp-hero{width:calc(var(--W) * .95)}
   #splash .sp-text{align-self:end;margin-top:0}
-  #splash .sp-word{font-size:calc(var(--W) * .17)}
+  #splash .sp-word{width:calc(var(--W) * .98)}
   #splash .sp-tag{font-size:max(9px,calc(var(--W) * .033))}
   #splash .sp-cta{align-self:start}
 }
@@ -526,15 +526,14 @@ textarea.pw-in{resize:none;min-height:88px}
   <div class="bar"><button class="pill gear" data-go="home" aria-label="Back to home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7138D1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg></button><div class="gname">Grown-ups</div><div style="width:48px"></div></div>
   <div class="pw-status" id="pwStatus"></div>
   <div class="pw-gulist" id="pwGuList"></div>
+  <div class="pw-hsbig" id="pwHS"><div class="pw-mini" id="pwMini" aria-hidden="true"></div><div><p class="pw-hst" id="pwHSt">Mojialand on your Home Screen!</p><p id="pwHSbody">Add Mojialand to your Home Screen. Your kids find it next to your other apps, and it opens full screen.</p><button class="pw-primary" id="pwHSbtn">Show me how</button></div></div>
   <div class="banner"><span class="e">🔒</span><div>Grown-ups only<div style="font-size:12px;font-weight:700;color:var(--purple-d);opacity:.8">A number question keeps kids out. Tap Grown-ups on the home screen to get here.</div></div></div>
   <div class="row"><div><div class="l">Voice</div><div class="s">Speaks emoji names and how-to cards out loud. Off by default.</div></div><button class="sw" id="swVoice" role="switch" aria-checked="false" aria-label="Voice"></button></div>
   <div class="row"><div><div class="l">Sounds</div><div class="s">Boops, chimes, cheers</div></div><button class="sw" id="swSound" role="switch" aria-checked="true" aria-label="Sounds"></button></div>
   <div class="row"><div><div class="l">Sound check</div><div class="s" id="sndInfo">Tap to play a chime</div></div><button class="small" id="sndTest">Test</button></div>
   <div class="row"><div><div class="l">How-to-play cards</div><div class="s" id="demosInfo">Show a how-to card the first time each game opens</div></div><button class="sw" id="swDemos" role="switch" aria-checked="true" aria-label="How-to-play cards"></button></div>
   <div class="row"><div><div class="l">Show cards again</div><div class="s">Replay the how-to cards for every game</div></div><button class="small" id="resetDemos">Reset</button></div>
-  <div class="row"><div><div class="l">Welcome screen</div><div class="s">Play the welcome screen again</div></div><button class="small" id="replaySplash">Show</button></div>
   <div class="note"><div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="width:28px;height:28px;border-radius:999px;background:var(--purple);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px">✓</span><b style="color:var(--ink);font-size:13px">No accounts · No ads · No tracking</b></div>Nothing leaves your phone. Just a safe, fun place to play, create and explore.<br><span id="voiceInfo"></span></div>
-  <div class="pw-hsbig" id="pwHS"><div class="pw-mini" id="pwMini" aria-hidden="true"></div><div><p class="pw-hst" id="pwHSt">Mojialand on your Home Screen!</p><p id="pwHSbody">Add Mojialand to your Home Screen. Your kids find it next to your other apps, and it opens full screen.</p><button class="pw-primary" id="pwHSbtn">Show me how</button></div></div>
 </section>
 
 <!-- TIME'S UP (kid-facing, no price) -->
@@ -606,7 +605,7 @@ textarea.pw-in{resize:none;min-height:88px}
       <div class="sp-cloud"><i style="left:0;width:26%;height:70%"></i><i style="left:16%;width:30%;height:100%"></i><i style="left:38%;width:28%;height:86%"></i><i style="left:58%;width:28%;height:100%"></i><i style="left:76%;width:24%;height:72%"></i></div>
     </div>
     <div class="sp-text" id="spText">
-      <div class="sp-word" aria-label="Mojialand"><span aria-hidden="true">Moj<span class="sp-i">ı<span class="sp-burst"><i style="--n:0"></i><i style="--n:1"></i><i style="--n:2"></i></span></span>aland</span></div>
+      <img class="sp-word" src="/logo/logo-3d-1000.webp" width="1000" height="332" alt="Mojialand" draggable="false">
       <div class="sp-tag" aria-label="Play, create, explore, together"><span aria-hidden="true">PLAY<b style="color:var(--pink)">•</b>CREATE<b style="color:var(--yellow)">•</b>EXPLORE<b style="color:var(--blue)">•</b>TOGETHER</span></div>
     </div>
     <div class="sp-cta"><button type="button" id="spGo">Tap to Play</button></div>
@@ -1212,7 +1211,6 @@ const splash=(function(){
   el.addEventListener('click',hide);
   return { show, hide };
 })();
-$('#replaySplash').onclick=()=>{ sfx.boop(); go('home'); splash.show(); };
 /* /pass/ sends grown-ups back with #allset (paid) or #passes (cancel): skip the welcome screen, then clear the hash */
 const route=(location.hash||'').slice(1);
 if(route==='allset'||route==='passes'){ try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){} }
