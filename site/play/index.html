@@ -35,6 +35,7 @@
 html,body{height:100%;margin:0;overflow:hidden;}
 body{position:fixed;inset:0;width:100%;background:var(--cream);color:var(--ink);font-family:var(--body);font-weight:700;touch-action:manipulation;user-select:none;-webkit-user-select:none}
 #app{height:100%;max-width:480px;margin:0 auto;position:relative;background:var(--cream)}
+@media (min-width:600px) and (orientation:landscape) and (pointer:coarse){#app{max-width:760px}}
 .screen{position:absolute;inset:0;display:flex;flex-direction:column;gap:14px;padding:max(14px,env(safe-area-inset-top,0px)) 16px max(14px,env(safe-area-inset-bottom,0px))}
 .screen[data-bg]{background:var(--cream);color:var(--ink)}
 .bar{display:flex;justify-content:space-between;align-items:center;min-height:48px}
@@ -668,6 +669,14 @@ textarea.pw-in{resize:none;min-height:88px}
 <script>
 (function(){
 'use strict';
+/* Tablets: scale the phone layout to fill the screen. A viewport width above 480 makes the browser zoom the whole
+   layout, so every tap coordinate stays right. Portrait iPad fills the width; landscape keeps about 640 px of height. */
+(function(){ const m=document.querySelector('meta[name="viewport"]'); if(!m||!(navigator.maxTouchPoints>0)) return;
+  const base='initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover';
+  function fit(){ const land=matchMedia('(orientation: landscape)').matches; const sw=Math.min(screen.width,screen.height), sh=Math.max(screen.width,screen.height); const w=land?sh:sw, h=land?sw:sh;
+    if(w<600){ m.setAttribute('content','width=device-width, '+base); return; }
+    const W=Math.max(480,Math.round(w*640/h)); m.setAttribute('content','width='+W+', '+base); }
+  fit(); addEventListener('orientationchange',()=>setTimeout(fit,250)); })();
 /* Android and desktop Chrome need start_url for the install prompt. iPhone must not have one (see the link tag). */
 (function(){ if(!/iPhone|iPad|iPod/.test(navigator.userAgent)&&!(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)){ const l=document.querySelector('link[rel="manifest"]'); if(l) l.setAttribute('href','/manifest-install.webmanifest'); } })();
 /* Play settings. Defaults here; the admin page's values come from the server and are kept for the next open. */

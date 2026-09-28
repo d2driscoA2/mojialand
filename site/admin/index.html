@@ -64,6 +64,28 @@ textarea{resize:vertical;min-height:80px}
 .settings .item .meta{grid-column:1/-1}
 .small{font-size:12px}
 @media (max-width:520px){.card{padding:16px;border-radius:20px}}
+.share{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 10px}
+.codelist{display:grid;gap:6px;margin-top:10px}
+.codelist div{display:flex;justify-content:space-between;align-items:center;gap:8px;border:2px solid var(--line);border-radius:12px;padding:6px 10px;font:900 15px ui-monospace,Menlo,Consolas,monospace;color:var(--deep)}
+.codelist div .acts{display:flex;gap:6px}.codelist div button{min-height:36px;padding:4px 10px;font-size:12px}
+/* print sheet: 10 business cards on a letter page, 3 codes per card */
+#sheet{display:none}
+@media print{
+  @page{size:letter;margin:0.5in 0.75in}
+  body{background:#fff;padding:0}header,main{display:none!important}
+  #sheet{display:grid;grid-template-columns:repeat(2,3.5in);grid-auto-rows:2in;gap:0;justify-content:center}
+  .bc{width:3.5in;height:2in;box-sizing:border-box;border:1px dashed #C9B8EA;padding:0.12in 0.14in;display:grid;grid-template-columns:1.05in 1fr;gap:0.08in;align-items:center;page-break-inside:avoid;break-inside:avoid;font-family:Nunito,sans-serif;color:#30254A;background:#fff}
+  .bc .l{display:grid;gap:0.05in;align-content:center}
+  .bc .l img{width:1in;height:auto;display:block}
+  .bc .l b{font:900 9.5pt/1.15 Nunito,sans-serif;color:#7138D1}
+  .bc .l small{font:700 6.5pt/1.25 Nunito,sans-serif;color:#6B6180}
+  .bc .r{display:grid;gap:0.04in}
+  .bc .q{display:grid;grid-template-columns:0.5in 1fr;gap:0.06in;align-items:center}
+  .bc .q img,.bc .q canvas{width:0.5in;height:0.5in;display:block}
+  .bc .q code{font:900 8pt/1.1 ui-monospace,Menlo,Consolas,monospace;color:#5122A5;letter-spacing:.2px}
+  .bc .q i{display:block;font:700 5.5pt/1.2 Nunito,sans-serif;color:#6B6180;font-style:normal}
+  .bc:nth-child(10n){page-break-after:always}
+}
 </style>
 </head>
 <body>
@@ -117,8 +139,29 @@ textarea{resize:vertical;min-height:80px}
     <p class="err" id="cErr"></p>
     <div id="cOut" hidden>
       <div class="codebox" id="cCode"></div>
-      <p>Copy it now. Send it with: open Mojialand, tap Grown-ups, answer the number question, tap Have a code?</p>
-      <p>Or send this link, which turns Mojialand on in one tap: <a id="cLink" href="#"></a></p>
+      <div class="share" id="cShare">
+        <button class="primary" type="button" data-share="share">Share…</button>
+        <button class="secondary" type="button" data-share="copylink">Copy link</button>
+        <button class="secondary" type="button" data-share="copycode">Copy code</button>
+        <a class="secondary" id="cSms" href="#" style="text-decoration:none;display:inline-flex;align-items:center">Text</a>
+        <a class="secondary" id="cMail" href="#" style="text-decoration:none;display:inline-flex;align-items:center">Email</a>
+      </div>
+      <p class="ok" id="cOk"></p>
+      <p>Share… opens your phone's share sheet: Messages, Mail, AirDrop to a phone next to you, and more. The link turns Mojialand on in one tap: <a id="cLink" href="#"></a></p>
+      <p>Typed by hand: open Mojialand, tap Grown-ups, answer the number question, tap Have a code?</p>
+    </div>
+    <h2 style="margin-top:22px">Printable cards</h2>
+    <p>Business cards, 10 to a letter sheet, 3 passes on each card. Every code is its own family pass with a QR code and the link. Use the kind, reason and use-by days above. The codes show once, here and on the sheet.</p>
+    <div class="row">
+      <label>Cards<input id="bCards" type="number" min="1" max="100" value="10"></label>
+      <label>Note for these codes<input id="bNote" maxlength="500" placeholder="Lincoln Elementary, Oct 2026"></label>
+      <button class="primary" id="bGo" type="button">Make cards</button>
+    </div>
+    <p class="err" id="bErr"></p>
+    <div id="bOut" hidden>
+      <p class="ok" id="bOk"></p>
+      <div class="row"><button class="primary" id="bPrint" type="button">Print sheet</button><button class="secondary" id="bCopy" type="button">Copy all codes</button></div>
+      <div class="codelist" id="bList"></div>
     </div>
   </section>
 
@@ -144,6 +187,8 @@ textarea{resize:vertical;min-height:80px}
   </section>
 </section>
 </main>
+<div id="sheet" aria-hidden="true"></div>
+<script src="/admin/qrcode.js"></script>
 <script>
 (function(){
 'use strict';
@@ -212,9 +257,37 @@ $('pList').addEventListener('click',async e=>{ const b=e.target.closest('[data-a
 /* ---- codes */
 $('cGo').addEventListener('click',async()=>{ const b=$('cGo'); b.disabled=true; $('cErr').textContent=''; $('cOut').hidden=true;
   try{ const d=await api('codes.create',{kind:$('cKind').value,source:$('cSource').value,days_valid:$('cDays').value,note:$('cNote').value});
-    $('cCode').textContent=d.code; const link=location.origin+'/r/'+d.code.replace(/-/g,''); $('cLink').textContent=link; $('cLink').href=link; $('cOut').hidden=false; $('cNote').value=''; }
+    $('cCode').textContent=d.code; const link=linkFor(d.code); $('cLink').textContent=link; $('cLink').href=link; setShareLinks(d.code); $('cOk').textContent=''; $('cOut').hidden=false; $('cNote').value=''; }
   catch(e){ $('cErr').textContent=e.message; }
   b.disabled=false; });
+
+/* ---- share a code */
+const linkFor=c=>location.origin+'/r/'+c.replace(/-/g,'');
+const msgFor=c=>'A Mojialand gift: a free '+($('cKind').value==='forever'?'Forever':'48-hour')+' pass for your family. Tap to turn it on: '+linkFor(c)+' Or open Mojialand, tap Grown-ups, then Have a code? and type '+c;
+async function copy(t){ try{ await navigator.clipboard.writeText(t); return true; }catch(e){ return false; } }
+$('cShare').addEventListener('click',async e=>{ const b=e.target.closest('[data-share]'); if(!b) return; const c=$('cCode').textContent; $('cOk').textContent='';
+  if(b.dataset.share==='share'){ if(navigator.share){ try{ await navigator.share({title:'Mojialand gift pass',text:msgFor(c),url:linkFor(c)}); }catch(err){} } else { $('cOk').textContent=(await copy(msgFor(c)))?'Copied the message. This computer has no share sheet; paste it anywhere.':'Copy failed.'; } }
+  else if(b.dataset.share==='copylink'){ $('cOk').textContent=(await copy(linkFor(c)))?'Link copied.':'Copy failed.'; }
+  else if(b.dataset.share==='copycode'){ $('cOk').textContent=(await copy(c))?'Code copied.':'Copy failed.'; } });
+function setShareLinks(c){ $('cSms').href='sms:?&body='+encodeURIComponent(msgFor(c)); $('cMail').href='mailto:?subject='+encodeURIComponent('A Mojialand gift pass')+'&body='+encodeURIComponent(msgFor(c)); }
+
+/* ---- printable cards */
+let batch=[];
+function qrImg(url){ try{ const q=qrcode(0,'M'); q.addData(url); q.make(); return q.createDataURL(4,0); }catch(e){ return ''; } }
+function buildSheet(codes,kind){ const cards=[]; for(let i=0;i<codes.length;i+=3) cards.push(codes.slice(i,i+3));
+  const host=location.hostname==='mojialand.com'?'mojialand.com':location.host;
+  $('sheet').innerHTML=cards.map(cs=>'<div class="bc"><div class="l"><img src="/logo/logo-3d-1000.webp" alt="Mojialand"><b>'+(kind==='forever'?'Free Forever passes':'3 free 48-hour passes')+'</b><small>Emoji games for kids 3 and up. No ads, nothing collected from your child. One code per family, up to 5 devices. Scan a code, or type it at '+esc(host)+' under Grown-ups.</small></div><div class="r">'
+    +cs.map(c=>'<div class="q"><img src="'+qrImg(linkFor(c))+'" alt=""><div><code>'+esc(c)+'</code><i>'+esc(host)+'/r/'+esc(c.replace(/-/g,''))+'</i></div></div>').join('')+'</div></div>').join(''); }
+$('bGo').addEventListener('click',async()=>{ const b=$('bGo'); const cards=Math.min(100,Math.max(1,parseInt($('bCards').value,10)||1)); const want=cards*3; b.disabled=true; $('bErr').textContent=''; $('bOut').hidden=true; batch=[];
+  try{ while(batch.length<want){ const d=await api('codes.batch',{kind:$('cKind').value,source:$('cSource').value,days_valid:$('cDays').value,note:$('bNote').value,count:Math.min(30,want-batch.length)}); batch=batch.concat(d.codes.map(x=>x.code)); b.textContent='Making… '+batch.length+' of '+want; }
+    $('bOk').textContent=batch.length+' codes made, '+cards+' cards. Print now; the codes never show again.';
+    $('bList').innerHTML=batch.map(c=>'<div><span>'+esc(c)+'</span><span class="acts"><button class="secondary" type="button" data-c="'+esc(c)+'">Copy link</button></span></div>').join('');
+    buildSheet(batch,$('cKind').value); $('bOut').hidden=false; }
+  catch(e){ $('bErr').textContent=e.message+(batch.length?' ('+batch.length+' codes were made before the error; they are listed below.)':''); if(batch.length){ $('bList').innerHTML=batch.map(c=>'<div><span>'+esc(c)+'</span></div>').join(''); buildSheet(batch,$('cKind').value); $('bOut').hidden=false; } }
+  b.disabled=false; b.textContent='Make cards'; });
+$('bList').addEventListener('click',async e=>{ const b=e.target.closest('[data-c]'); if(!b) return; b.textContent=(await copy(linkFor(b.dataset.c)))?'Copied':'Copy failed'; setTimeout(()=>{ b.textContent='Copy link'; },1200); });
+$('bCopy').addEventListener('click',async()=>{ $('bOk').textContent=(await copy(batch.join('\n')))?'All codes copied.':'Copy failed.'; });
+$('bPrint').addEventListener('click',()=>{ window.print(); });
 
 /* ---- support */
 let sStatus='open';

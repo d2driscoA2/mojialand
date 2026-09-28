@@ -45,7 +45,7 @@ function parseHeaders(site) {
   return blocks;
 }
 const matches = (pat, p) => pat.endsWith('*') ? p.startsWith(pat.slice(0, -1)) : p === pat;
-const TYPES = { '.html': 'text/html; charset=utf-8', '.png': 'image/png', '.svg': 'image/svg+xml', '.webp': 'image/webp', '.woff2': 'font/woff2', '.json': 'application/json', '.webmanifest': 'application/manifest+json' };
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.png': 'image/png', '.svg': 'image/svg+xml', '.webp': 'image/webp', '.woff2': 'font/woff2', '.json': 'application/json', '.webmanifest': 'application/manifest+json' };
 
 function serve(site) {
   const blocks = parseHeaders(site);
@@ -579,7 +579,7 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
     const b = r.request().postDataJSON(); calls.push(b.action);
     if (!signedIn) return r.fulfill({ status: 401, contentType: 'application/json', body: '{"error":"Please sign in."}' });
     const out = { 'passes.list': { passes: [pass] }, 'passes.note': { pass: { ...pass, note: b.note } }, 'passes.add48': { pass: { ...pass, ends_at: new Date(Date.now() + 49 * 3600e3).toISOString() } },
-      'codes.create': { code: 'GIFT-ABCD-EFGH-JKMN', pass: {} }, 'support.list': { messages: [{ id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', email: 'mom@example.com', topic: 'pass', message: 'Code not working\n\nCode ending AB12: pass ...', created_at: new Date().toISOString(), status: 'open' }] },
+      'codes.create': { code: 'GIFT-ABCD-EFGH-JKMN', pass: {} }, 'codes.batch': { codes: Array.from({ length: b.count }, (_, i) => ({ code: 'GIFT-B' + String(i).padStart(3, '0') + '-EFGH-JKMN', id: 'id' + i })) }, 'support.list': { messages: [{ id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', email: 'mom@example.com', topic: 'pass', message: 'Code not working\n\nCode ending AB12: pass ...', created_at: new Date().toISOString(), status: 'open' }] },
       'support.set': { ok: true }, 'settings.get': { settings: [{ key: 'daily_minutes', value: 3, help: 'Free play each day.' }, { key: 'daily_reset', value: '04:00', help: 'Reset time.' }] }, 'settings.set': { ok: true } }[b.action];
     r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(out || { error: 'Unknown action.' }) });
   });
@@ -603,6 +603,15 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await page.click('#cGo');
   await page.waitForSelector('#cOut:not([hidden])');
   check('admin: gift code shown once with a /r/ link', (await page.textContent('#cCode')) === 'GIFT-ABCD-EFGH-JKMN' && (await page.getAttribute('#cLink', 'href')).endsWith('/r/GIFTABCDEFGHJKMN'));
+  check('admin: share row with Text and Email links carrying the code', /GIFT-ABCD-EFGH-JKMN/.test(decodeURIComponent(await page.getAttribute('#cSms', 'href'))) && /r\/GIFTABCDEFGHJKMN/.test(decodeURIComponent(await page.getAttribute('#cMail', 'href'))) && await page.isVisible('#cShare [data-share="share"]'));
+  await page.fill('#bCards', '4'); await page.click('#bGo');
+  await page.waitForSelector('#bOut:not([hidden])');
+  check('admin: cards batch makes 3 codes per card', (await page.locator('#bList > div').count()) === 12 && /12 codes made, 4 cards/.test(await page.textContent('#bOk')));
+  const sheet = await page.evaluate(() => ({ cards: document.querySelectorAll('#sheet .bc').length, qrs: [...document.querySelectorAll('#sheet .q img')].filter((i) => i.src.startsWith('data:image/')).length, codes: document.querySelectorAll('#sheet .q code').length }));
+  check('admin: print sheet has 4 cards, 12 QR codes, 12 codes', sheet.cards === 4 && sheet.qrs === 12 && sheet.codes === 12, JSON.stringify(sheet));
+  await page.emulateMedia({ media: 'print' });
+  await page.screenshot({ path: path.join(SHOTS, 'admin-cards-print.png'), fullPage: true });
+  await page.emulateMedia({ media: null });
   await page.screenshot({ path: path.join(SHOTS, 'admin-codes.png') });
   await page.click('[data-tab="support"]');
   await page.waitForSelector('#sList .item');

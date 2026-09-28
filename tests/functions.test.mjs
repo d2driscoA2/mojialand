@@ -426,6 +426,12 @@ test('admin-api: needs the cookie; passes, codes, support, settings', async () =
   assert.ok(!JSON.stringify(db.passes).includes(d.code) && !JSON.stringify(db.passes).includes(d.code.replace(/-/g, '')));
   const rr = await redeemFn(ev({ code: d.code, device_id: 'b'.repeat(32) }));
   assert.equal(rr.statusCode, 200);
+  // batch for printed cards
+  [st, d] = await A('codes.batch', { kind: '48h', source: 'gift', days_valid: 365, note: 'school', count: 7 });
+  assert.equal(st, 200); assert.equal(d.codes.length, 7); assert.equal(new Set(d.codes.map((c) => c.code)).size, 7);
+  assert.ok(d.codes.every((c) => /^GIFT-/.test(c.code) && c.id));
+  [st, d] = await A('codes.batch', { count: 999 });
+  assert.equal(d.codes.length, 30, 'capped at 30 per call');
   // support
   await contact(ev({ email: 'p@example.com', topic: 'pass', message: 'Help me' }));
   [st, d] = await A('support.list', {});

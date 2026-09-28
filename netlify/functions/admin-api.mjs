@@ -93,6 +93,14 @@ const actions = {
     return { code, pass };
   },
 
+  // Many codes at once, for printed cards. Up to 30 per call (function time limit); the page loops for more.
+  async 'codes.batch'({ kind, source, days_valid, note, count }) {
+    const n = Math.min(30, Math.max(1, parseInt(count, 10) || 1));
+    const out = [];
+    for (let i = 0; i < n; i++) out.push(await actions['codes.create']({ kind, source, days_valid, note }));
+    return { codes: out.map((c) => ({ code: c.code, id: c.pass && c.pass.id })) };
+  },
+
   // ---- support inbox
   async 'support.list'({ status }) {
     const st = status === 'done' ? 'done' : 'open';
