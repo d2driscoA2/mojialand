@@ -848,6 +848,56 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await ctx.close();
 }
 
+
+// 12. Home: big stamp canvas first, featured card peeks at the bottom edge, games scroll below
+{
+  const { ctx, page } = await newPage();
+  await page.addInitScript(() => { localStorage.setItem('mojia.demos', 'false'); localStorage.setItem('mojia.welcomed', 'true'); });
+  await page.goto(base + '/play/');
+  await page.click('#splash'); await page.waitForTimeout(400);
+  const lay = await page.evaluate(() => { const c = document.querySelector('#canvas').getBoundingClientRect(), f = document.querySelector('#hfeat .hfeat').getBoundingClientRect(), sc = document.querySelector('#s-home'); return { canvas: Math.round(c.height), featTop: Math.round(f.top), vh: innerHeight, scrolls: sc.scrollHeight > sc.clientHeight + 100 }; });
+  check('home: stamp canvas fills most of the first screen', lay.canvas >= 420, JSON.stringify(lay));
+  check('home: featured card peeks at the bottom edge', lay.featTop < lay.vh - 60 && lay.featTop > lay.vh - 150, JSON.stringify(lay));
+  check('home: games below the fold scroll', lay.scrolls);
+  check('home: labeled Grown-ups button, wordmark left', (await page.textContent('#lockBtn')).trim() === 'Grown-ups' && await page.evaluate(() => document.querySelector('.homehead2 .wordmark').getBoundingClientRect().left < 60));
+  check('home: new Draw game is featured with a New! tag', (await page.getAttribute('#hfeat .hfeat', 'data-go')) === 'draw' && /New!/.test(await page.textContent('#hfeat')));
+  check('home: grid shows the other four games once each', (await page.evaluate(() => [...document.querySelectorAll('#hgrid .hcell')].map((b) => b.dataset.go).join(','))) === 'pattern,bounce,match,parade');
+  const box = await page.locator('#canvas').boundingBox();
+  await page.mouse.click(box.x + 120, box.y + 200);
+  check('home: tapping the canvas still stamps', (await page.locator('#canvas .stamp').count()) === 1);
+  await page.screenshot({ path: path.join(SHOTS, 'home-top-390.png') });
+  await page.evaluate(() => { document.querySelector('#s-home').scrollTop = 9999; }); await page.waitForTimeout(300);
+  await page.screenshot({ path: path.join(SHOTS, 'home-games-390.png') });
+  await page.click('#hfeat .hfeat'); await page.waitForSelector('#s-draw:not(.hidden)');
+  await page.click('#s-draw [data-go="home"]'); await page.waitForTimeout(300);
+  check('home: after playing Draw it shows Keep playing and home scrolls back to the top', /Keep playing/.test(await page.textContent('#hfeat')) && (await page.evaluate(() => document.querySelector('#s-home').scrollTop)) === 0);
+  await page.click('#hgrid [data-go="match"]'); await page.waitForSelector('#s-match:not(.hidden)');
+  await page.click('#s-match [data-go="home"]'); await page.waitForTimeout(300);
+  check('home: last game played is featured; Draw goes back to the grid as a white tile', (await page.getAttribute('#hfeat .hfeat', 'data-go')) === 'match' && (await page.locator('#hgrid .hcell.white[data-go="draw"]').count()) === 1);
+  await page.evaluate(() => localStorage.setItem('mojia.homeProg', JSON.stringify({ match: { medal: 1, frac: 0.5 } })));
+  await page.click('#hgrid [data-go="pattern"]'); await page.waitForSelector('#s-pattern:not(.hidden)'); await page.click('#s-pattern [data-go="home"]'); await page.waitForTimeout(300);
+  check('home: medal line shows the earned medal on the grid tile', /Silver/.test(await page.textContent('#hgrid [data-go="match"]')));
+  await page.click('#hgrid [data-go="match"]'); await page.waitForSelector('#s-match:not(.hidden)'); await page.click('#s-match [data-go="home"]'); await page.waitForTimeout(300);
+  check('home: featured progress row shows medal and dots', (await page.locator('#hfeat .hprog i.on').count()) === 3 && /🥈/.test(await page.textContent('#hfeat .hprog')));
+  await page.evaluate(() => { document.querySelector('#s-home').scrollTop = 9999; }); await page.waitForTimeout(200);
+  await page.screenshot({ path: path.join(SHOTS, 'home-keep-390.png') });
+  const small = await page.evaluate(() => [...document.querySelectorAll('#s-home button')].filter((b) => b.offsetParent && (b.getBoundingClientRect().width < 44 || b.getBoundingClientRect().height < 40)).map((b) => b.id || b.className));
+  check('home: every button is a big tap target', small.length === 0, small.join(','));
+  check('home: no horizontal scroll at 390', await page.evaluate(() => document.documentElement.scrollWidth <= 390 && document.querySelector('#s-home').scrollWidth <= document.querySelector('#s-home').clientWidth));
+  check('home: no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
+  await ctx.close();
+}
+// 12b. Home on a small phone (375x667) and iPad portrait
+for (const [w, h, name] of [[375, 667, 'se'], [820, 1180, 'ipad']]) {
+  const { ctx, page } = await newPage({ viewport: { width: w, height: h } });
+  await page.addInitScript(() => { localStorage.setItem('mojia.demos', 'false'); localStorage.setItem('mojia.welcomed', 'true'); });
+  await page.goto(base + '/play/'); await page.click('#splash'); await page.waitForTimeout(400);
+  const lay = await page.evaluate(() => ({ canvas: document.querySelector('#canvas').getBoundingClientRect().height, featTop: document.querySelector('#hfeat .hfeat').getBoundingClientRect().top, vh: innerHeight }));
+  check('home ' + name + ': canvas big, featured card peeks', lay.canvas >= 240 && lay.featTop < lay.vh && lay.featTop > lay.vh - 170, JSON.stringify(lay));
+  await page.screenshot({ path: path.join(SHOTS, 'home-' + name + '.png') });
+  await ctx.close();
+}
+
 await browser.close();
 A.srv.close(); B.srv.close();
 const failed = results.filter((r) => !r.ok);
