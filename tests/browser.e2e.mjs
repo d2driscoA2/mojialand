@@ -693,7 +693,7 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   const line = () => page.evaluate(() => { const c = document.querySelector('#dline'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 0) n++; return n; });
   const box = await page.locator('#dmain').boundingBox();
   const stroke = async (x0, y0, x1, y1, steps = 12) => { await page.mouse.move(box.x + x0, box.y + y0); await page.mouse.down(); for (let i = 1; i <= steps; i++) await page.mouse.move(box.x + x0 + (x1 - x0) * i / steps, box.y + y0 + (y1 - y0) * i / steps); await page.mouse.up(); };
-  check('draw: nine tools, seven brand colors', (await page.locator('#dtools .dtool').count()) === 9 && (await page.locator('#dswatches .dsw').count()) === 7);
+  check('draw: ten tools, seven brand colors', (await page.locator('#dtools .dtool').count()) === 10 && (await page.locator('#dswatches .dsw').count()) === 7);
   const small = await page.evaluate(() => [...document.querySelectorAll('#s-draw button')].filter((b) => b.offsetParent && (b.getBoundingClientRect().width < 44 || b.getBoundingClientRect().height < 44)).map((b) => b.id || b.className || b.getAttribute('aria-label')));
   check('draw: every visible button is at least 44 px', small.length === 0, small.join(','));
   const pal = await page.evaluate(() => [...document.querySelectorAll('#dswatches .dsw i')].map((b) => getComputedStyle(b).backgroundColor));
@@ -756,6 +756,11 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await page.click('#dtools [data-tool="rainbow"]'); await stroke(40, 170, 300, 170);
   const rb = await page.evaluate(() => { const c = document.querySelector('#dmain'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; const hues = new Set(); for (let i = 0; i < d.length; i += 4 * 7) if (d[i + 3] > 200) hues.add(Math.round(d[i] / 64) + ',' + Math.round(d[i + 1] / 64) + ',' + Math.round(d[i + 2] / 64)); return hues.size; });
   check('draw: rainbow brush lays down many colors', rb >= 6, String(rb));
+  const s0 = await ink();
+  await page.click('#dtools [data-tool="sprinkles"]'); await stroke(40, 250, 300, 250);
+  const sp = await page.evaluate(() => { const c = document.querySelector('#dmain'); const d = c.getContext('2d').getImageData(0, Math.round(236 * 2), c.width, 56).data; const hues = new Set(); for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 220) hues.add(Math.round(d[i] / 64) + ',' + Math.round(d[i + 1] / 64) + ',' + Math.round(d[i + 2] / 64)); return hues.size; });
+  check('draw: sprinkles brush tosses many colored bits', (await ink()) > s0 && sp >= 5, String(sp));
+  await page.screenshot({ path: path.join(SHOTS, 'draw-sprinkles-390.png') });
   const g0 = await ink();
   await page.click('#dsize'); await page.click('#dtools [data-tool="glitter"]'); await stroke(40, 240, 300, 240);
   check('draw: glitter adds sparkles', (await ink()) > g0, String((await ink()) - g0));
@@ -859,7 +864,7 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   check('home: stamp canvas fills most of the first screen', lay.canvas >= 420, JSON.stringify(lay));
   check('home: featured card peeks at the bottom edge', lay.featTop < lay.vh - 60 && lay.featTop > lay.vh - 150, JSON.stringify(lay));
   check('home: games below the fold scroll', lay.scrolls);
-  check('home: labeled Grown-ups button, wordmark left', (await page.textContent('#lockBtn')).trim() === 'Grown-ups' && await page.evaluate(() => document.querySelector('.homehead2 .wordmark').getBoundingClientRect().left < 60));
+  check('home: original header kept (centered logo, tagline, timer chip, gear over Grown-ups)', await page.isVisible('.homehead .tagline') && await page.isVisible('#lockBtn .gl') && await page.isVisible('.homehead [data-chip]') && await page.evaluate(() => { const r = document.querySelector('.homehead .wordmark').getBoundingClientRect(); return Math.abs(r.left + r.width / 2 - innerWidth / 2) < 12; }));
   check('home: new Draw game is featured with a New! tag', (await page.getAttribute('#hfeat .hfeat', 'data-go')) === 'draw' && /New!/.test(await page.textContent('#hfeat')));
   check('home: grid shows the other four games once each', (await page.evaluate(() => [...document.querySelectorAll('#hgrid .hcell')].map((b) => b.dataset.go).join(','))) === 'pattern,bounce,match,parade');
   const box = await page.locator('#canvas').boundingBox();
@@ -870,15 +875,13 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await page.screenshot({ path: path.join(SHOTS, 'home-games-390.png') });
   await page.click('#hfeat .hfeat'); await page.waitForSelector('#s-draw:not(.hidden)');
   await page.click('#s-draw [data-go="home"]'); await page.waitForTimeout(300);
-  check('home: after playing Draw it shows Keep playing and home scrolls back to the top', /Keep playing/.test(await page.textContent('#hfeat')) && (await page.evaluate(() => document.querySelector('#s-home').scrollTop)) === 0);
+  check('home: Draw stays featured with New! after playing, home scrolls back to the top', (await page.getAttribute('#hfeat .hfeat', 'data-go')) === 'draw' && /New!/.test(await page.textContent('#hfeat')) && (await page.evaluate(() => document.querySelector('#s-home').scrollTop)) === 0);
   await page.click('#hgrid [data-go="match"]'); await page.waitForSelector('#s-match:not(.hidden)');
   await page.click('#s-match [data-go="home"]'); await page.waitForTimeout(300);
-  check('home: last game played is featured; Draw goes back to the grid as a white tile', (await page.getAttribute('#hfeat .hfeat', 'data-go')) === 'match' && (await page.locator('#hgrid .hcell.white[data-go="draw"]').count()) === 1);
+  check('home: after playing Match, Draw is still featured and Match stays in the grid', (await page.getAttribute('#hfeat .hfeat', 'data-go')) === 'draw' && (await page.locator('#hgrid [data-go="match"]').count()) === 1);
   await page.evaluate(() => localStorage.setItem('mojia.homeProg', JSON.stringify({ match: { medal: 1, frac: 0.5 } })));
   await page.click('#hgrid [data-go="pattern"]'); await page.waitForSelector('#s-pattern:not(.hidden)'); await page.click('#s-pattern [data-go="home"]'); await page.waitForTimeout(300);
   check('home: medal line shows the earned medal on the grid tile', /Silver/.test(await page.textContent('#hgrid [data-go="match"]')));
-  await page.click('#hgrid [data-go="match"]'); await page.waitForSelector('#s-match:not(.hidden)'); await page.click('#s-match [data-go="home"]'); await page.waitForTimeout(300);
-  check('home: featured progress row shows medal and dots', (await page.locator('#hfeat .hprog i.on').count()) === 3 && /🥈/.test(await page.textContent('#hfeat .hprog')));
   await page.evaluate(() => { document.querySelector('#s-home').scrollTop = 9999; }); await page.waitForTimeout(200);
   await page.screenshot({ path: path.join(SHOTS, 'home-keep-390.png') });
   const small = await page.evaluate(() => [...document.querySelectorAll('#s-home button')].filter((b) => b.offsetParent && (b.getBoundingClientRect().width < 44 || b.getBoundingClientRect().height < 40)).map((b) => b.id || b.className));
