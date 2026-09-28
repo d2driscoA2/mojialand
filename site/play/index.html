@@ -1027,7 +1027,7 @@ const pay=(function(){
     if(PLAY.has(current)&&blocked()) showRest();
     else if(current==='rest'&&!blocked()) go('home');
     paintChips(); if(current==='gate') paintStatus(); syncGrace(); }
-  document.addEventListener('visibilitychange',()=>{ last=Date.now(); if(!document.hidden) tick(); });
+  document.addEventListener('visibilitychange',()=>{ last=Date.now(); if(!document.hidden){ tick(); offerHandoff(); claimHandoff().then(ok=>{ if(ok) showAllset(); }); } });
 
   /* parent gate: number words */
   const ONES=['','one','two','three','four','five','six','seven','eight','nine'], TENS=['','','twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'];
@@ -1107,7 +1107,7 @@ const pay=(function(){
   /* Home Screen handoff, third channel: Safari parks the pass on the server for 30 minutes; the Home Screen app claims it. */
   const isStandalone=()=>{ try{ return window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true; }catch(e){ return false; } };
   function offerHandoff(){ const p=store.get('pass',null); if(!p||typeof p.token!=='string'||!vcache.payload||vcache.token!==p.token||isStandalone()) return;
-    const last=store.get('offered',null); if(last&&last.token===p.token&&Date.now()-Number(last.at)<10*MIN) return;
+    const last=store.get('offered',null); if(last&&last.token===p.token&&Date.now()-Number(last.at)<5*MIN) return;
     store.set('offered',{token:p.token,at:Date.now()});
     fetch('/.netlify/functions/handoff',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'offer',token:p.token,code:p.code||''}),credentials:'same-origin',cache:'no-store'}).catch(()=>{}); }
   let claiming=false, lastClaim=0;
