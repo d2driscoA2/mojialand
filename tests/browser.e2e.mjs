@@ -678,6 +678,110 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await ctx.close();
 }
 
+// 11. Emoji Draw: tools, marks, Undo, picture-only Clear check, color a friend, fridge, Save to Photos behind the gate
+{
+  const { ctx, page } = await newPage();
+  await page.addInitScript(() => { localStorage.setItem('mojia.demos', 'false'); localStorage.setItem('mojia.welcomed', 'true'); });
+  await page.goto(base + '/play/');
+  await page.click('#splash');
+  check('draw: home has a Draw tile', await page.isVisible('#s-home [data-go="draw"]'));
+  await page.screenshot({ path: path.join(SHOTS, 'draw-home-390.png') });
+  await page.click('[data-go="draw"]');
+  await page.waitForSelector('#s-draw:not(.hidden)');
+  await page.waitForTimeout(300);
+  const ink = () => page.evaluate(() => { const c = document.querySelector('#dmain'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 0) n++; return n; });
+  const line = () => page.evaluate(() => { const c = document.querySelector('#dline'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 0) n++; return n; });
+  const box = await page.locator('#dmain').boundingBox();
+  const stroke = async (x0, y0, x1, y1, steps = 12) => { await page.mouse.move(box.x + x0, box.y + y0); await page.mouse.down(); for (let i = 1; i <= steps; i++) await page.mouse.move(box.x + x0 + (x1 - x0) * i / steps, box.y + y0 + (y1 - y0) * i / steps); await page.mouse.up(); };
+  check('draw: six tools, seven brand colors', (await page.locator('#dtools .dtool').count()) === 6 && (await page.locator('#dswatches .dsw').count()) === 7);
+  const small = await page.evaluate(() => [...document.querySelectorAll('#s-draw button')].filter((b) => b.offsetParent && (b.getBoundingClientRect().width < 44 || b.getBoundingClientRect().height < 44)).map((b) => b.id || b.className || b.getAttribute('aria-label')));
+  check('draw: every visible button is at least 44 px', small.length === 0, small.join(','));
+  const pal = await page.evaluate(() => [...document.querySelectorAll('#dswatches .dsw')].map((b) => getComputedStyle(b).backgroundColor));
+  check('draw: palette is the brand colors', pal.join('|') === 'rgb(113, 56, 209)|rgb(255, 95, 162)|rgb(255, 200, 61)|rgb(77, 188, 236)|rgb(114, 214, 154)|rgb(48, 37, 74)|rgb(255, 255, 255)', pal.join('|'));
+  check('draw: canvas starts empty', (await ink()) === 0);
+  await stroke(40, 60, 250, 90);
+  const a1 = await ink();
+  check('draw: crayon leaves a mark', a1 > 500, String(a1));
+  await page.click('#dtools [data-tool="marker"]'); await page.click('#dswatches .dsw:nth-child(2)'); await stroke(40, 130, 250, 150);
+  const a2 = await ink();
+  check('draw: marker adds a mark', a2 > a1, a2 + ' > ' + a1);
+  await page.click('#dtools [data-tool="paint"]'); await stroke(40, 200, 250, 220);
+  const a3 = await ink();
+  check('draw: paint brush adds a wide mark', a3 - a2 > 4000, String(a3 - a2));
+  await page.click('#dtools [data-tool="trail"]');
+  check('draw: emoji tools swap colors for the emoji tray', await page.isVisible('#dtray') && await page.isHidden('#dswatches'));
+  await stroke(40, 280, 300, 290, 20);
+  const a4 = await ink();
+  check('draw: emoji brush leaves a trail', a4 > a3, String(a4 - a3));
+  await page.click('#dtools [data-tool="stamp"]'); await page.click('#dtray .tile:nth-child(2)');
+  await page.mouse.click(box.x + 200, box.y + 360);
+  const a5 = await ink();
+  check('draw: stamp drops one emoji', a5 > a4, String(a5 - a4));
+  check('draw: stamp tool shows the picked emoji', (await page.textContent('#dtools [data-tool="stamp"]')).includes('❤️'));
+  await page.screenshot({ path: path.join(SHOTS, 'draw-marks-390.png') });
+  await page.click('#dundo');
+  check('draw: Undo removes the last mark', (await ink()) === a4, String(await ink()));
+  // Clear check: keep, time out, then clear, then Undo restores
+  await page.click('#dclear'); await page.waitForTimeout(350);
+  check('draw: Clear opens the picture check with a snapshot', await page.isVisible('#dconfirm') && /^data:image\/jpeg/.test(await page.getAttribute('#dcimg', 'src')));
+  check('draw: Clear check has no words to read', ((await page.textContent('#dconfirm')).replace(/[\s🗑️↩️️]/gu, '')) === '', await page.textContent('#dconfirm'));
+  await page.screenshot({ path: path.join(SHOTS, 'draw-clear-check-390.png') });
+  await page.click('#dcno');
+  check('draw: green arrow keeps the drawing', await page.isHidden('#dconfirm') && (await ink()) === a4);
+  await page.click('#dclear'); await page.waitForTimeout(5400);
+  check('draw: the check closes after 5 seconds and keeps the drawing', await page.isHidden('#dconfirm') && (await ink()) === a4);
+  await page.click('#dclear'); await page.click('#dcyes'); await page.waitForTimeout(800);
+  check('draw: red trash clears', (await ink()) === 0);
+  await page.click('#dundo');
+  check('draw: Undo brings back a cleared drawing', (await ink()) === a4, String(await ink()));
+  await page.click('#dclear'); await page.click('#dcyes'); await page.waitForTimeout(800);
+  await page.click('#dclear');
+  check('draw: Clear on an empty page does nothing', await page.isHidden('#dconfirm'));
+  // color a friend
+  await page.click('#dtools [data-tool="friend"]');
+  check('draw: friend picker shows five friends and none', (await page.locator('#dfriends button').count()) === 6);
+  await page.screenshot({ path: path.join(SHOTS, 'draw-friends-390.png') });
+  await page.click('#dfriends button[aria-label="smiley"]');
+  check('draw: smiley outline appears, crayon selected', (await line()) > 1000 && /on/.test(await page.getAttribute('#dtools [data-tool="crayon"]', 'class')));
+  await page.click('#dtools [data-tool="paint"]');
+  for (let y = 40; y < box.height - 30; y += 18) await stroke(20, y, box.width - 20, y, 8);
+  await page.waitForTimeout(200);
+  check('draw: coloring the friend sets off the cheer', (await page.getAttribute('#dstage', 'data-cheered')) === 'smiley');
+  await page.screenshot({ path: path.join(SHOTS, 'draw-friend-done-390.png') });
+  // fridge
+  await page.click('#dfridgeBtn');
+  check('draw: fridge opens with empty slots', await page.isVisible('#dfridge') && (await page.locator('#dfgrid .slot').count()) === 3);
+  await page.click('#dfput'); await page.waitForTimeout(300);
+  const fr = await page.evaluate(() => JSON.parse(localStorage.getItem('mojia.fridge') || '[]'));
+  check('draw: drawing goes on the fridge (this device only)', fr.length === 1 && /^data:image\/jpeg;base64,/.test(fr[0].src) && fr[0].src.length < 600000, String(fr[0] && fr[0].src.length));
+  check('draw: fresh page after hanging the drawing', (await ink()) === 0 && (await line()) === 0);
+  await page.screenshot({ path: path.join(SHOTS, 'draw-fridge-390.png') });
+  await page.click('#dfput'); await page.waitForTimeout(200);
+  check('draw: empty page does not go on the fridge', (await page.evaluate(() => JSON.parse(localStorage.getItem('mojia.fridge')).length)) === 1);
+  await page.click('#dfgrid button'); await page.waitForTimeout(300);
+  check('draw: tapping a fridge drawing opens it', await page.isHidden('#dfridge') && (await ink()) > 50000);
+  const fits = await page.evaluate(() => document.documentElement.scrollWidth <= 390 && document.querySelector('#s-draw .helprow').getBoundingClientRect().height < 60);
+  check('draw: fits 390 wide, help row on one line', fits);
+  const swOk = await page.evaluate(() => { const r = document.querySelector('#dswatches').getBoundingClientRect(); return [...document.querySelectorAll('#dswatches .dsw')].every((b) => { const q = b.getBoundingClientRect(); return q.left >= r.left && q.right <= r.right; }); });
+  check('draw: every color shows without scrolling at 390', swOk);
+  check('draw: kid screen has no links and no inputs', (await page.locator('#s-draw a, #s-draw input').count()) === 0);
+  // Save to Photos behind the number gate
+  await page.click('#s-draw [data-go="home"]');
+  await page.click('#lockBtn');
+  await page.waitForSelector('#s-ngate:not(.hidden)');
+  const ans = await page.getAttribute('#pwChoices', 'data-a');
+  await page.click('#pwChoices .pw-choice[data-n="' + ans + '"]');
+  await page.waitForSelector('#s-gate:not(.hidden)');
+  await page.click('.pw-gurow[data-a="photos"]'); await page.waitForTimeout(400);
+  check('draw: Grown-ups Save to Photos lists fridge drawings', await page.isVisible('#pwOvPhotos') && (await page.locator('#pwPhGrid img').count()) === 1);
+  await page.screenshot({ path: path.join(SHOTS, 'draw-photos-390.png') });
+  await page.click('#pwPhGrid .rm');
+  check('draw: Grown-ups remove a drawing', (await page.locator('#pwPhGrid img').count()) === 0 && (await page.evaluate(() => JSON.parse(localStorage.getItem('mojia.fridge')).length)) === 0);
+  check('draw: zero third-party requests', page.reqs.every((u) => u.startsWith(base) || u.startsWith('data:')));
+  check('draw: no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
+  await ctx.close();
+}
+
 await browser.close();
 A.srv.close(); B.srv.close();
 const failed = results.filter((r) => !r.ok);

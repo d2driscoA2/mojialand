@@ -468,6 +468,53 @@ textarea.pw-in{resize:none;min-height:88px}
 .pw-next{width:100%;display:grid;gap:6px;justify-items:center;padding-top:14px;border-top:2px dashed var(--line)}
 .pw-eyebrow{font-family:var(--display);font-weight:900;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--mute)}
 .pw-textbtn:focus-visible,.pw-grown:focus-visible,.pw-choice:focus-visible,.pw-plan:focus-visible,.pw-primary:focus-visible,.pw-secondary:focus-visible,.pw-link:focus-visible,.pw-back:focus-visible,.pw-gurow:focus-visible,.pw-bubble:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+/* ---------- EMOJI DRAW ---------- */
+.gamebtn.drawbtn{grid-column:1/-1;height:72px;flex-direction:row;gap:12px;background:var(--white);color:var(--purple);border:2px solid var(--line)}
+.gamebtn.drawbtn .ico{margin:0;font-size:26px}
+.gamebtn.drawbtn .dtx{display:flex;flex-direction:column;align-items:flex-start;line-height:1.1}
+.gamebtn.drawbtn small{color:var(--purple-d)}
+.dtools{display:flex;gap:6px;justify-content:center}
+.dtool{width:52px;height:52px;flex:0 0 auto;border-radius:16px;border:2px solid var(--line);background:var(--white);font-size:28px;line-height:1;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);cursor:pointer;padding:0;position:relative;transition:transform .12s}
+.dtool.on{border:3px solid var(--purple);background:var(--purple-l);transform:scale(1.06)}
+.dtool .mini{position:absolute;right:-5px;bottom:-5px;font-size:17px}
+.dtool:focus-visible,.dsw:focus-visible{outline:3px solid var(--purple-d);outline-offset:2px}
+#dstage{touch-action:none;background:var(--white)}
+.dlayers{position:absolute;inset:0}
+.dlayers canvas{position:absolute;left:0;top:0;width:100%;height:100%;display:block}
+#dline{pointer-events:none}
+.dswatches{display:flex;gap:6px;justify-content:center;overflow-x:auto;padding:4px 4px;scrollbar-width:none;min-height:56px;align-items:center}
+.dswatches::-webkit-scrollbar{display:none}
+.dsw{flex:0 0 auto;width:44px;height:44px;border-radius:999px;border:3px solid #fff;box-shadow:0 0 0 2px var(--line),var(--shadow);cursor:pointer;padding:0;transition:transform .12s}
+.dsw.on{box-shadow:0 0 0 3px var(--purple),var(--shadow);transform:scale(1.14)}
+#dtray{min-height:56px;padding:4px 4px}
+#dtray .tile{width:48px;height:48px;font-size:28px}
+#s-draw .helprow{gap:10px}
+#s-draw .helpbtn.dicon{width:56px;height:52px;padding:0;justify-content:center;font-size:24px}
+.dpanel{position:absolute;inset:0;z-index:30;background:rgba(237,230,251,.95);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:16px;animation:fadein .25s;touch-action:pan-y}
+.dx{position:absolute;top:10px;right:10px;width:48px;height:48px;border-radius:999px;border:2px solid var(--purple);background:#fff;font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:var(--shadow);padding:0}
+.dfriends{display:grid;grid-template-columns:repeat(3,76px);gap:12px}
+.dfriends button{width:76px;height:76px;border-radius:24px;border:2px solid var(--line);background:#fff;font-size:44px;line-height:1;box-shadow:var(--shadow);cursor:pointer;padding:0}
+.dfriends button:active,.dfgrid button:active{transform:scale(.94)}
+.dfridge{justify-content:flex-start;overflow-y:auto;padding-top:18px}
+.dfput{width:auto;min-width:180px;padding:0 22px;flex-direction:row;gap:10px;height:64px;flex:0 0 auto;font-size:30px}
+.dfgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:16px 12px;width:100%;padding:8px 2px 16px}
+.dfgrid button{position:relative;aspect-ratio:3/4;border-radius:12px;border:4px solid #fff;padding:0;overflow:visible;box-shadow:var(--shadow);background:#fff;cursor:pointer;transform:rotate(var(--r,0deg))}
+.dfgrid img{width:100%;height:100%;object-fit:cover;display:block;border-radius:8px}
+.dfgrid .mag{position:absolute;top:-12px;left:50%;transform:translateX(-50%);font-size:22px;line-height:1}
+.dfgrid .slot{aspect-ratio:3/4;border-radius:12px;border:3px dashed #D5C6F2;display:flex;align-items:center;justify-content:center;font-size:26px;opacity:.6}
+.dfgrid button.new{animation:badgepop .6s cubic-bezier(.34,1.56,.64,1)}
+.dcsnap{position:relative;width:56%;max-width:220px}
+.dcsnap img{width:100%;display:block;border-radius:16px;border:4px solid #fff;box-shadow:var(--shadow);background:#fff}
+.dctrash{position:absolute;right:-22px;bottom:-22px;font-size:56px;line-height:1;animation:dwob .45s infinite alternate ease-in-out}
+@keyframes dwob{from{transform:rotate(-14deg)}to{transform:rotate(14deg)}}
+.dcbtns{display:flex;gap:18px;margin-top:10px}
+.dcbtns .big{width:104px;height:84px;font-size:40px}
+.dcbtns .big.no{background:var(--green);color:var(--ink)}
+.pw-photos{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-height:46vh;overflow-y:auto;padding:4px}
+.pw-photo{position:relative}
+.pw-photo .pic{display:block;width:100%;aspect-ratio:3/4;border-radius:12px;border:2px solid var(--line);padding:0;overflow:hidden;background:#fff;cursor:pointer}
+.pw-photo img{width:100%;height:100%;object-fit:cover;display:block}
+.pw-photo .rm{position:absolute;top:-8px;right:-8px;width:40px;height:40px;border-radius:999px;border:2px solid #FFC2D6;background:var(--red-l);color:var(--red);font-weight:900;font-size:14px;cursor:pointer;padding:0}
 </style>
 
 <div id="app">
@@ -483,6 +530,7 @@ textarea.pw-in{resize:none;min-height:88px}
     <button class="gamebtn" data-go="bounce" style="background:var(--blue)"><span class="ico" aria-hidden="true"><i>🦄</i><i class="gnd"></i><i>🐸</i></span>Bounce<small>Drop and bounce!</small></button>
     <button class="gamebtn" data-go="match" style="background:var(--yellow);color:var(--ink)"><span class="ico" aria-hidden="true"><i class="card back">🌟</i><i class="card face">🦄</i><i class="card face">🦄</i></span>Match<small>Find the pairs</small></button>
     <button class="gamebtn" data-go="parade" style="background:var(--green);color:var(--ink)"><span class="ico" aria-hidden="true"><i>🐲</i><i>🐴</i><i>🦄</i><i class="lolly">🍭</i></span>Parade<small>Follow the leader</small></button>
+    <button class="gamebtn drawbtn" data-go="draw"><span class="ico" aria-hidden="true"><i>🖍️</i><i>🖌️</i><i>✨</i></span><span class="dtx">Draw<small>Crayons, paint, emoji</small></span></button>
   </div>
 </section>
 
@@ -520,6 +568,21 @@ textarea.pw-in{resize:none;min-height:88px}
     <button class="addbtn" id="addBtn" aria-label="Add a character"><b>+</b>Add</button>
   </div>
   <div class="helprow"><button class="helpbtn" data-demo="parade"><span aria-hidden="true">❓</span>How to play</button><button class="helpbtn act" id="ppause" aria-pressed="false"><span aria-hidden="true">⏸️</span>Pause</button><button class="helpbtn act danger" id="pclear"><span aria-hidden="true">🗑️</span>Clear</button></div>
+</section>
+
+<!-- DRAW -->
+<section class="screen hidden" id="s-draw" data-bg="grape">
+  <div class="bar"><button class="pill gear" data-go="home" aria-label="Back to home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7138D1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg></button><div class="gname"><span class="e">🖍️</span>Draw</div><div class="pw-slot"><span class="pw-chip" data-chip role="timer"><svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="14" fill="none" stroke="#F3ECFC" stroke-width="6"/><circle class="arc" cx="18" cy="18" r="14" fill="none" stroke="#FFC83D" stroke-width="6" stroke-linecap="round" stroke-dasharray="88" stroke-dashoffset="0" transform="rotate(-90 18 18)"/></svg><span class="t">15:00</span></span></div></div>
+  <div class="dtools" id="dtools" role="toolbar" aria-label="Drawing tools"></div>
+  <div class="stage" id="dstage">
+    <div class="dlayers" id="dlayers"><canvas id="dmain"></canvas><canvas id="dlive"></canvas><canvas id="dline"></canvas></div>
+    <div class="dpanel hidden" id="dfriend" role="dialog" aria-label="Pick a friend to color"><button class="dx" data-dclose aria-label="Close"><span aria-hidden="true">✖️</span></button><div class="dfriends" id="dfriends"></div></div>
+    <div class="dpanel dfridge hidden" id="dfridge" role="dialog" aria-label="The fridge"><button class="dx" id="dfclose" data-dclose aria-label="Close"><span aria-hidden="true">✖️</span></button><button class="big lime dfput" id="dfput" aria-label="Put my drawing on the fridge"><span aria-hidden="true">🧲</span><span aria-hidden="true">🖼️</span></button><div class="dfgrid" id="dfgrid"></div></div>
+    <div class="dpanel hidden" id="dconfirm" role="dialog" aria-label="Clear your drawing?"><div class="dcsnap"><img id="dcimg" alt=""><span class="dctrash" aria-hidden="true">🗑️</span></div><div class="dcbtns"><button class="big danger" id="dcyes" aria-label="Yes, clear my drawing"><span aria-hidden="true">🗑️</span></button><button class="big no" id="dcno" aria-label="Keep my drawing"><span aria-hidden="true">↩️</span></button></div></div>
+  </div>
+  <div class="dswatches" id="dswatches" role="radiogroup" aria-label="Colors"></div>
+  <div class="tray hidden" id="dtray"></div>
+  <div class="helprow"><button class="helpbtn" data-demo="draw"><span aria-hidden="true">❓</span>How to play</button><button class="helpbtn act dicon" id="dundo" aria-label="Undo"><span aria-hidden="true">↩️</span></button><button class="helpbtn act dicon" id="dfridgeBtn" aria-label="Fridge"><span aria-hidden="true">🧲</span></button><button class="helpbtn act danger dicon" id="dclear" aria-label="Clear"><span aria-hidden="true">🗑️</span></button></div>
 </section>
 
 <!-- EMOJI PICKER (shared) -->
@@ -660,6 +723,12 @@ textarea.pw-in{resize:none;min-height:88px}
   <p id="pwSoonText">This part of Mojialand is on the way.</p>
   <button class="pw-secondary" data-pw-close>OK</button>
 </div></div>
+<div class="pw-ov hidden" id="pwOvPhotos" role="dialog" aria-label="Save drawings to Photos"><div class="pw-card">
+  <h3>Save drawings to Photos</h3>
+  <p id="pwPhText">Tap a drawing, then choose Save Image.</p>
+  <div class="pw-photos" id="pwPhGrid"></div>
+  <button class="pw-secondary" data-pw-close>Done</button>
+</div></div>
 <div id="toast" class="toast"><span class="ck">✓</span><span id="toastText">You did it!</span></div>
 <div id="hand" class="hidden">👆</div>
 <div id="watch" class="hidden"><span>👀</span>Watch</div>
@@ -741,7 +810,7 @@ let toastT=null; function toast(text){ const t=$('#toast'); $('#toastText').text
 function confetti(host,x,y,n){ const cols=['#FF6FAE','#4CC9F0','#FFC83D','#8AE234','#9B5DE5']; for(let i=0;i<(n||18);i++){ const c=document.createElement('div'); c.className='confetti'; c.style.left=x+'px'; c.style.top=y+'px'; c.style.background=rnd(cols); c.style.setProperty('--dx',(Math.random()*220-110)+'px'); c.style.setProperty('--dy',(Math.random()*180+40)+'px'); host.appendChild(c); setTimeout(()=>c.remove(),1100);} }
 
 /* ---------- navigation ---------- */
-const screens={home:'#s-home',pattern:'#s-pattern',bounce:'#s-bounce',match:'#s-match',parade:'#s-parade',gate:'#s-gate',rest:'#s-rest',ngate:'#s-ngate',plans:'#s-plans',allset:'#s-allset'};
+const screens={home:'#s-home',pattern:'#s-pattern',bounce:'#s-bounce',match:'#s-match',parade:'#s-parade',draw:'#s-draw',gate:'#s-gate',rest:'#s-rest',ngate:'#s-ngate',plans:'#s-plans',allset:'#s-allset'};
 let current='home';
 const games={};
 function go(name){ stopDemo(); closeGlass(); if(games[current]&&games[current].leave) games[current].leave(); $$('.screen').forEach(s=>s.classList.add('hidden')); $(screens[name]).classList.remove('hidden'); current=name; onScreen(name); if(games[name]&&games[name].enter) games[name].enter(); if(games[name]&&settings.demos&&!demoDone[name]) setTimeout(()=>showGlass(name),350); }
@@ -766,7 +835,11 @@ const HOWTO={
   parade:{icon:'🍭', title:'Parade', goal:'Lead the parade with the lollipop.', say:'Tap the field. The parade chases the lollipop. Tap plus to add friends. Pause to say bye.', steps:[
     {pic:P('<span class="wave"><i>🐲</i><i>🐴</i><i>🦄</i></span>'+AR+'🍭'), t:'Tap anywhere. The parade chases the lollipop.'},
     {pic:P('<span class="sm">➕</span>'+AR+'🐶'), t:'Tap Add to bring a new friend.'},
-    {pic:P('⏸️'+AR+TAP+'🐴<span class="sm">✖️</span>'), t:'Tap Pause, then tap a friend to say bye.'}]}
+    {pic:P('⏸️'+AR+TAP+'🐴<span class="sm">✖️</span>'), t:'Tap Pause, then tap a friend to say bye.'}]},
+  draw:{icon:'🖍️', title:'Draw', goal:'Draw a picture with crayons, paint, and emoji.', say:'Pick a tool and a color. Draw with your finger. Put your picture on the fridge.', steps:[
+    {pic:P('🖍️'+AR+'<span class="sm">🟣🩷🟡</span>'), t:'Pick a crayon, marker, or brush. Then pick a color.'},
+    {pic:P(TAP+'<span class="sm">〰️</span>'+AR+'<span class="sm">⭐⭐⭐</span>'), t:'Draw with your finger. The emoji brush leaves a trail!'},
+    {pic:P('🧲'+AR+'🖼️'), t:'Tap Fridge to hang your picture.'}]}
 };
 let glassFor=null;
 function showGlass(name){ const h=HOWTO[name]; if(!h) return; stopDemo(); glassFor=name; idleClear();
@@ -965,11 +1038,183 @@ games.parade=(function(){
     async demo(tap,stopped){ say('Tap plus to add a friend.'); await tap($('#addBtn')); if(stopped()) return; await wait(300); await tap(drawer.tab(1)); if(stopped()) return; await tap(drawer.firstTile()); if(stopped()) return; await wait(500); await tap($('#dclose')); if(stopped()) return; say('Tap the field. The parade chases the lollipop.'); const fake={getBoundingClientRect(){ const r=stage.getBoundingClientRect(); return {left:r.left+r.width*0.75,top:r.top+r.height*0.45,width:0,height:0}; }, click(){ target={x:W()*0.75,y:H()*0.45}; tgt.style.left=target.x+'px'; tgt.style.top=target.y+'px'; tgt.classList.remove('hidden'); sfx.boop(); }}; await tap(fake); await wait(1600); if(stopped()) return; say('Pause. Tap a friend to say bye.'); await tap(pauseBtn); if(stopped()) return; await wait(600); const last=marchers[marchers.length-1]; if(last) await tap(last.el); await wait(900); if(stopped()) return; await tap(pauseBtn); await wait(600); } };
 })();
 
+/* ---------- EMOJI DRAW (September 28, 2026) ---------- */
+/* Crayon, marker, paint, emoji brush, emoji stamp, color a friend. Undo, picture-only Clear check, fridge wall on this device.
+   Save to Photos lives in Grown-ups (behind the number gate). Every mark is kept as an op so Undo can redraw. */
+games.draw=(function(){
+  const stage=$('#dstage'), layers=$('#dlayers'), cMain=$('#dmain'), cLive=$('#dlive'), cLine=$('#dline');
+  const mx=cMain.getContext('2d'), lx=cLive.getContext('2d'), ox=cLine.getContext('2d');
+  const COLORS=[['#7138D1','purple'],['#FF5FA2','pink'],['#FFC83D','yellow'],['#4DBCEC','blue'],['#72D69A','green'],['#30254A','black'],['#FFFFFF','white']];
+  const TOOLS=[['crayon','🖍️','Crayon'],['marker','🖊️','Marker'],['paint','🖌️','Paint brush'],['trail','','Emoji brush'],['stamp','','Emoji stamp'],['friend','🎨','Color a friend']];
+  const EMO='"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+  const WIDTH={crayon:14,marker:12,paint:28};
+  /* Friend outlines drawn on a 200 by 200 grid. sil: outer shapes (filled for the coloring check, stroked as outline). det: inside lines. dots: filled eyes. */
+  const FRIENDS=[
+    {id:'unicorn',e:'🦄',name:'unicorn',
+      sil:['M150 190L150 120C150 90 136 66 110 56C92 50 74 52 60 62L30 96C22 106 24 120 36 124C48 128 60 122 70 114L84 108C92 130 96 160 90 190Z','M86 58L78 10L102 52Z','M112 58L120 30L132 64Z','M118 56C142 50 162 66 164 92C178 106 174 128 164 140C176 156 170 176 160 190L150 190L150 120C150 90 138 70 118 56Z'],
+      det:['M81 38L94 32M80 24L89 20','M40 118Q52 124 64 114','M150 150Q140 170 150 190'], dots:['M84 80a6 8 0 1 0 .01 0Z','M40 106a3.5 3.5 0 1 0 .01 0Z']},
+    {id:'shark',e:'🦈',name:'shark',
+      sil:['M22 112C44 84 92 72 140 80C164 84 182 96 188 110C176 124 150 134 120 136C80 138 46 130 30 122Z','M34 116L8 78Q22 112 8 152Z','M92 78L108 38Q124 62 130 80Z','M104 134L92 166Q118 152 126 135Z'],
+      det:['M130 96Q125 108 130 120M120 96Q115 108 120 120','M158 118Q170 124 182 114'], dots:['M158 98a5 6 0 1 0 .01 0Z']},
+    {id:'puppy',e:'🐶',name:'puppy',
+      sil:['M100 50C142 50 162 82 160 118C158 158 132 178 100 178C68 178 42 158 40 118C38 82 58 50 100 50Z','M60 62C36 52 18 70 20 104C22 130 34 144 48 138C56 118 58 92 64 74Z','M140 62C164 52 182 70 180 104C178 130 166 144 152 138C144 118 142 92 136 74Z'],
+      det:['M100 118C124 118 136 132 134 146C132 162 118 168 100 168C82 168 68 162 66 146C64 132 76 118 100 118Z','M100 141L100 152M100 152Q90 161 83 154M100 152Q110 161 117 154'], dots:['M78 94a7 9 0 1 0 .01 0Z','M122 94a7 9 0 1 0 .01 0Z','M89 127Q100 120 111 127Q109 139 100 142Q91 139 89 127Z']},
+    {id:'smiley',e:'😀',name:'smiley',
+      sil:['M100 20a80 80 0 1 0 .01 0Z'],
+      det:['M56 116Q100 172 144 116Z'], dots:['M74 64a9 13 0 1 0 .01 0Z','M126 64a9 13 0 1 0 .01 0Z']},
+    {id:'pizza',e:'🍕',name:'pizza',
+      sil:['M100 190L28 54Q100 22 172 54Z','M28 54Q100 22 172 54Q178 38 166 30Q100 4 34 30Q22 38 28 54Z'],
+      det:['M66 62a9 9 0 1 0 .01 0Z','M138 64a9 9 0 1 0 .01 0Z','M100 144a8 8 0 1 0 .01 0Z','M86 110Q100 124 114 110'], dots:['M88 82a6 8 0 1 0 .01 0Z','M112 82a6 8 0 1 0 .01 0Z']}
+  ];
+  FRIENDS.forEach(f=>{ f.silP=f.sil.map(d=>new Path2D(d)); f.detP=f.det.map(d=>new Path2D(d)); f.dotP=f.dots.map(d=>new Path2D(d)); });
+  const friendById=id=>FRIENDS.find(f=>f.id===id)||null;
+
+  let tool='crayon', color=COLORS[0][0], emo='⭐', W=0, H=0, dpr=1, ops=[], cur=null, pid=null, last=null, travel=0, cheered=false, samples=null, confirmT=null, trailN=0;
+
+  function rng(seed){ return function(){ seed=seed+0x6D2B79F5|0; let t=Math.imul(seed^seed>>>15,1|seed); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+  function lighten(hex,k){ const n=parseInt(hex.slice(1),16), f=v=>Math.round(v+(255-v)*k); return 'rgb('+f(n>>16)+','+f(n>>8&255)+','+f(n&255)+')'; }
+
+  /* ---- canvas size ---- */
+  function size(){ const r=cMain.getBoundingClientRect(); if(!r.width||!r.height) return; const nd=Math.min(2,window.devicePixelRatio||1); if(r.width===W&&r.height===H&&nd===dpr) return;
+    W=r.width; H=r.height; dpr=nd; [cMain,cLive,cLine].forEach(c=>{ c.width=Math.round(W*dpr); c.height=Math.round(H*dpr); }); [mx,lx,ox].forEach(x=>x.setTransform(dpr,0,0,dpr,0,0)); samples=null; redraw(); }
+  window.addEventListener('resize',()=>{ if(current==='draw') size(); });
+
+  /* ---- marks ---- */
+  function segCrayon(x,o,a,b,rand){ const w=o.w; x.globalAlpha=.35; x.strokeStyle=o.color; x.lineWidth=w*.7; x.lineCap='round'; x.beginPath(); x.moveTo(a[0],a[1]); x.lineTo(b[0]+.01,b[1]); x.stroke(); x.fillStyle=o.color;
+    const d=Math.hypot(b[0]-a[0],b[1]-a[1]), n=Math.max(1,Math.ceil(d/1.5));
+    for(let i=0;i<n;i++){ const t=i/n, cx=a[0]+(b[0]-a[0])*t, cy=a[1]+(b[1]-a[1])*t; for(let k=0;k<3;k++){ const ang=rand()*6.2832, rr=Math.sqrt(rand())*w/2, s=1.2+rand()*1.4; x.globalAlpha=.5+rand()*.45; x.fillRect(cx+Math.cos(ang)*rr-s/2,cy+Math.sin(ang)*rr-s/2,s,s); } }
+    x.globalAlpha=1; }
+  function segMarker(x,o,a,b){ x.globalAlpha=1; x.strokeStyle=o.color; x.lineWidth=o.w; x.lineCap='round'; x.beginPath(); x.moveTo(a[0],a[1]); x.lineTo(b[0]+.01,b[1]); x.stroke(); }
+  function drawPaint(x,o){ const p=o.pts; x.lineCap='round'; x.lineJoin='round';
+    const path=()=>{ x.beginPath(); x.moveTo(p[0],p[1]); for(let i=2;i<p.length;i+=2) x.lineTo(p[i],p[i+1]); if(p.length===2) x.lineTo(p[0]+.1,p[1]); };
+    x.globalAlpha=.8; x.strokeStyle=o.color; x.lineWidth=o.w; path(); x.stroke(); x.globalAlpha=.5; x.strokeStyle=lighten(o.color,.35); x.lineWidth=o.w*.6; path(); x.stroke(); x.globalAlpha=1; }
+  function drawEmo(x,it){ x.save(); x.globalAlpha=1; x.translate(it[0],it[1]); x.rotate(it[4]); x.font=it[3]+'px '+EMO; x.textAlign='center'; x.textBaseline='middle'; x.fillText(it[2],0,0); x.restore(); }
+  function renderOp(x,o){
+    if(o.t==='s'){ if(o.tool==='paint'){ drawPaint(x,o); return; } const p=o.pts, rand=rng(o.seed);
+      for(let i=0;i<p.length;i+=2){ const a=[p[Math.max(0,i-2)],p[Math.max(1,i-1)]], b=[p[i],p[i+1]]; if(o.tool==='crayon') segCrayon(x,o,a,b,rand); else segMarker(x,o,a,b); } }
+    else if(o.t==='e') o.items.forEach(it=>drawEmo(x,it));
+    else if(o.t==='i') x.drawImage(o.img,0,0,W,H); }
+  function startIndex(){ for(let i=ops.length-1;i>=0;i--){ if(ops[i].t==='c'||ops[i].t==='i') return i; } return 0; }
+  function friendNow(){ let f=null; for(const o of ops){ if(o.t==='c'||o.t==='i') f=null; else if(o.t==='f') f=o.id; } return friendById(f); }
+  function marks(){ return ops.slice(startIndex()).some(o=>o.t==='s'||o.t==='e'||o.t==='i'); }
+  function isEmpty(){ return !marks()&&!friendNow(); }
+  function frame(){ const s=Math.min(W,H)*0.84; return {s,x:(W-s)/2,y:(H-s)/2}; }
+  function drawFriend(){ ox.clearRect(0,0,W,H); const F=friendNow(); if(!F) return; const fr=frame(); ox.save(); ox.translate(fr.x,fr.y); ox.scale(fr.s/200,fr.s/200);
+    ox.lineJoin='round'; ox.lineCap='round'; ox.strokeStyle='#30254A'; ox.lineWidth=5; F.silP.concat(F.detP).forEach(p=>ox.stroke(p)); ox.fillStyle='#30254A'; F.dotP.forEach(p=>ox.fill(p)); ox.restore(); }
+  function redraw(){ if(!W) return; mx.clearRect(0,0,W,H); lx.clearRect(0,0,W,H); const s=startIndex(); for(let i=s;i<ops.length;i++){ const o=ops[i]; if(o.t!=='c'&&o.t!=='f') renderOp(mx,o); } samples=null; drawFriend(); }
+  /* Undo keeps the last 160 steps; older marks fold into one picture. */
+  function push(o){ if(ops.length>=160){ const snap=document.createElement('canvas'); snap.width=cMain.width; snap.height=cMain.height; snap.getContext('2d').drawImage(cMain,0,0); const F=friendNow(); ops=[{t:'i',img:snap}]; if(F) ops.push({t:'f',id:F.id}); } ops.push(o); }
+
+  /* ---- color a friend: cheer when most of the friend is colored ---- */
+  function checkFriend(){ const F=friendNow(); if(!F||cheered||!W) return; const fr=frame(), k=frame.k||(frame.k=document.createElement('canvas').getContext('2d'));
+    if(!samples){ samples=[]; k.setTransform(fr.s/200,0,0,fr.s/200,fr.x,fr.y); const step=Math.max(6,fr.s/40); for(let y=fr.y;y<fr.y+fr.s;y+=step) for(let x=fr.x;x<fr.x+fr.s;x+=step){ if(F.silP.some(p=>k.isPointInPath(p,x,y))) samples.push([x,y]); } k.setTransform(1,0,0,1,0,0); }
+    if(!samples.length) return; const cw=cMain.width, data=mx.getImageData(0,0,cw,cMain.height).data; let hit=0;
+    for(const [x,y] of samples){ const i=(Math.round(y*dpr)*cw+Math.round(x*dpr))*4+3; if(data[i]>40) hit++; }
+    if(hit/samples.length>=0.6){ cheered=true; stage.dataset.cheered=F.id; layers.animate([{transform:'translateY(0) scale(1)'},{transform:'translateY(-26px) scale(1.04)',offset:.3},{transform:'translateY(0) scale(.98)',offset:.6},{transform:'translateY(-12px) scale(1.02)',offset:.8},{transform:'translateY(0) scale(1)'}],{duration:900,easing:'ease-out'}); sfx.cheer(); confetti(stage,W/2,H/3,28); say('Yay! You colored the '+F.name+'!'); } }
+
+  /* ---- drawing input ---- */
+  function pt(ev){ const r=cMain.getBoundingClientRect(); return [ev.clientX-r.left,ev.clientY-r.top]; }
+  function liveSeg(a,b){ if(cur.tool==='paint'){ lx.clearRect(0,0,W,H); drawPaint(lx,cur); } else if(cur.tool==='crayon') segCrayon(lx,cur,a,b,cur.rand); else segMarker(lx,cur,a,b); }
+  function addTrail(p){ const it=[p[0],p[1],emo,26+Math.random()*14,(Math.random()-.5)*.6]; cur.items.push(it); drawEmo(lx,it); if(settings.sound) tone(520+(trailN++%6)*60,0,.07,'sine',.1); }
+  function stampAt(p){ const it=[p[0],p[1],emo,64,(Math.random()-.5)*.3]; push({t:'e',items:[it]}); drawEmo(mx,it); sfx.boop(); const n=ops.filter(o=>o.t==='e').length; if(n%5===1) say(nameOf(emo)); checkFriend(); }
+  function begin(p){ if(tool==='stamp'){ stampAt(p); return false; }
+    if(tool==='trail'){ cur={t:'e',items:[]}; travel=0; addTrail(p); last=p; return true; }
+    cur={t:'s',tool,color,w:WIDTH[tool],pts:[p[0],p[1]],seed:(Math.random()*1e9)|0}; cur.rand=rng(cur.seed); liveSeg(p,p); last=p;
+    if(settings.sound){ if(tool==='paint') sfx.whoosh(); else tone(tool==='crayon'?240:360,0,.08,'triangle',.08); } return true; }
+  function move(p){ if(!cur) return; const d=Math.hypot(p[0]-last[0],p[1]-last[1]); if(d<1.5) return;
+    if(cur.t==='e'){ travel+=d; last=p; if(travel>=34){ travel=0; addTrail(p); } return; }
+    cur.pts.push(p[0],p[1]); liveSeg(last,p); last=p; }
+  function end(){ if(!cur) return; const o=cur; cur=null; delete o.rand; lx.clearRect(0,0,W,H); if(o.t==='e'&&!o.items.length) return; push(o); renderOp(mx,o); checkFriend(); }
+  stage.addEventListener('pointerdown',ev=>{ if(ev.target.closest('.dpanel')) return; if(pid!==null) return; ctx(); size(); if(!W) return; ev.preventDefault();
+    if(begin(pt(ev))){ pid=ev.pointerId; try{ stage.setPointerCapture(pid); }catch(e){} } });
+  stage.addEventListener('pointermove',ev=>{ if(ev.pointerId!==pid) return; const list=ev.getCoalescedEvents?ev.getCoalescedEvents():[]; (list.length?list:[ev]).forEach(e=>move(pt(e))); });
+  const up=ev=>{ if(ev.pointerId!==pid) return; pid=null; end(); };
+  stage.addEventListener('pointerup',up); stage.addEventListener('pointercancel',up);
+
+  /* ---- tools, colors, emoji tray ---- */
+  const toolsEl=$('#dtools'), swEl=$('#dswatches'), trayEl=$('#dtray');
+  TOOLS.forEach(([id,ico,label])=>{ const b=document.createElement('button'); b.className='dtool'+(id===tool?' on':''); b.dataset.tool=id; b.setAttribute('aria-label',label); if(ico) b.innerHTML='<span aria-hidden="true">'+ico+'</span>';
+    b.onclick=()=>{ ctx(); sfx.boop(); if(id==='friend'){ openFriend(); say('Pick a friend to color.'); return; } setTool(id); say(label); }; toolsEl.appendChild(b); });
+  function paintEmoTools(){ $('#dtools [data-tool=trail]').innerHTML='<span aria-hidden="true">'+emo+'</span><span class="mini" aria-hidden="true">✨</span>'; $('#dtools [data-tool=stamp]').innerHTML='<span aria-hidden="true">'+emo+'</span><span class="mini" aria-hidden="true">👆</span>'; }
+  function setTool(id){ tool=id; $$('#dtools .dtool').forEach(b=>b.classList.toggle('on',b.dataset.tool===id)); const em=(id==='trail'||id==='stamp'); swEl.classList.toggle('hidden',em); trayEl.classList.toggle('hidden',!em); }
+  COLORS.forEach(([hex,name],i)=>{ const b=document.createElement('button'); b.className='dsw'+(i?'':' on'); b.style.background=hex; b.setAttribute('role','radio'); b.setAttribute('aria-checked',String(!i)); b.setAttribute('aria-label',name);
+    b.onclick=()=>{ ctx(); sfx.boop(); color=hex; $$('#dswatches .dsw').forEach(x=>{ x.classList.toggle('on',x===b); x.setAttribute('aria-checked',String(x===b)); }); if(tool!=='crayon'&&tool!=='marker'&&tool!=='paint') setTool('crayon'); say(name); }; swEl.appendChild(b); });
+  function emoTile(e){ const t=document.createElement('button'); t.className='tile'+(e===emo?' on':''); t.textContent=e; t.setAttribute('aria-label',nameOf(e)); t.onclick=()=>{ ctx(); sfx.boop(); pickEmo(e); say(nameOf(e)); }; return t; }
+  function pickEmo(e){ emo=e; if(![...trayEl.querySelectorAll('.tile')].some(x=>x.textContent===e)) trayEl.insertBefore(emoTile(e),moreT); $$('#dtray .tile').forEach(x=>x.classList.toggle('on',x.textContent===e)); paintEmoTools(); }
+  ['⭐','❤️','🐟','🌈','🦄','🌸','🦋','🐶','🌻','🚀','🍕'].forEach(e=>trayEl.appendChild(emoTile(e)));
+  const moreT=document.createElement('button'); moreT.className='tile'; moreT.textContent='➕'; moreT.setAttribute('aria-label','More emoji'); moreT.style.background='var(--sand)'; trayEl.appendChild(moreT);
+  moreT.onclick=()=>{ ctx(); sfx.boop(); drawer.open(e=>{ pickEmo(e); say(nameOf(e)); trayEl.scrollLeft=trayEl.scrollWidth; drawer.close(); }); };
+  paintEmoTools();
+
+  /* ---- panels ---- */
+  const panels=['#dfriend','#dfridge','#dconfirm'];
+  function closePanels(){ panels.forEach(s=>$(s).classList.add('hidden')); clearTimeout(confirmT); }
+  $$('#s-draw [data-dclose]').forEach(b=>b.onclick=()=>{ ctx(); sfx.boop(); closePanels(); });
+  const fEl=$('#dfriends');
+  FRIENDS.forEach(F=>{ const b=document.createElement('button'); b.textContent=F.e; b.setAttribute('aria-label',F.name); b.onclick=()=>{ ctx(); sfx.chime(); push({t:'f',id:F.id}); cheered=false; redraw(); closePanels(); setTool('crayon'); say('Color the '+F.name+'!'); }; fEl.appendChild(b); });
+  const none=document.createElement('button'); none.textContent='🚫'; none.setAttribute('aria-label','No friend'); none.onclick=()=>{ ctx(); sfx.boop(); if(friendNow()){ push({t:'f',id:null}); redraw(); } closePanels(); }; fEl.appendChild(none);
+  function openFriend(){ closePanels(); $('#dfriend').classList.remove('hidden'); }
+
+  /* ---- Undo and Clear (picture-only check: red trash clears, green arrow keeps, 5 seconds or a tap outside keeps) ---- */
+  $('#dundo').onclick=()=>{ ctx(); closePanels(); if(!ops.length){ sfx.hmm(); return; } ops.pop(); cheered=false; redraw(); tone(440,0,.08,'sine',.15); tone(330,.07,.12,'sine',.15); };
+  function exportImage(maxSide,type){ const sc=Math.min(2,maxSide/Math.max(W,H)), c=document.createElement('canvas'); c.width=Math.round(W*sc); c.height=Math.round(H*sc); const k=c.getContext('2d');
+    k.fillStyle='#FFFFFF'; k.fillRect(0,0,c.width,c.height); k.drawImage(cMain,0,0,c.width,c.height); k.drawImage(cLine,0,0,c.width,c.height); return c.toDataURL(type||'image/jpeg',.82); }
+  function keep(){ clearTimeout(confirmT); if($('#dconfirm').classList.contains('hidden')) return; sfx.boop(); closePanels(); }
+  $('#dclear').onclick=()=>{ ctx(); closePanels(); size(); if(isEmpty()){ sfx.hmm(); return; } sfx.boop(); $('#dcimg').src=exportImage(360); $('#dconfirm').classList.remove('hidden'); say('Clear your drawing?'); confirmT=setTimeout(keep,5000); };
+  $('#dcno').onclick=()=>{ ctx(); keep(); };
+  $('#dconfirm').addEventListener('click',e=>{ if(e.target===e.currentTarget){ ctx(); keep(); } });
+  $('#dcyes').onclick=()=>{ ctx(); clearTimeout(confirmT); closePanels(); sfx.poof(); push({t:'c'}); cheered=false;
+    layers.animate([{transform:'scale(1) rotate(0)',opacity:1},{transform:'scale(.15) rotate(18deg)',opacity:0}],{duration:420,easing:'cubic-bezier(.45,0,.2,1)'}).onfinish=()=>{ redraw(); layers.animate([{opacity:0},{opacity:1}],{duration:200}); }; };
+
+  /* ---- fridge: drawings kept on this device only ---- */
+  const FKEY='mojia.fridge', FMAX=12;
+  function loadF(){ try{ const v=JSON.parse(localStorage.getItem(FKEY)||'[]'); return Array.isArray(v)?v.filter(x=>x&&typeof x.src==='string'&&x.src.startsWith('data:image/')):[]; }catch(e){ return []; } }
+  function saveF(list){ for(;;){ try{ localStorage.setItem(FKEY,JSON.stringify(list)); return true; }catch(e){ if(list.length<=1) return false; list.shift(); } } }
+  function renderFridge(fresh){ const g=$('#dfgrid'), list=loadF(); g.innerHTML='';
+    list.slice().reverse().forEach((it,i)=>{ const b=document.createElement('button'); b.style.setProperty('--r',((i*37%9)-4)+'deg'); b.setAttribute('aria-label','Open this drawing'); if(fresh&&i===0) b.className='new';
+      const img=document.createElement('img'); img.src=it.src; img.alt=''; b.appendChild(img); const m=document.createElement('span'); m.className='mag'; m.textContent='🧲'; m.setAttribute('aria-hidden','true'); b.appendChild(m);
+      b.onclick=()=>openDrawing(it); g.appendChild(b); });
+    for(let i=list.length;i<3;i++){ const s=document.createElement('div'); s.className='slot'; s.textContent='🖼️'; s.setAttribute('aria-hidden','true'); g.appendChild(s); } }
+  function openDrawing(it){ ctx(); const img=new Image(); img.onload=()=>{ push({t:'i',img}); cheered=false; redraw(); closePanels(); sfx.chime(); }; img.src=it.src; }
+  function openFridge(){ closePanels(); renderFridge(false); $('#dfridge').classList.remove('hidden'); $('#dfridge').scrollTop=0; }
+  $('#dfridgeBtn').onclick=()=>{ ctx(); sfx.boop(); openFridge(); say('The fridge!'); };
+  $('#dfput').onclick=()=>{ ctx(); size(); if(isEmpty()){ sfx.hmm(); $('#dfput').animate([{transform:'translateX(0)'},{transform:'translateX(-8px)'},{transform:'translateX(8px)'},{transform:'translateX(0)'}],{duration:300}); say('Draw something first!'); return; }
+    const list=loadF(); list.push({id:Date.now().toString(36),src:exportImage(1000),t:Date.now()}); while(list.length>FMAX) list.shift();
+    if(!saveF(list)){ sfx.hmm(); return; } push({t:'c'}); cheered=false; redraw(); renderFridge(true); sfx.cheer(); const r=$('#dfput').getBoundingClientRect(), s=stage.getBoundingClientRect(); confetti(stage,r.left-s.left+r.width/2,r.top-s.top+r.height/2,22); say('On the fridge!'); };
+
+  /* ---- Grown-ups: Save to Photos (behind the number gate) ---- */
+  function fileOf(it){ const bin=atob(it.src.split(',')[1]||''), u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); const type=(it.src.match(/^data:([^;,]+)/)||[])[1]||'image/jpeg'; return new File([u],'mojialand-drawing-'+(it.id||'1')+(type==='image/png'?'.png':'.jpg'),{type}); }
+  function savePhoto(it){ let f=null; try{ f=fileOf(it); }catch(e){}
+    if(f&&navigator.canShare&&navigator.share){ try{ if(navigator.canShare({files:[f]})){ navigator.share({files:[f]}).catch(()=>{}); return; } }catch(e){} }
+    const a=document.createElement('a'); a.href=it.src; a.download=f?f.name:'mojialand-drawing.jpg'; document.body.appendChild(a); a.click(); a.remove(); }
+  function openPhotos(){ const g=$('#pwPhGrid'), list=loadF(); g.innerHTML='';
+    $('#pwPhText').textContent=list.length?'Tap a drawing, then choose Save Image. These drawings stay on this device.':'No drawings on the fridge yet. Kids add drawings in Draw with the magnet button.';
+    list.slice().reverse().forEach(it=>{ const w=document.createElement('div'); w.className='pw-photo'; const b=document.createElement('button'); b.className='pic'; b.setAttribute('aria-label','Save this drawing'); const img=document.createElement('img'); img.src=it.src; img.alt=''; b.appendChild(img); b.onclick=()=>{ ctx(); sfx.boop(); savePhoto(it); };
+      const x=document.createElement('button'); x.className='rm'; x.textContent='✕'; x.setAttribute('aria-label','Remove from the fridge'); x.onclick=()=>{ ctx(); sfx.poof(); saveF(loadF().filter(y=>y.id!==it.id)); openPhotos(); };
+      w.appendChild(b); w.appendChild(x); g.appendChild(w); });
+    $('#pwOvPhotos').classList.remove('hidden'); }
+
+  /* ---- demo for Watch ---- */
+  function fakeAt(fx,fy,fn){ return {getBoundingClientRect(){ const r=cMain.getBoundingClientRect(); return {left:r.left+r.width*fx,top:r.top+r.height*fy,width:0,height:0}; }, click:fn}; }
+  function squiggle(){ size(); const pts=[]; for(let i=0;i<=40;i++) pts.push(W*.18+i*W*.016,H*.35+Math.sin(i/4)*H*.06); const o={t:'s',tool,color,w:WIDTH[tool]||14,pts,seed:7}; push(o); renderOp(mx,o); tone(240,0,.08,'triangle',.08); }
+  function trailDemo(){ size(); const items=[]; for(let i=0;i<=6;i++) items.push([W*.2+i*W*.1,H*.65+Math.sin(i)*H*.05,emo,32,0]); const o={t:'e',items}; push(o); renderOp(mx,o); sfx.chime(); }
+
+  return {
+    enter(){ requestAnimationFrame(()=>size()); },
+    leave(){ closePanels(); if(cur){ cur=null; pid=null; lx.clearRect(0,0,W,H); } drawer.close(); },
+    openPhotos,
+    async demo(tap,stopped){ closePanels(); say('Pick a crayon and a color.'); await tap($('#dtools [data-tool=crayon]')); if(stopped()) return; await tap($$('#dswatches .dsw')[1]); if(stopped()) return;
+      say('Draw with your finger.'); await tap(fakeAt(.3,.35,squiggle)); await wait(700); if(stopped()) return;
+      say('The emoji brush leaves a trail.'); await tap($('#dtools [data-tool=trail]')); if(stopped()) return; await tap(fakeAt(.5,.65,trailDemo)); await wait(800); if(stopped()) return;
+      say('Put your drawing on the fridge.'); await tap($('#dfridgeBtn')); await wait(1200); if(stopped()) return; await tap($('#dfclose')); await wait(300); setTool('crayon'); }
+  };
+})();
+
 /* ---------- PAYMENTS slice 1: free play timer, pass state, chip, time's up, parent gate, pass screen, Grown-ups rows ---------- */
 /* Nothing here talks to the network. Pay only moves the top window to /pass/ on this site. */
 const pay=(function(){
   const MIN=60e3, HOUR=3600e3, DAY=864e5;
-  const PLAY=new Set(['home','pattern','bounce','match','parade']);
+  const PLAY=new Set(['home','pattern','bounce','match','parade','draw']);
   const money=v=>'$'+v.toFixed(2);
   const fmtT=t=>{ try{ return new Date(t).toLocaleString([],{weekday:'short',hour:'numeric',minute:'2-digit'}); }catch(e){ return new Date(t).toString(); } };
   const splashOn=()=>!$('#splash').classList.contains('hidden');
@@ -1208,14 +1453,14 @@ const pay=(function(){
   function buildGU(){ paintStatus(); const p=getPass(), rows=[];
     if(passOn(p)){ rows.push(['📲 Send code to another device','›','share']); if(p.kind==='48h') rows.push(['Add 48 hours',money(PRICES.add),'add'],['Upgrade to Forever',money(PRICES.up),'up']); }
     else rows.push(['Get a pass',money(PRICES.pass)+' or '+money(PRICES.life),'buy']);
-    rows.push(['Have a code?','›','code'],['Contact us','›','help']);
+    rows.push(['🖼️ Save drawings to Photos','›','photos'],['Have a code?','›','code'],['Contact us','›','help']);
     $('#pwGuList').innerHTML=rows.map(r=>'<button class="pw-gurow'+(r[2]==='share'?' share':'')+'" data-a="'+r[2]+'"><span>'+r[0]+'</span><span>'+r[1]+'</span></button>').join('');
     const on=standalone(), hb=$('#pwHS'); hb.classList.toggle('done',on); $('#pwHSt').textContent=on?'On your Home Screen':'Mojialand on your Home Screen!';
     $('#pwHSbody').textContent=on?'Mojialand sits next to your other apps on this device. Open it from the icon for full screen play.':'Add Mojialand to your Home Screen. Your kids find it next to your other apps, and it opens full screen.';
     $('#pwHSbtn').hidden=on; }
   $('#pwGuList').addEventListener('click',e=>{ const b=e.target.closest('.pw-gurow'); if(!b) return; ctx(); sfx.boop(); const a=b.dataset.a;
     if(a==='add'||a==='up') openGate('plans','gate',a); else if(a==='buy') openGate('plans','gate','pass');
-    else if(a==='share') sharePass(); else if(a==='code') openCode(); else if(a==='help') openContact(); });
+    else if(a==='share') sharePass(); else if(a==='photos') games.draw.openPhotos(); else if(a==='code') openCode(); else if(a==='help') openContact(); });
 
   function onScreen(name){ if(name==='ngate'){ newGate(); claimHandoff().then(ok=>{ if(ok) showAllset(); }); } else if(name==='plans') buildPlans(); else if(name==='gate') buildGU(); if(name!=='rest') $('#pwZeroChip').classList.remove('shake'); $$('.pw-ov').forEach(o=>o.classList.add('hidden')); paintChips(); }
   async function start(route){ deviceId(); rollDay(); await restoreFromUrl(); await verifyStored(); if(await claimHandoff()) route='allset'; ackEnd(getPass()); paintChips();
