@@ -661,8 +661,11 @@ textarea.pw-in{resize:none;min-height:88px}
 <script>
 (function(){
 'use strict';
-/* Payment settings. Defaults here; a later server call may overwrite them (admin Settings). */
+/* Play settings. Defaults here; the admin page's values come from the server and are kept for the next open. */
 const SETTINGS={first_visit_minutes:15,daily_minutes:3,daily_reset:'04:00',warning_minutes:10,credit_days:7,devices_per_code:5};
+(function(){ function apply(o){ if(!o||typeof o!=='object') return; for(const k of Object.keys(SETTINGS)){ if(!(k in o)) continue; const v=o[k]; if(k==='daily_reset'){ if(/^([01]\d|2[0-3]):[0-5]\d$/.test(String(v))) SETTINGS[k]=String(v); } else { const n=Number(v); if(Number.isFinite(n)&&n>=0&&n<=100000) SETTINGS[k]=n; } } }
+  try{ apply(JSON.parse(localStorage.getItem('mojia.settings')||'null')); }catch(e){}
+  fetch('/.netlify/functions/settings',{credentials:'same-origin'}).then(r=>r.ok?r.json():null).then(o=>{ if(o){ try{ localStorage.setItem('mojia.settings',JSON.stringify(o)); }catch(e){} } }).catch(()=>{}); })();
 const PRICES={pass:1.50,add:1.50,life:14.99,up:13.49}; /* shown only behind the parent gate; set in Stripe */
 /* Public key for pass tokens. The build fills it in; null means no pass is valid. A public key only checks, never signs. */
 const PASS_PUBLIC_JWK=/*__PASS_PUBLIC_JWK__*/null;

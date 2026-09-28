@@ -38,19 +38,21 @@ export function setEnv(extra = {}) {
 
 // In-memory PostgREST covering the calls the functions make.
 export function fakeDb() {
-  const db = { passes: [], stripe_events: [], devices: [], support_messages: [], rate: new Map(), emails: [], calls: [], rateLimit: Infinity };
+  const db = { passes: [], stripe_events: [], devices: [], support_messages: [], admin_codes: [], admin_sessions: [], settings: [{ key: 'daily_minutes', value: 3, help: 'x' }, { key: 'daily_reset', value: '04:00', help: 'y' }], rate: new Map(), emails: [], calls: [], rateLimit: Infinity };
   const parseFilters = (qs) => {
     const f = [];
     for (const part of qs.split('&')) {
       const [k, v] = part.split('=');
       if (!v || ['select', 'limit', 'on_conflict'].includes(k)) continue;
       if (v.startsWith('neq.')) { f.push((r) => String(r[k]) !== decodeURIComponent(v.slice(4))); continue; }
+      if (v.startsWith('ilike.')) { const needle = decodeURIComponent(v.slice(6)).replace(/\*/g, '').toLowerCase(); f.push((r) => String(r[k] || '').toLowerCase().includes(needle)); continue; }
+      if (k === 'order') continue;
       if (v.startsWith('eq.')) f.push((r) => String(r[k]) === decodeURIComponent(v.slice(3)));
       else if (v === 'is.null') f.push((r) => r[k] == null);
     }
     return (r) => f.every((fn) => fn(r));
   };
-  const reply = (status, body) => new Response(body === undefined ? '' : JSON.stringify(body), { status });
+  const reply = (status, body) => new Response(status === 204 || body === undefined ? null : JSON.stringify(body), { status });
   db.fetch = async (url, opts = {}) => {
     const u = String(url);
     const method = opts.method || 'GET';
@@ -70,23 +72,27 @@ export function fakeDb() {
       db.rate.set(body.p_key, n);
       return reply(200, n <= Math.min(body.p_limit, db.rateLimit));
     }
-    if (table === 'settings') return reply(200, [{ value: 7 }]);
+    if (table === 'settings' && method === 'GET' && /select=value/.test(qs)) return reply(200, [{ value: 7 }]);
     const rows = db[table];
     if (!rows) throw new Error('unknown table ' + table);
     const match = parseFilters(qs);
     if (method === 'GET') {
       const lim = /(?:^|&)limit=(\d+)/.exec(qs);
-      const hit = rows.filter(match);
+      const sel = /(?:^|&)select=([^&]+)/.exec(qs);
+      let hit = rows.filter(match);
+      if (sel && sel[1] !== '*') { const cols = decodeURIComponent(sel[1]).split(','); hit = hit.map((r) => Object.fromEntries(cols.filter((c) => c in r).map((c) => [c, r[c]]))); }
       return reply(200, lim ? hit.slice(0, Number(lim[1])) : hit);
     }
     if (method === 'POST') {
-      const uniq = table === 'passes' ? ['stripe_session_id', 'code_hash', 'id'] : table === 'stripe_events' ? ['event_id'] : [];
+      const uniq = table === 'passes' ? ['stripe_session_id', 'code_hash', 'id'] : table === 'stripe_events' ? ['event_id'] : table === 'admin_sessions' ? ['token_hash'] : [];
       const dupDevice = table === 'devices' && rows.some((r) => r.pass_id === body.pass_id && r.device_id_hash === body.device_id_hash);
       if (dupDevice || rows.some((r) => uniq.some((k) => body[k] != null && r[k] === body[k]))) {
         if (!prefer.includes('ignore-duplicates')) return reply(409, { message: 'duplicate' });
         return reply(prefer.includes('return=representation') ? 200 : 201, prefer.includes('return=representation') ? [] : undefined);
       }
-      const row = table === 'passes' ? { id: crypto.randomUUID(), emailed_at: null, note: null, ...body } : { ...body };
+      const row = table === 'passes' ? { id: crypto.randomUUID(), emailed_at: null, note: null, ...body }
+        : table === 'admin_codes' ? { tries: 0, used: false, ...body }
+        : table === 'support_messages' ? { id: crypto.randomUUID(), status: 'open', created_at: new Date().toISOString(), ...body } : { ...body };
       rows.push(row);
       return reply(201, prefer.includes('return=representation') ? [row] : undefined);
     }

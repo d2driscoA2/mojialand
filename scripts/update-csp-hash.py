@@ -9,6 +9,7 @@ Pages (all under site/, the only folder Netlify publishes):
   site/pass/index.html       checkout (Stripe Embedded Checkout; the only page that loads Stripe)
   site/pass/done/index.html  after payment: confirms the pass, then opens the game
   site/r/index.html          the email button: turns a pass on with its code
+  site/admin/index.html      the admin page (email-code sign-in; talks only to this site)
 
 Before hashing, the pass token public key (env PASS_SIGNING_PUBLIC_JWK) goes
 into the game and the done page in place of the __PASS_PUBLIC_JWK__ placeholder.
@@ -27,7 +28,7 @@ BADGE = ('<div aria-hidden="true" style="position:fixed;left:8px;bottom:8px;z-in
          'letter-spacing:.12em;padding:7px 10px;border-radius:999px;opacity:.9">STAGING</div>')
 
 if STAGING:
-    for rel in ('index.html', 'play/index.html', 'pass/index.html', 'pass/done/index.html', 'r/index.html'):
+    for rel in ('index.html', 'play/index.html', 'pass/index.html', 'pass/done/index.html', 'r/index.html', 'admin/index.html'):
         f = site_dir / rel
         h = f.read_text(encoding='utf-8')
         if 'STAGING</div>' not in h:
@@ -81,6 +82,7 @@ game = script_hash('play/index.html')
 site = script_hash('index.html')
 pay_hashes = "'sha256-%s' 'sha256-%s'" % (script_hash('pass/index.html'), script_hash('pass/done/index.html'))
 redeem = script_hash('r/index.html')
+admin = script_hash('admin/index.html')
 
 # Game: same strict policy as before. The website may show the game in its
 # play window, so the game allows framing by its own site only.
@@ -97,6 +99,11 @@ site_csp = ("default-src 'none'; script-src 'self' 'sha256-%s'; style-src 'self'
 redeem_csp = ("default-src 'none'; script-src 'self' 'sha256-%s'; style-src 'self' 'unsafe-inline'; "
               "img-src 'self' data:; font-src 'self'; connect-src 'self'; "
               "base-uri 'self'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests") % redeem
+
+# Admin page: same-site only, never indexed, never cached.
+admin_csp = ("default-src 'none'; script-src 'self' 'sha256-%s'; style-src 'self' 'unsafe-inline'; "
+             "img-src 'self' data:; font-src 'self'; connect-src 'self'; "
+             "base-uri 'self'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests") % admin
 
 # Checkout pages (/pass/ and /pass/done/): the only place Stripe may load.
 # Both inline scripts' hashes are listed, since one block covers both pages.
@@ -135,9 +142,10 @@ headers = "".join([
     block('/index.html', site_csp, 'DENY'),
     block('/play/*', game_csp, 'SAMEORIGIN'),
     block('/r/*', redeem_csp, 'DENY') + "  Cache-Control: no-store\n",
+    block('/admin/*', admin_csp, 'DENY') + "  Cache-Control: no-store\n  X-Robots-Tag: noindex, nofollow\n",
     block('/pass/*', pass_csp, 'DENY') + "  Permissions-Policy: %s\n" % pass_pp,
     "/fonts/*\n  Cache-Control: public, max-age=31536000, immutable\n",
 ])
 (site_dir / '_headers').write_text(headers, encoding='utf-8')
-print('wrote _headers (%s): game sha256-%s, site sha256-%s, pass %s, code link sha256-%s, pass key %s' % (
-    'staging' if STAGING else 'production', game, site, pay_hashes, redeem, 'set' if JWK != 'null' else 'not set'))
+print('wrote _headers (%s): game sha256-%s, site sha256-%s, pass %s, code link sha256-%s, admin sha256-%s, pass key %s' % (
+    'staging' if STAGING else 'production', game, site, pay_hashes, redeem, admin, 'set' if JWK != 'null' else 'not set'))

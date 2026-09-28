@@ -97,7 +97,7 @@ async function newPage(opts = {}) {
 }
 
 // one inline script per built page
-for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/done/index.html', 'r/index.html']) {
+for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/done/index.html', 'r/index.html', 'admin/index.html']) {
   const n = (fs.readFileSync(path.join(site, rel), 'utf8').match(/<script>/g) || []).length;
   check('one inline script: ' + rel, n === 1, String(n));
 }
@@ -495,6 +495,83 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   const txt = await page.textContent('#preward');
   check('pattern: bronze medal after the first place', /bronze medal/.test(txt) && (await page.locator('#preward .shelf span.got').count()) === 1, txt.slice(0, 60));
   await page.screenshot({ path: path.join(SHOTS, 'pattern-reward-390.png') });
+  await ctx.close();
+}
+
+// 9e2. play settings from the admin page apply on the next open
+{
+  const { ctx, page } = await newPage();
+  await page.route('**/.netlify/functions/settings', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '{"first_visit_minutes":20,"daily_minutes":3,"daily_reset":"04:00"}' }));
+  await page.goto(base + '/play/');
+  await page.waitForTimeout(700);
+  const first = (await page.locator('#s-home [data-chip]').textContent()).trim();
+  await page.reload(); await page.waitForTimeout(700);
+  const second = (await page.locator('#s-home [data-chip]').textContent()).trim();
+  check('play: server settings apply on the next open (15:00 then 20:00)', /^15:0\d|^14:5\d/.test(first) && /^20:0\d|^19:5\d/.test(second), first + ' -> ' + second);
+  await ctx.close();
+}
+
+// 9f. admin page: sign in with an emailed code, then passes, codes, support, settings, services
+{
+  const { ctx, page } = await newPage({ viewport: { width: 1024, height: 900 }, isMobile: false, hasTouch: false, deviceScaleFactor: 1 });
+  let signedIn = false; const calls = [];
+  page.on('dialog', (d) => d.accept('note from test'));
+  await page.route('**/.netlify/functions/admin-login', (r) => {
+    const m = r.request().method(); const b = m === 'POST' ? r.request().postDataJSON() : {};
+    if (m === 'GET') return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ signed_in: signedIn }) });
+    if (b.step === 'send') return r.fulfill({ status: 200, contentType: 'application/json', body: '{"id":"11111111-1111-4111-8111-111111111111"}' });
+    if (b.step === 'verify') { if (b.code === '123 456') { signedIn = true; return r.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' }); } return r.fulfill({ status: 401, contentType: 'application/json', body: '{"error":"That code did not work. Check it, or send a new one."}' }); }
+    signedIn = false; r.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' });
+  });
+  const pass = { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', code_last4: 'AB12', prefix: 'MOJI', kind: '48h', source: 'stripe', email: 'parent@example.com', stripe_session_id: 'cs_test_x1', amount_cents: 150, created_at: new Date().toISOString(), ends_at: new Date(Date.now() + 3600e3).toISOString(), device_limit: 5, status: 'active', note: null, devices: 2 };
+  await page.route('**/.netlify/functions/admin-api', (r) => {
+    const b = r.request().postDataJSON(); calls.push(b.action);
+    if (!signedIn) return r.fulfill({ status: 401, contentType: 'application/json', body: '{"error":"Please sign in."}' });
+    const out = { 'passes.list': { passes: [pass] }, 'passes.note': { pass: { ...pass, note: b.note } }, 'passes.add48': { pass: { ...pass, ends_at: new Date(Date.now() + 49 * 3600e3).toISOString() } },
+      'codes.create': { code: 'GIFT-ABCD-EFGH-JKMN', pass: {} }, 'support.list': { messages: [{ id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', email: 'mom@example.com', topic: 'pass', message: 'Code not working\n\nCode ending AB12: pass ...', created_at: new Date().toISOString(), status: 'open' }] },
+      'support.set': { ok: true }, 'settings.get': { settings: [{ key: 'daily_minutes', value: 3, help: 'Free play each day.' }, { key: 'daily_reset', value: '04:00', help: 'Reset time.' }] }, 'settings.set': { ok: true } }[b.action];
+    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(out || { error: 'Unknown action.' }) });
+  });
+  await page.goto(base + '/admin/');
+  await page.waitForSelector('#vLogin:not([hidden])');
+  check('admin: sign-in screen first, no data calls', await page.isVisible('#lSendBtn') && calls.length === 0);
+  await page.click('#lSendBtn');
+  await page.waitForSelector('#lVerify:not([hidden])');
+  await page.fill('#lCode', '000000'); await page.click('#lGo');
+  await page.waitForFunction(() => document.querySelector('#lErr2').textContent.length > 0);
+  check('admin: wrong code shows the server message', /did not work/.test(await page.textContent('#lErr2')));
+  await page.fill('#lCode', '123 456'); await page.click('#lGo');
+  await page.waitForSelector('#vApp:not([hidden])');
+  await page.waitForSelector('#pList .item');
+  check('admin: passes list after sign-in', /parent@example\.com/.test(await page.textContent('#pList')) && /2 of 5 devices/.test(await page.textContent('#pList')));
+  await page.click('#pList [data-act="note"]');
+  await page.waitForFunction(() => /note from test/.test(document.querySelector('#pList').textContent));
+  check('admin: note saved through prompt', true);
+  await page.screenshot({ path: path.join(SHOTS, 'admin-passes.png') });
+  await page.click('[data-tab="codes"]');
+  await page.click('#cGo');
+  await page.waitForSelector('#cOut:not([hidden])');
+  check('admin: gift code shown once with a /r/ link', (await page.textContent('#cCode')) === 'GIFT-ABCD-EFGH-JKMN' && (await page.getAttribute('#cLink', 'href')).endsWith('/r/GIFTABCDEFGHJKMN'));
+  await page.screenshot({ path: path.join(SHOTS, 'admin-codes.png') });
+  await page.click('[data-tab="support"]');
+  await page.waitForSelector('#sList .item');
+  check('admin: support inbox lists the message', /mom@example\.com/.test(await page.textContent('#sList')));
+  await page.click('#sList [data-st="done"]');
+  await page.waitForTimeout(300);
+  check('admin: mark done calls support.set', calls.includes('support.set'));
+  await page.click('[data-tab="settings"]');
+  await page.waitForSelector('#stList .item');
+  await page.fill('#stList .item[data-key="daily_minutes"] input', '5');
+  await page.press('#stList .item[data-key="daily_minutes"] input', 'Tab');
+  await page.waitForFunction(() => /Saved/.test(document.querySelector('#stOk').textContent));
+  check('admin: settings save on change', calls.includes('settings.set'));
+  await page.click('[data-tab="services"]');
+  check('admin: services tab lists Stripe, Supabase, Resend with links', (await page.locator('#svcList a[href^="https://"]').count()) >= 8 && /Stripe/.test(await page.textContent('#svcList')));
+  await page.screenshot({ path: path.join(SHOTS, 'admin-services.png') });
+  await page.click('#outBtn');
+  await page.waitForSelector('#vLogin:not([hidden])');
+  check('admin: sign out returns to the sign-in screen', await page.isHidden('#vApp'));
+  check('admin: no CSP violations', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
   await ctx.close();
 }
 

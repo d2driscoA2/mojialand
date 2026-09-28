@@ -13,6 +13,10 @@ import { handler as webhook } from '../netlify/functions/stripe-webhook.mjs';
 import { handler as redeem } from '../netlify/functions/redeem-code.mjs';
 import { handler as contact } from '../netlify/functions/contact.mjs';
 import { handler as manifest } from '../netlify/functions/manifest.mjs';
+import { handler as adminLogin } from '../netlify/functions/admin-login.mjs';
+import { handler as adminApi } from '../netlify/functions/admin-api.mjs';
+import { handler as redeemFn } from '../netlify/functions/redeem-code.mjs';
+import { handler as settingsFn } from '../netlify/functions/settings.mjs';
 
 let db, stripe;
 beforeEach(() => {
@@ -358,4 +362,106 @@ test('manifest: plain without a token; start_url carries a well-formed token and
   assert.equal(m.start_url, '/play/?restore=' + encodeURIComponent(tok) + '&code=MOJI-ABCD-EFGH-JKMN');
   r = await get({ r: '<script>', c: 'x' });
   assert.equal(JSON.parse(r.body).start_url, '/play/');
+});
+
+const codeFromEmail = () => /code is (\d{3}) (\d{3})/.exec(db.emails.at(-1).text).slice(1).join('');
+async function adminSignIn() {
+  const r = await adminLogin(ev({ step: 'send' }));
+  const { id } = JSON.parse(r.body);
+  const v = await adminLogin(ev({ step: 'verify', id, code: codeFromEmail() }));
+  assert.equal(v.statusCode, 200);
+  return v.headers['Set-Cookie'].split(';')[0];
+}
+const withCookie = (body, cookie) => ev(body, { cookie });
+
+test('admin-login: code goes to the admin inbox; wrong code fails; right code sets a strict cookie; sign out clears it', async () => {
+  let r = await adminLogin(ev({ step: 'send' }));
+  assert.equal(r.statusCode, 200);
+  const { id } = JSON.parse(r.body);
+  const m = db.emails.at(-1);
+  assert.deepEqual(m.to, ['admin@example.test']); assert.ok(m.subject.startsWith('Mojialand: admin sign-in code'));
+  assert.ok(!JSON.stringify(db.admin_codes).includes(codeFromEmail()), 'code stored only as a hash');
+  r = await adminLogin(ev({ step: 'verify', id, code: '000000' }));
+  assert.equal(r.statusCode, codeFromEmail() === '000000' ? 200 : 401);
+  r = await adminLogin(ev({ step: 'verify', id, code: codeFromEmail().slice(0, 3) + ' ' + codeFromEmail().slice(3) }));
+  assert.equal(r.statusCode, 200);
+  const cookie = r.headers['Set-Cookie'];
+  assert.match(cookie, /^mojia_admin=[A-Za-z0-9_-]{40,}; Path=\/\.netlify\/functions\/; HttpOnly; Secure; SameSite=Strict; Max-Age=43200$/);
+  assert.equal((await adminLogin(ev({ step: 'verify', id, code: codeFromEmail() }))).statusCode, 401, 'a code works once');
+  const c = cookie.split(';')[0];
+  assert.equal(JSON.parse((await adminLogin(ev({}, { cookie: c }, 'GET'))).body).signed_in, true);
+  assert.equal(JSON.parse((await adminLogin(ev({}, {}, 'GET'))).body).signed_in, false);
+  r = await adminLogin(withCookie({ step: 'out' }, c));
+  assert.match(r.headers['Set-Cookie'], /Max-Age=0/);
+  assert.equal(JSON.parse((await adminLogin(ev({}, { cookie: c }, 'GET'))).body).signed_in, false);
+});
+
+test('admin-login: five wrong tries burn the code; send is rate limited', async () => {
+  const { id } = JSON.parse((await adminLogin(ev({ step: 'send' }))).body);
+  const right = codeFromEmail();
+  const wrong = right === '111111' ? '222222' : '111111';
+  for (let i = 0; i < 5; i++) assert.equal((await adminLogin(ev({ step: 'verify', id, code: wrong }))).statusCode, 401);
+  assert.equal((await adminLogin(ev({ step: 'verify', id, code: right }))).statusCode, 401, 'burned after 5 tries');
+  db.rateLimit = 0;
+  assert.equal((await adminLogin(ev({ step: 'send' }))).statusCode, 429);
+});
+
+test('admin-api: needs the cookie; passes, codes, support, settings', async () => {
+  assert.equal((await adminApi(ev({ action: 'passes.list' }))).statusCode, 401);
+  const cookie = await adminSignIn();
+  const A = (action, extra) => adminApi(withCookie({ action, ...extra }, cookie)).then((r) => [r.statusCode, JSON.parse(r.body)]);
+  // passes
+  const { pass, code } = await grantPass(paidSession('cs_test_adm1', 'pass'));
+  let [st, d] = await A('passes.list', { q: 'parent@' });
+  assert.equal(st, 200); assert.equal(d.passes.length, 1); assert.equal(d.passes[0].id, pass.id);
+  assert.ok(!JSON.stringify(d).includes('code_hash'), 'hashes never leave the server');
+  [st, d] = await A('passes.list', { q: code.slice(-4).toLowerCase() });
+  assert.equal(d.passes.length, 1);
+  const ends0 = new Date(d.passes[0].ends_at).getTime();
+  [st, d] = await A('passes.add48', { id: pass.id });
+  assert.equal(new Date(d.pass.ends_at).getTime(), ends0 + 48 * 3600e3);
+  [st, d] = await A('passes.note', { id: pass.id, note: 'called mom' });
+  assert.equal(d.pass.note, 'called mom');
+  await redeemFn(ev({ code, device_id: 'a'.repeat(32) }));
+  [st, d] = await A('passes.get', { id: pass.id });
+  assert.equal(d.pass.devices, 1);
+  [st, d] = await A('passes.devices_reset', { id: pass.id });
+  assert.equal(d.pass.devices, 0);
+  [st, d] = await A('passes.forever', { id: pass.id });
+  assert.equal(d.pass.kind, 'forever'); assert.equal(d.pass.ends_at, null);
+  [st, d] = await A('passes.end', { id: pass.id });
+  assert.equal(d.pass.status, 'ended');
+  [st, d] = await A('passes.add48', { id: 'nope' });
+  assert.equal(st, 400);
+  // gift code: shown once, works in redeem-code, never stored
+  [st, d] = await A('codes.create', { kind: '48h', source: 'gift', days_valid: 30, note: 'grandma' });
+  assert.equal(st, 200); assert.match(d.code, /^GIFT-/); assert.equal(d.pass.status, 'unused');
+  assert.ok(!JSON.stringify(db.passes).includes(d.code) && !JSON.stringify(db.passes).includes(d.code.replace(/-/g, '')));
+  const rr = await redeemFn(ev({ code: d.code, device_id: 'b'.repeat(32) }));
+  assert.equal(rr.statusCode, 200);
+  // support
+  await contact(ev({ email: 'p@example.com', topic: 'pass', message: 'Help me' }));
+  [st, d] = await A('support.list', {});
+  assert.equal(d.messages.length, 1);
+  [st, d] = await A('support.set', { id: db.support_messages[0].id, status: 'done' });
+  [st, d] = await A('support.list', { status: 'done' });
+  assert.equal(d.messages.length, 1);
+  // settings
+  [st, d] = await A('settings.get', {});
+  assert.equal(d.settings.length, 2);
+  [st, d] = await A('settings.set', { key: 'daily_minutes', value: '5' });
+  assert.equal(st, 200); assert.equal(db.settings[0].value, 5);
+  [st, d] = await A('settings.set', { key: 'daily_reset', value: '25:00' });
+  assert.equal(st, 400);
+  [st, d] = await A('settings.set', { key: 'evil', value: '1' });
+  assert.equal(st, 400);
+  [st, d] = await A('nope', {});
+  assert.equal(st, 400);
+});
+
+test('settings: public read of play settings only', async () => {
+  const r = await settingsFn(ev({}, {}, 'GET'));
+  assert.equal(r.statusCode, 200);
+  assert.deepEqual(JSON.parse(r.body), { daily_minutes: 3, daily_reset: '04:00' });
+  assert.equal((await settingsFn(ev({}))).statusCode, 405);
 });

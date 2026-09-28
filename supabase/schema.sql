@@ -144,3 +144,49 @@ revoke all on function public.rate_hit(text,int,int) from public, anon, authenti
 grant usage on schema public to service_role;
 grant select, insert, update, delete on public.passes, public.devices, public.stripe_events,
   public.support_messages, public.rate_limits, public.settings to service_role;
+
+-- Admin sign-in (email code). Codes and session tokens are stored only as hashes.
+create table if not exists public.admin_codes (
+  id         uuid primary key default gen_random_uuid(),
+  code_hash  text not null,
+  expires_at timestamptz not null,
+  tries      integer not null default 0,
+  used       boolean not null default false,
+  created_at timestamptz not null default now()
+);
+create table if not exists public.admin_sessions (
+  token_hash text primary key,
+  expires_at timestamptz not null,
+  created_at timestamptz not null default now()
+);
+alter table public.admin_codes    enable row level security;
+alter table public.admin_sessions enable row level security;
+revoke all on public.admin_codes, public.admin_sessions from anon, authenticated;
+grant select, insert, update, delete on public.admin_codes, public.admin_sessions to service_role;
+
+-- Nightly cleanup also drops old sign-in rows.
+create or replace function public.nightly_cleanup() returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  keep_days integer := coalesce((select (value)::text::integer from settings
+                                 where key = 'delete_ended_after_days'), 30);
+begin
+  update passes set status = 'ended'
+   where status = 'active' and ends_at is not null and ends_at < now();
+
+  delete from passes
+   where kind = '48h'
+     and status in ('ended','refunded')
+     and coalesce(ends_at, created_at) < now() - make_interval(days => keep_days);
+
+  delete from passes
+   where source in ('gift','support') and status = 'unused'
+     and use_by is not null and use_by < now() - make_interval(days => keep_days);
+
+  delete from support_messages where created_at < now() - interval '90 days';
+  delete from stripe_events    where processed_at < now() - interval '90 days';
+  delete from rate_limits      where window_start < now() - interval '1 day';
+  delete from admin_codes      where expires_at < now() - interval '1 day';
+  delete from admin_sessions   where expires_at < now();
+end;
+$$;

@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FFF8E8">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/svg+xml" href="/logo/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/logo/icon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/logo/icon-180.png">
+<title>Mojialand admin</title>
+<style>
+@font-face{font-family:'Nunito';font-style:normal;font-weight:700 900;font-display:swap;src:url('/fonts/nunito-latin.woff2') format('woff2')}
+:root{--purple:#7138D1;--deep:#5122A5;--pink:#FF5FA2;--yellow:#FFC83D;--blue:#4DBCEC;--green:#72D69A;--cream:#FFF8E8;--ink:#30254A;--white:#FFFFFF;--soft:#6B6180;--line:#E9E0F5;--red:#B3261E;color-scheme:light}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;min-height:100%}
+body{background:var(--cream);color:var(--ink);font:700 15px/1.45 Nunito,ui-rounded,system-ui,sans-serif;padding:0 16px max(24px,env(safe-area-inset-bottom,0px))}
+button,input,select,textarea{font-family:inherit}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+a{color:var(--purple)}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 0 12px;max-width:960px;margin:0 auto}
+header img{width:140px;height:auto;display:block}
+header .env{font-size:12px;font-weight:900;letter-spacing:.12em;color:var(--deep);background:var(--line);border-radius:999px;padding:6px 10px}
+main{max-width:960px;margin:0 auto}
+.card{background:var(--white);border-radius:24px;box-shadow:0 4px 12px rgba(0,0,0,.08);padding:20px;margin:0 0 16px}
+h1{margin:0 0 6px;font:900 24px/1.15 Nunito,sans-serif;color:var(--purple)}
+h2{margin:0 0 10px;font:900 19px/1.2 Nunito,sans-serif;color:var(--deep)}
+p{margin:0 0 10px;color:var(--soft);font-size:14px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}
+.tabs button{border:2px solid var(--line);background:var(--white);color:var(--deep);border-radius:999px;padding:10px 16px;font-weight:900;font-size:14px;cursor:pointer;min-height:44px}
+.tabs button[aria-selected="true"]{background:var(--purple);border-color:var(--purple);color:var(--white)}
+.primary{background:var(--purple);color:var(--white);border:0;border-radius:999px;padding:12px 18px;font:900 15px Nunito,sans-serif;cursor:pointer;min-height:44px}
+.primary:disabled{background:#C9B8EA;cursor:default}
+.secondary{background:var(--white);border:2px solid var(--purple);color:var(--purple);border-radius:999px;padding:9px 14px;font:900 14px Nunito,sans-serif;cursor:pointer;min-height:44px}
+.danger{background:var(--white);border:2px solid var(--red);color:var(--red);border-radius:999px;padding:9px 14px;font:900 14px Nunito,sans-serif;cursor:pointer;min-height:44px}
+.textbtn{background:none;border:0;color:var(--deep);font:800 14px Nunito,sans-serif;cursor:pointer;text-decoration:underline;text-underline-offset:3px;padding:10px;min-height:44px}
+label{display:grid;gap:5px;font-size:14px;color:var(--ink)}
+input,select,textarea{font:700 16px/1.35 Nunito,sans-serif;color:var(--ink);background:var(--white);border:2px solid var(--line);border-radius:14px;padding:11px 12px;width:100%}
+input:focus,select:focus,textarea:focus{border-color:var(--purple)}
+textarea{resize:vertical;min-height:80px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+.row>label{flex:1 1 180px}
+.err{color:var(--red);font-size:14px;min-height:0;margin:8px 0 0}
+.err:empty{display:none}
+.ok{color:#1E7A4A;font-size:14px;margin:8px 0 0}
+.ok:empty{display:none}
+.codein{font:900 22px/1.2 ui-monospace,Menlo,Consolas,monospace;letter-spacing:4px;text-align:center}
+.codebox{font:900 22px/1.2 ui-monospace,Menlo,Consolas,monospace;letter-spacing:1px;background:#F3ECFC;color:var(--deep);border-radius:16px;padding:14px 8px;text-align:center;user-select:all;-webkit-user-select:all;margin:10px 0}
+.list{display:grid;gap:10px}
+.item{border:2px solid var(--line);border-radius:16px;padding:12px 14px;display:grid;gap:6px}
+.item .top{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+.item .top b{font-size:15px}
+.item .meta{font-size:13px;color:var(--soft);font-weight:700}
+.item .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.item .acts button{min-height:40px;padding:7px 12px;font-size:13px}
+.pill{display:inline-block;font-size:12px;font-weight:900;border-radius:999px;padding:3px 9px;background:var(--line);color:var(--deep)}
+.pill.active{background:#DDF6E7;color:#1E7A4A}.pill.ended,.pill.refunded,.pill.disputed{background:#FDE7EA;color:var(--red)}.pill.unused{background:#FFF1C9;color:#7A5A00}
+.msg{white-space:pre-wrap;font-weight:700;font-size:14px;color:var(--ink)}
+.svc{display:grid;gap:10px}
+.svc .item .top b{font-size:16px;color:var(--deep)}
+.settings .item{grid-template-columns:1fr auto;align-items:center}
+.settings .item input{width:120px;text-align:center}
+.settings .item .meta{grid-column:1/-1}
+.small{font-size:12px}
+@media (max-width:520px){.card{padding:16px;border-radius:20px}}
+</style>
+</head>
+<body>
+<header>
+  <img src="/logo/wordmark.png" width="140" height="51" alt="Mojialand">
+  <span class="env" id="envTag">ADMIN</span>
+</header>
+<main>
+<section class="card" id="vLogin">
+  <h1>Grown-ups' back room</h1>
+  <p>A sign-in code goes to the Mojialand inbox. Enter it here.</p>
+  <div id="lSend">
+    <button class="primary" id="lSendBtn" type="button">Email me a code</button>
+    <p class="err" id="lErr1"></p>
+  </div>
+  <div id="lVerify" hidden>
+    <label>Code from the email<input class="codein" id="lCode" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="000 000"></label>
+    <div class="row" style="margin-top:10px"><button class="primary" id="lGo" type="button">Sign in</button><button class="textbtn" id="lAgain" type="button">Send a new code</button></div>
+    <p class="err" id="lErr2"></p>
+  </div>
+</section>
+
+<section id="vApp" hidden>
+  <div class="tabs" role="tablist" id="tabs">
+    <button role="tab" data-tab="passes" aria-selected="true">Passes</button>
+    <button role="tab" data-tab="codes" aria-selected="false">Gift codes</button>
+    <button role="tab" data-tab="support" aria-selected="false">Support</button>
+    <button role="tab" data-tab="settings" aria-selected="false">Settings</button>
+    <button role="tab" data-tab="services" aria-selected="false">Services</button>
+    <button class="textbtn" id="outBtn" type="button" style="margin-left:auto">Sign out</button>
+  </div>
+
+  <section class="card" data-panel="passes">
+    <h2>Passes</h2>
+    <p>Search by email, the last 4 characters of a code, or a Stripe session id. Empty search shows the latest 50.</p>
+    <div class="row"><label>Search<input id="pq" placeholder="parent@example.com or AB12"></label><button class="primary" id="pGo" type="button">Search</button></div>
+    <p class="err" id="pErr"></p>
+    <div class="list" id="pList" style="margin-top:14px"></div>
+  </section>
+
+  <section class="card" data-panel="codes" hidden>
+    <h2>Gift and support codes</h2>
+    <p>One code turns on one family's pass, on up to 5 devices. It starts the first time it is used. The code shows once here and is never stored.</p>
+    <div class="row">
+      <label>Kind<select id="cKind"><option value="48h">48 hours</option><option value="forever">Forever</option></select></label>
+      <label>Reason<select id="cSource"><option value="gift">Gift</option><option value="support">Support (something went wrong)</option></select></label>
+      <label>Use within (days)<input id="cDays" type="number" min="1" max="365" value="90"></label>
+    </div>
+    <label style="margin-top:10px">Note (who it is for)<input id="cNote" maxlength="500" placeholder="Grandma's iPad, contact form Sep 27"></label>
+    <div class="row" style="margin-top:12px"><button class="primary" id="cGo" type="button">Make a code</button></div>
+    <p class="err" id="cErr"></p>
+    <div id="cOut" hidden>
+      <div class="codebox" id="cCode"></div>
+      <p>Copy it now. Send it with: open Mojialand, tap Grown-ups, answer the number question, tap Have a code?</p>
+      <p>Or send this link, which turns Mojialand on in one tap: <a id="cLink" href="#"></a></p>
+    </div>
+  </section>
+
+  <section class="card" data-panel="support" hidden>
+    <h2>Support inbox</h2>
+    <p>Messages from the in-app contact form. Reply from the Mojialand inbox, then mark done.</p>
+    <div class="row"><button class="secondary" id="sOpen" type="button" aria-pressed="true">Open</button><button class="secondary" id="sDone" type="button" aria-pressed="false">Done</button></div>
+    <p class="err" id="sErr"></p>
+    <div class="list" id="sList" style="margin-top:14px"></div>
+  </section>
+
+  <section class="card settings" data-panel="settings" hidden>
+    <h2>Settings</h2>
+    <p>The game reads these on the next open. Numbers are minutes or days. Reset time is 24-hour, like 04:00.</p>
+    <p class="err" id="stErr"></p><p class="ok" id="stOk"></p>
+    <div class="list" id="stList"></div>
+  </section>
+
+  <section class="card" data-panel="services" hidden>
+    <h2>Services</h2>
+    <p>Every outside service Mojialand runs on. Passwords live in Apple Passwords. Secrets live in Netlify.</p>
+    <div class="svc" id="svcList"></div>
+  </section>
+</section>
+</main>
+<script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=t=>{ if(!t) return ''; try{ return new Date(t).toLocaleString('en-US',{timeZone:'America/Detroit',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}); }catch(e){ return String(t); } };
+const money=c=>'$'+((Number(c)||0)/100).toFixed(2);
+if(/displayedux\.com$|netlify\.app$|localhost/.test(location.hostname)) $('envTag').textContent='ADMIN · STAGING';
+
+async function call(url,body){
+  let res, d={};
+  try{ res=await fetch(url,{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined,credentials:'same-origin',cache:'no-store'}); try{ d=await res.json(); }catch(e){} }
+  catch(e){ throw new Error('No connection. Try again.'); }
+  if(res.status===401&&body&&body.action){ showLogin(); throw new Error('Signed out. Sign in again.'); }
+  if(!res.ok) throw new Error(d&&d.error?d.error:'That did not work. Try again.');
+  return d;
+}
+const api=(action,extra)=>call('/.netlify/functions/admin-api',Object.assign({action:action},extra||{}));
+const login=body=>call('/.netlify/functions/admin-login',body);
+
+/* ---- sign in */
+let codeId='';
+function showLogin(){ $('vApp').hidden=true; $('vLogin').hidden=false; $('lSend').hidden=false; $('lVerify').hidden=true; }
+function showApp(){ $('vLogin').hidden=true; $('vApp').hidden=false; loadPasses(); }
+$('lSendBtn').addEventListener('click',async()=>{ const b=$('lSendBtn'); b.disabled=true; b.textContent='Sending…'; $('lErr1').textContent='';
+  try{ const d=await login({step:'send'}); codeId=d.id; $('lSend').hidden=true; $('lVerify').hidden=false; $('lCode').value=''; setTimeout(()=>$('lCode').focus(),50); }
+  catch(e){ $('lErr1').textContent=e.message; }
+  b.disabled=false; b.textContent='Email me a code'; });
+$('lAgain').addEventListener('click',()=>{ $('lVerify').hidden=true; $('lSend').hidden=false; $('lSendBtn').click(); });
+$('lCode').addEventListener('keydown',e=>{ if(e.key==='Enter') $('lGo').click(); });
+$('lGo').addEventListener('click',async()=>{ const b=$('lGo'); b.disabled=true; $('lErr2').textContent='';
+  try{ await login({step:'verify',id:codeId,code:$('lCode').value}); showApp(); }
+  catch(e){ $('lErr2').textContent=e.message; }
+  b.disabled=false; });
+$('outBtn').addEventListener('click',async()=>{ try{ await login({step:'out'}); }catch(e){} showLogin(); });
+
+/* ---- tabs */
+$('tabs').addEventListener('click',e=>{ const b=e.target.closest('[data-tab]'); if(!b) return; const t=b.dataset.tab;
+  document.querySelectorAll('#tabs [data-tab]').forEach(x=>x.setAttribute('aria-selected',String(x===b)));
+  document.querySelectorAll('[data-panel]').forEach(p=>{ p.hidden=p.dataset.panel!==t; });
+  if(t==='passes') loadPasses(); else if(t==='support') loadSupport(); else if(t==='settings') loadSettings(); else if(t==='services') renderServices(); });
+
+/* ---- passes */
+function passItem(p){ const st=p.status; const ends=p.kind==='forever'?'Forever':(p.ends_at?'Ends '+fmt(p.ends_at):'Not started');
+  return '<div class="item" data-id="'+esc(p.id)+'"><div class="top"><b>'+esc(p.prefix)+'-…'+esc(p.code_last4)+' · '+(p.kind==='forever'?'Forever':'48h')+'</b><span class="pill '+esc(st)+'">'+esc(st)+'</span></div>'
+    +'<div class="meta">'+esc(p.email||'(no email)')+' · '+esc(p.source)+(p.amount_cents?' · '+money(p.amount_cents):'')+' · made '+fmt(p.created_at)+'</div>'
+    +'<div class="meta">'+esc(ends)+(p.use_by&&st==='unused'?' · use by '+fmt(p.use_by):'')+(typeof p.devices==='number'?' · '+p.devices+' of '+p.device_limit+' devices':'')+(p.stripe_session_id?' · '+esc(p.stripe_session_id):'')+'</div>'
+    +(p.note?'<div class="meta">Note: '+esc(p.note)+'</div>':'')
+    +'<div class="acts">'+(p.kind!=='forever'?'<button class="secondary" data-act="passes.add48">Add 48 hours</button><button class="secondary" data-act="passes.forever">Make Forever</button>':'')
+    +'<button class="secondary" data-act="passes.devices_reset">Reset devices</button><button class="secondary" data-act="note">Note</button>'
+    +(st==='active'?'<button class="danger" data-act="passes.end">End pass</button>':'')+'</div></div>'; }
+async function loadPasses(){ $('pErr').textContent=''; $('pList').innerHTML='<p>Loading…</p>';
+  try{ const d=await api('passes.list',{q:$('pq').value}); $('pList').innerHTML=d.passes.length?d.passes.map(passItem).join(''):'<p>No passes found.</p>'; }
+  catch(e){ $('pList').innerHTML=''; $('pErr').textContent=e.message; } }
+$('pGo').addEventListener('click',loadPasses);
+$('pq').addEventListener('keydown',e=>{ if(e.key==='Enter') loadPasses(); });
+$('pList').addEventListener('click',async e=>{ const b=e.target.closest('[data-act]'); if(!b) return; const item=b.closest('.item'), id=item.dataset.id, act=b.dataset.act; $('pErr').textContent='';
+  let extra={id:id};
+  if(act==='note'){ const cur=(item.querySelector('.meta:last-of-type')||{}).textContent||''; const n=prompt('Note for this pass:',/^Note: /.test(cur)?cur.slice(6):''); if(n===null) return; extra.note=n; }
+  else if(act==='passes.end'&&!confirm('End this pass now?')) return;
+  else if(act==='passes.devices_reset'&&!confirm('Forget every device on this pass? The family taps the email button or types the code again on each device.')) return;
+  b.disabled=true;
+  try{ const d=await api(act==='note'?'passes.note':act,extra); item.outerHTML=passItem(d.pass); }
+  catch(err){ $('pErr').textContent=err.message; b.disabled=false; } });
+
+/* ---- codes */
+$('cGo').addEventListener('click',async()=>{ const b=$('cGo'); b.disabled=true; $('cErr').textContent=''; $('cOut').hidden=true;
+  try{ const d=await api('codes.create',{kind:$('cKind').value,source:$('cSource').value,days_valid:$('cDays').value,note:$('cNote').value});
+    $('cCode').textContent=d.code; const link=location.origin+'/r/'+d.code.replace(/-/g,''); $('cLink').textContent=link; $('cLink').href=link; $('cOut').hidden=false; $('cNote').value=''; }
+  catch(e){ $('cErr').textContent=e.message; }
+  b.disabled=false; });
+
+/* ---- support */
+let sStatus='open';
+function msgItem(m){ return '<div class="item" data-id="'+esc(m.id)+'"><div class="top"><b>'+esc(m.email)+'</b><span class="pill">'+esc(m.topic)+'</span></div><div class="meta">'+fmt(m.created_at)+'</div><div class="msg">'+esc(m.message)+'</div>'
+  +'<div class="acts">'+(m.status==='open'?'<button class="secondary" data-st="done">Mark done</button>':'<button class="secondary" data-st="open">Reopen</button>')+'</div></div>'; }
+async function loadSupport(){ $('sErr').textContent=''; $('sList').innerHTML='<p>Loading…</p>'; $('sOpen').setAttribute('aria-pressed',String(sStatus==='open')); $('sDone').setAttribute('aria-pressed',String(sStatus==='done'));
+  try{ const d=await api('support.list',{status:sStatus}); $('sList').innerHTML=d.messages.length?d.messages.map(msgItem).join(''):'<p>Nothing here.</p>'; }
+  catch(e){ $('sList').innerHTML=''; $('sErr').textContent=e.message; } }
+$('sOpen').addEventListener('click',()=>{ sStatus='open'; loadSupport(); });
+$('sDone').addEventListener('click',()=>{ sStatus='done'; loadSupport(); });
+$('sList').addEventListener('click',async e=>{ const b=e.target.closest('[data-st]'); if(!b) return; const id=b.closest('.item').dataset.id; b.disabled=true;
+  try{ await api('support.set',{id:id,status:b.dataset.st}); loadSupport(); }catch(err){ $('sErr').textContent=err.message; b.disabled=false; } });
+
+/* ---- settings */
+async function loadSettings(){ $('stErr').textContent=''; $('stOk').textContent=''; $('stList').innerHTML='<p>Loading…</p>';
+  try{ const d=await api('settings.get'); $('stList').innerHTML=d.settings.map(s=>'<div class="item" data-key="'+esc(s.key)+'"><b>'+esc(s.key.replace(/_/g,' '))+'</b><input value="'+esc(s.value)+'" aria-label="'+esc(s.key)+'"><div class="meta">'+esc(s.help||'')+'</div></div>').join(''); }
+  catch(e){ $('stList').innerHTML=''; $('stErr').textContent=e.message; } }
+$('stList').addEventListener('change',async e=>{ const inp=e.target; if(inp.tagName!=='INPUT') return; const key=inp.closest('.item').dataset.key; $('stErr').textContent=''; $('stOk').textContent='';
+  try{ await api('settings.set',{key:key,value:inp.value}); $('stOk').textContent='Saved '+key.replace(/_/g,' ')+'.'; }catch(err){ $('stErr').textContent=err.message; } });
+
+/* ---- services (also listed in the project doc Mojialand-Services) */
+const SERVICES=[
+  ['Stripe','Payments, receipts, refunds, fraud checks.',[['Dashboard','https://dashboard.stripe.com/acct_1UJGyyERXhRT8V6d/dashboard'],['Test mode','https://dashboard.stripe.com/acct_1UJGyyERXhRT8V6d/test/dashboard'],['Webhooks','https://dashboard.stripe.com/acct_1UJGyyERXhRT8V6d/test/workbench/webhooks']]],
+  ['Supabase','Database: passes, devices, support messages, settings. Nightly cleanup at 4 AM.',[['Staging project','https://supabase.com/dashboard/project/latfilzdizjgxrnjftug'],['Table editor','https://supabase.com/dashboard/project/latfilzdizjgxrnjftug/editor']]],
+  ['Resend','Sends the code emails and contact alerts from hello@mojialand.com.',[['Emails sent','https://resend.com/emails'],['Domains','https://resend.com/domains']]],
+  ['iCloud Mail','The hello@mojialand.com inbox. Reply to parents from here.',[['Open Mail','https://www.icloud.com/mail/'],['Custom email domain','https://www.icloud.com/settings/']]],
+  ['Netlify','Hosting, functions, secrets, DNS.',[['Staging site','https://app.netlify.com/projects/mojialand-staging'],['Environment variables','https://app.netlify.com/projects/mojialand-staging/configuration/env']]],
+  ['GitHub','The code. Staging branch first, main after approval.',[['Repository','https://github.com/d2driscoA2/mojialand']]],
+  ['GoDaddy','Owns mojialand.com and mojialand.app.',[['Domains','https://dcc.godaddy.com/control/portfolio']]],
+  ['Apple Passwords','Every password and recovery code for the accounts above.',[]],
+];
+function renderServices(){ $('svcList').innerHTML=SERVICES.map(s=>'<div class="item"><div class="top"><b>'+esc(s[0])+'</b></div><div class="meta">'+esc(s[1])+'</div>'+(s[2].length?'<div class="acts">'+s[2].map(l=>'<a class="secondary" style="text-decoration:none;display:inline-flex;align-items:center" href="'+esc(l[1])+'" target="_blank" rel="noopener">'+esc(l[0])+'</a>').join('')+'</div>':'')+'</div>').join(''); }
+
+/* ---- start */
+login().then(d=>{ if(d&&d.signed_in) showApp(); else showLogin(); }).catch(()=>showLogin());
+})();
+</script>
+</body>
+</html>
