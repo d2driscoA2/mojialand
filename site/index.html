@@ -192,7 +192,8 @@ details.why[open] summary:after{content:"–"}
 details.why p{color:var(--soft);margin-top:6px;max-width:60ch}
 .pay{width:100%;margin-top:20px}
 .stripe-row{text-align:center;margin-top:12px;font-size:14px;color:var(--soft)}
-.stripe-badge{display:inline-block;border:2px dashed var(--line);border-radius:8px;padding:2px 10px;margin-right:6px;font-size:12px}
+.stripe-row .pm{display:inline-block;border:1px solid #DDD;border-radius:5px;padding:2px 7px;margin:0 2px;font:800 11px system-ui,sans-serif;color:#555;background:#fff}
+.stripe-row .by{margin-left:6px;font-size:12px;color:var(--soft)}.stripe-row .by b{color:var(--ink);letter-spacing:.02em}
 .restore{display:block;text-align:center;margin-top:10px;font-size:15px}
 .pay-status{margin-top:14px;border-radius:16px;padding:12px 14px;background:#FFF1CC;font-size:15px}
 .side h3{font-size:24px}
@@ -394,7 +395,7 @@ footer .fine.credit a{color:#fff;text-decoration:underline;text-underline-offset
   <div class="wrap">
    <p class="eyebrow">For grown-ups</p>
    <h2 style="margin-top:10px;font-size:clamp(34px,4.4vw,52px)">Keep Mojialand ad-free</h2>
-   <p class="lede" style="margin-top:12px">Every device gets <span id="freeMinutes">10</span> free minutes a day. Pick a pass when your child wants more.</p>
+   <p class="lede" style="margin-top:12px">Every device gets <span id="freeMinutes">15</span> free minutes on the first visit, then 3 minutes a day. Pick a pass when your child wants more.</p>
    <div class="pass-grid">
     <div class="pass-card">
      <h3>Pick a pass</h3>
@@ -423,7 +424,7 @@ footer .fine.credit a{color:#fff;text-decoration:underline;text-underline-offset
      </div>
      <ul class="checks">
       <li>Nothing collected from your child. No ads, no tracking, no account.</li>
-      <li>One-time charge. Refund any time in 7 days.</li>
+      <li>One-time charge. Something wrong? Refund within 7 days.</li>
       <li>Shows on your card as MOJIALAND.</li>
      </ul>
      <div class="maker"><span class="av" aria-hidden="true"><span class="em" style="font-size:24px">😀</span></span><span>Made by a family in Michigan. Your pass pays for new games and keeps ads out.</span></div>
@@ -432,8 +433,8 @@ footer .fine.credit a{color:#fff;text-decoration:underline;text-underline-offset
       <p>Free kids apps pay their bills with ads or with data about your child. Mojialand does neither. Passes pay for hosting and for new games. When you pay, your card goes straight to Stripe. Mojialand never sees your card number.</p>
      </details>
      <a class="btn btn-primary pay" id="payBtn" href="#passes">Pay $1.50</a>
-     <p class="stripe-row"><span class="stripe-badge">Powered by Stripe badge</span>Apple Pay · Google Pay · cards</p>
-     <a class="restore" href="#restore" data-open-faq="restore">Already paid? Restore your pass</a>
+     <p class="stripe-row" aria-label="Pay with Apple Pay, Google Pay, Visa, Mastercard, or Amex. Payments by Stripe."><span class="pm">Apple Pay</span><span class="pm">G Pay</span><span class="pm">VISA</span><span class="pm">Mastercard</span><span class="pm">AMEX</span><span class="by">by <b>stripe</b></span></p>
+     <a class="restore" href="#restore" data-open-faq="restore">Already paid? Use your pass on another device</a>
      <p class="pay-status" id="payStatus" hidden></p>
     </div>
     <aside class="side">
@@ -455,8 +456,8 @@ footer .fine.credit a{color:#fff;text-decoration:underline;text-underline-offset
    <h2 style="margin-top:10px;font-size:clamp(34px,4.4vw,52px)">Questions, fixes, and a real person</h2>
    <div class="help-grid">
     <div class="faq">
-     <details id="faq-free"><summary>How does free play work?</summary><div class="a">Each device gets <span class="freeMin">10</span> free minutes a day. The timer lives on the device only. When time runs out, your child sees a pause picture and a Grown-up button. Prices never appear on kid screens.</div></details>
-     <details id="faq-restore"><summary>How do I use my pass on another device?</summary><div class="a">Open Mojialand on the new device, hold the gear button for 3 seconds, and tap Restore. Enter the code from your email (the code starts with MOJI). The restore link in your receipt email works too.</div></details>
+     <details id="faq-free"><summary>How does free play work?</summary><div class="a">Each device gets <span class="freeMin">15</span> free minutes on the first visit, then 3 minutes a day. The timer lives on the device only. When time runs out, your child sees a pause picture and a Grown-up button. Prices never appear on kid screens.</div></details>
+     <details id="faq-restore"><summary>How do I use my pass on another device?</summary><div class="a">Open your pass email on the new device and tap Turn on Mojialand. Or open Mojialand, tap Grown-ups, answer the number question, tap Have a code? and type the code from the email (it starts with MOJI). One pass works on up to 5 devices.</div></details>
      <details id="faq-home"><summary>How do I add Mojialand to my home screen?</summary><div class="a">On iPhone or iPad:<ol><li>Open Mojialand in Safari.</li><li>Tap the Share button.</li><li>Tap Add to Home Screen, then Add.</li></ol>On Android, open the Chrome menu and tap Add to Home screen.</div></details>
      <details id="faq-refund"><summary>How do refunds work?</summary><div class="a">Ask within 7 days of any purchase and we refund the full amount. Send a message with the form here, and include the email you used at checkout.</div></details>
      <details id="faq-sound"><summary>No sound on iPhone?</summary><div class="a">Flip the ring or silent switch on the side of the phone, turn the volume up, then tap the screen once. In Grown-ups, tap Sound check to test.</div></details>
@@ -502,36 +503,39 @@ footer .fine.credit a{color:#fff;text-decoration:underline;text-underline-offset
     <div>
      <article class="doc" id="doc-privacy" role="tabpanel" aria-labelledby="tab-privacy" hidden>
       <h3>Privacy notice</h3>
-      <p class="date">Effective <span class="effDate">September 23, 2026</span></p>
+      <p class="date">Effective <span class="effDate">September 28, 2026</span></p>
       <div class="box"><p><strong>The short version:</strong> Mojialand collects nothing from your child. Grown-ups share an email address and payment details only when buying a pass, and Stripe handles the card.</p></div>
       <h4>Who runs Mojialand</h4>
       <p>Mojialand is operated by <span class="chip" data-fill="operator">Operator name to confirm</span>, Michigan, United States. Contact: <span class="chip" data-fill="email">Contact email to confirm</span>. Mailing address: <span class="chip" data-fill="address">Mailing address to confirm</span>.</p>
       <h4>What we collect from children</h4>
       <p>Nothing. Kid screens have no text fields, no microphone, no camera, and no location. The game sends no requests to any outside company. Mojialand uses no analytics, no advertising, and no tracking cookies.</p>
       <h4>What stays on the device</h4>
-      <p>The browser on your device saves game settings (sound, voice, how-to cards), the free play timer, and your pass token. This data stays in the browser's local storage and never reaches us. Clearing your browser data removes the data.</p>
+      <p>The browser on your device saves game settings (sound, voice, how-to cards), the free play timer, a random device value, and your pass token. This data stays in the browser's storage. Clearing your browser data removes the data. When you add Mojialand to your Home Screen, the pass token travels with it.</p>
       <h4>What we collect from grown-ups</h4>
       <ul>
        <li>When you buy a pass: your email address and payment details, entered on Stripe's secure form.</li>
-       <li>From Stripe we keep: your email, a restore code, the pass type, the expiry date, the Stripe session ID, and how many devices use the code.</li>
-       <li>When you send a message: your email, the topic, and your message.</li>
+       <li>From Stripe we keep: your email, the pass type, the end date, the Stripe session ID, and the amount paid. We keep only a scrambled version of your pass code plus its last 4 characters, never the code itself.</li>
+       <li>To count devices per pass: a scrambled version of the random device value your browser makes. Nothing about your child or your device model.</li>
+       <li>When you send a message: your email, the topic, your message, and, if you include it, your pass code's last 4 characters.</li>
       </ul>
       <p>We use this data to deliver your pass, restore the pass on your devices, send receipts, answer your questions, and process refunds. We never sell or rent data, and we never use data for advertising.</p>
       <h4>Who processes data for us</h4>
       <ul>
        <li>Stripe: payments and receipts. Stripe's privacy policy applies to card details.</li>
-       <li>Netlify: website hosting and the contact form.</li>
-       <li>Our email provider: restore code emails.</li>
+       <li>Netlify: website hosting and the server code behind passes and the contact form.</li>
+       <li>Supabase: the database that holds pass records and contact messages.</li>
+       <li>Resend: sends the pass code email and contact form alerts from hello@mojialand.com.</li>
       </ul>
       <h4>How long we keep data</h4>
       <ul>
        <li>48-hour pass records: deleted 30 days after the pass expires.</li>
        <li>Forever pass records: kept while the pass exists.</li>
-       <li>Support messages: deleted 12 months after the conversation ends.</li>
+       <li>Contact messages: deleted after 90 days.</li>
+       <li>Gift and support codes never used: deleted 30 days after they expire.</li>
        <li>Stripe keeps payment records as Stripe's own legal duties require.</li>
       </ul>
       <h4>Your choices</h4>
-      <p>Ask us to see or delete your data any time. Use the contact form and pick Privacy request, or email <span class="chip" data-fill="email">Contact email to confirm</span>. We reply within 30 days. Deleting a Forever pass record ends the pass.</p>
+      <p>Ask us to see or delete your data any time. Use Contact us inside Mojialand (Grown-ups) or the form on this page and pick Other, or email <span class="chip" data-fill="email">Contact email to confirm</span>. We reply within 30 days. Deleting a Forever pass record ends the pass.</p>
       <h4>Children's privacy (COPPA)</h4>
       <p>Mojialand is made for children under 13 and follows the Children's Online Privacy Protection Act. We collect no personal information from children. Every purchase, restore, and outside link sits behind a grown-up check.</p>
       <h4>Where we sell passes</h4>
@@ -542,20 +546,23 @@ footer .fine.credit a{color:#fff;text-decoration:underline;text-underline-offset
 
      <article class="doc" id="doc-terms" role="tabpanel" aria-labelledby="tab-terms" hidden>
       <h3>Terms and refunds</h3>
-      <p class="date">Effective <span class="effDate">September 23, 2026</span></p>
+      <p class="date">Effective <span class="effDate">September 28, 2026</span></p>
       <h4>Using Mojialand</h4>
-      <p>Mojialand is a set of games for children, used with a grown-up's permission. Free play gives each device <span class="freeMin">10</span> minutes a day. By buying a pass, you confirm you are 18 or older.</p>
+      <p>Mojialand is a set of games for children, used with a grown-up's permission. Free play gives each device <span class="freeMin">15</span> minutes on the first visit, then 3 minutes a day. By buying a pass, you confirm you are 18 or older.</p>
       <h4>Passes</h4>
       <ul>
        <li>48-hour pass, $1.50: unlocks unlimited play for 48 hours from purchase. Never renews.</li>
        <li>Forever pass, $14.99: unlocks unlimited play for as long as Mojialand runs.</li>
-       <li>Each pass works on up to <span id="devLimit">5</span> devices with your restore code. A 48-hour pass ends at the same moment on every device.</li>
+       <li>Each pass works on up to <span id="devLimit">5</span> devices. Tap the button in your pass email on each device, or type the pass code. A 48-hour pass ends at the same moment on every device.</li>
+       <li>Add 48 hours to a running pass for $1.50. Move to Forever for $13.49 while a 48-hour pass runs, or within 7 days after it ends.</li>
        <li>Every pass is a one-time charge. No subscription, no automatic renewal.</li>
       </ul>
       <h4>Refunds</h4>
-      <p>Ask within 7 days of any purchase for a full refund, no questions. Use the contact form and include the email used at checkout. Refunds go back to the original card through Stripe, usually within 5 to 10 business days.</p>
-      <h4>Restore codes</h4>
-      <p>Keep your restore code private. Anyone with the code uses your device slots. If your code leaks, contact us and we issue a new code.</p>
+      <p>If something went wrong with a purchase, ask within 7 days and tell us what happened: a charge you did not mean to make, a pass that never turned on, a bug that stopped play. Use Contact us inside Mojialand and include the email used at checkout or your pass code. When a pass fails on our side, we fix it or refund it. Refunds go back to the original card through Stripe, usually within 5 to 10 business days.</p>
+      <h4>If the pass is slow to arrive</h4>
+      <p>Payment goes through in seconds. If our side is slow, Mojialand keeps playing on free minutes and turns the pass on by itself. Your pass email also carries a button that turns it on.</p>
+      <h4>Pass codes</h4>
+      <p>Keep your pass code and pass email private. Anyone with the code uses your device slots. If your code leaks, contact us and we reset the devices or issue a new code.</p>
       <h4>Changes to the games</h4>
       <p>We add and improve games over time. If Mojialand ever shuts down, Forever pass holders get notice by email at least 60 days ahead.</p>
       <h4>Our responsibility</h4>
@@ -637,11 +644,11 @@ var CONFIG = {
  gameUrl: "/play/",            /* where the game lives; same site so the frame loads */
  embedGame: true,              /* false: show a button that opens the game in a new tab */
  stripeLinks: { day: "", forever: "" }, /* Stripe Payment Link or Checkout URL for each pass */
- freeMinutes: 10,
+ freeMinutes: 15,
  deviceLimit: 5,
- operator: "",                 /* e.g. business or legal name */
- email: "",                    /* parent and privacy contact */
- address: "",
+ operator: "DisplayedUX",      /* the parent company; no personal names in public copy */
+ email: "hello@mojialand.com", /* parent and privacy contact */
+ address: "2422 Meadowridge Court, Ann Arbor, MI 48105",
  preview: false                /* true in the Claude preview: forms and payment show a notice */
 };
 
@@ -690,8 +697,8 @@ var CONFIG = {
  $("#payBtn").addEventListener("click",function(e){
   e.preventDefault();
   askGrown(function(){
-   var url=CONFIG.stripeLinks[pass];
-   if(url && !CONFIG.preview){ window.location.href=url; return; }
+   var url=CONFIG.stripeLinks[pass] || "/pass/?plan="+(pass==="day"?"pass":"life");
+   if(!CONFIG.preview){ window.location.href=url; return; }
    var s=$("#payStatus"); s.hidden=false;
    s.textContent= CONFIG.preview
     ? "Preview: on the live site this button opens Stripe checkout for the "+(pass==="day"?"48-hour pass ($1.50).":"Forever pass ($14.99).")
