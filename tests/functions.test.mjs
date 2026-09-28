@@ -306,12 +306,20 @@ test('redeem-code: turns a pass on, counts devices, limit 5, refunds stop it', a
   r = await redeem(ev({ code, device_id: DEV('6') }));
   assert.equal(r.statusCode, 409); assert.match(JSON.parse(r.body).error, /5 devices/);
   assert.equal((await redeem(ev({ code: 'MOJI-AAAA-BBBB-CCCC', device_id: DEV('1') }))).statusCode, 404);
-  assert.equal((await redeem(ev({ code: 'hello', device_id: DEV('1') }))).statusCode, 400);
+  assert.equal((await redeem(ev({ code: 'hello', device_id: DEV('1') }))).statusCode, 404, 'not a pass code, not a promotion code');
   assert.equal((await redeem(ev({ code, device_id: 'x' }))).statusCode, 400);
   db.passes[0].status = 'refunded';
   assert.equal((await redeem(ev({ code, device_id: DEV('1') }))).statusCode, 403);
   db.passes[0].status = 'active'; db.passes[0].ends_at = new Date(Date.now() - 1000).toISOString();
   assert.equal((await redeem(ev({ code, device_id: DEV('1') }))).statusCode, 410);
+});
+
+test('redeem-code: a Stripe promotion code comes back as a discount', async () => {
+  let r = await redeemFn(ev({ code: 'friends50', device_id: 'd'.repeat(32) }));
+  assert.equal(r.statusCode, 200);
+  assert.deepEqual(JSON.parse(r.body).discount, { code: 'FRIENDS50', percent_off: 50, amount_off: null, name: 'Friends' });
+  assert.equal((await redeemFn(ev({ code: 'NOPE99', device_id: 'd'.repeat(32) }))).statusCode, 404);
+  assert.equal((await redeemFn(ev({ code: 'bad code!', device_id: 'd'.repeat(32) }))).statusCode, 400);
 });
 
 test('redeem-code: gift code starts on first use; rate limit', async () => {
@@ -418,6 +426,13 @@ test('admin-api: needs the cookie; passes, codes, support, settings', async () =
   assert.equal(d.pass.kind, 'forever'); assert.equal(d.pass.ends_at, null);
   [st, d] = await A('passes.end', { id: pass.id });
   assert.equal(d.pass.status, 'ended');
+  // refund: Stripe refund on the session's payment intent, pass marked refunded
+  stripe.sessions.set('cs_test_adm1', paidSession('cs_test_adm1', 'pass'));
+  [st, d] = await A('passes.refund', { id: pass.id });
+  assert.equal(st, 200); assert.equal(d.pass.status, 'refunded');
+  assert.deepEqual(stripe.calls.refunds, [{ payment_intent: 'pi_cs_test_adm1' }]);
+  [st, d] = await A('passes.refund', { id: pass.id });
+  assert.equal(st, 400, 'no double refund');
   [st, d] = await A('passes.add48', { id: 'nope' });
   assert.equal(st, 400);
   // gift code: shown once, works in redeem-code, never stored

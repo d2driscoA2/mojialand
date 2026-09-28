@@ -132,8 +132,9 @@ export function fakeStripe(overrides = {}) {
       },
     },
     promotionCodes: {
-      list: async (p) => { calls.promo.push(p); return { data: p.code === 'FRIENDS50' ? [{ id: 'promo_123', code: 'FRIENDS50' }] : [] }; },
+      list: async (p) => { calls.promo.push(p); return { data: String(p.code).toUpperCase() === 'FRIENDS50' ? [{ id: 'promo_123', code: 'FRIENDS50', coupon: { percent_off: 50, amount_off: null, valid: true, name: 'Friends' } }] : [] }; },
     },
+    refunds: { create: async (p) => { calls.refunds = calls.refunds || []; calls.refunds.push(p); return { id: 're_1', status: 'succeeded' }; } },
     ...overrides,
   };
   return fake;

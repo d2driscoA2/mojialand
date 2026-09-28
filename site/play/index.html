@@ -569,6 +569,7 @@ textarea.pw-in{resize:none;min-height:88px}
   <div class="pw-plantop"><button class="pw-back" id="pwPlansBack">← Not now</button><img src="/logo/wordmark.png" width="150" height="55" alt="Mojialand" draggable="false"><span></span></div>
   <h2 class="pw-brandh" id="pwPlansTitle">Keep playing!</h2>
   <p class="pw-plansub" id="pwPlansSub">Pick a pass. No account needed.</p>
+  <p class="pw-plansub" id="pwDiscount" style="color:#1E7A4A;font-weight:900" hidden></p>
   <div id="pwCards"></div>
   <ul class="pw-trust">
     <li><span>🛡️</span><span><b>Nothing collected from your child.</b> Ever. No names, no photos, no voice.</span></li>
@@ -633,7 +634,7 @@ textarea.pw-in{resize:none;min-height:88px}
 </div></div>
 <div class="pw-ov hidden" id="pwOvCode" role="dialog" aria-label="Have a code?"><div class="pw-card">
   <h3>Have a code?</h3>
-  <p>Type the code from your Mojialand email.</p>
+  <p>Pass codes, gift codes and discount codes all go here.</p>
   <input class="pw-in pw-codein" id="pwCodeIn" aria-label="Code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="24" placeholder="MOJI-XXXX-XXXX-XXXX">
   <p class="pw-err" id="pwCodeErr" role="alert"></p>
   <button class="pw-primary" id="pwCodeGo">Turn on Mojialand</button>
@@ -1057,8 +1058,12 @@ const pay=(function(){
   $('#pwGateBack').addEventListener('click',()=>{ ctx(); sfx.boop(); back(); });
 
   /* pass screen */
-  function card(key,title,small,tag,strike){ return '<button class="pw-plan" aria-pressed="'+(plan===key)+'" data-plan="'+key+'"><b>'+title+(tag?'<span class="pw-tag">best value</span>':'')+'</b><span class="price">'+(strike?'<s>'+money(PRICES.life)+'</s>':'')+money(PRICES[key])+'</span><small>'+small+'</small></button>'; }
+  /* a Stripe promotion code from Have a code?: shown on the pass screen and passed to checkout */
+  let promo=null;
+  function priceOf(key){ let v=PRICES[key]; if(promo){ if(promo.percent_off) v=v*(1-promo.percent_off/100); else if(promo.amount_off) v=v-promo.amount_off/100; } return Math.max(0,Math.round(v*100)/100); }
+  function card(key,title,small,tag,strike){ return '<button class="pw-plan" aria-pressed="'+(plan===key)+'" data-plan="'+key+'"><b>'+title+(tag?'<span class="pw-tag">best value</span>':'')+'</b><span class="price">'+(strike||promo?'<s>'+money(strike?PRICES.life:PRICES[key])+'</s>':'')+money(priceOf(key))+'</span><small>'+small+'</small></button>'; }
   function buildPlans(){ const p=getPass(); let html='', keys;
+    const dsc=$('#pwDiscount'); if(promo){ dsc.textContent=promo.code+' applied: '+(promo.percent_off?promo.percent_off+'% off':'$'+(promo.amount_off/100).toFixed(2)+' off'); dsc.hidden=false; } else dsc.hidden=true;
     $('#pwDevLine').innerHTML='<b>One pass, all your devices.</b> Up to '+SETTINGS.devices_per_code+' phones and tablets in your family.';
     $('#pwWhyMore').hidden=true; $('#pwWhyBtn').setAttribute('aria-expanded','false');
     if(passOn(p)&&p.kind==='forever'){ $('#pwPlansTitle').textContent='You have Forever'; $('#pwPlansSub').textContent='Nothing to buy. Enjoy.'; $('#pwCards').innerHTML=''; $('#pwPay').hidden=true; return; }
@@ -1073,11 +1078,11 @@ const pay=(function(){
       if(!keys.includes(plan)) plan='pass';
       html=card('pass','48-hour pass','Two days of everything.')+card('life','Forever','Pay once, play for good.',true); }
     $('#pwCards').innerHTML=html; syncPlan(); }
-  function syncPlan(){ $$('#pwCards .pw-plan').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.plan===plan))); $('#pwPay').textContent={pass:'Start 48 hours',life:'Get Forever',add:'Add 48 hours',up:'Upgrade to Forever'}[plan]+' · '+money(PRICES[plan]); }
+  function syncPlan(){ $$('#pwCards .pw-plan').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.plan===plan))); $('#pwPay').textContent={pass:'Start 48 hours',life:'Get Forever',add:'Add 48 hours',up:'Upgrade to Forever'}[plan]+' · '+money(priceOf(plan)); }
   $('#pwCards').addEventListener('click',e=>{ const b=e.target.closest('.pw-plan'); if(!b) return; plan=b.dataset.plan; syncPlan(); });
   $('#pwWhyBtn').addEventListener('click',()=>{ const open=$('#pwWhyMore').hidden; $('#pwWhyMore').hidden=!open; $('#pwWhyBtn').setAttribute('aria-expanded',String(open)); });
   $('#pwPlansBack').addEventListener('click',()=>{ ctx(); sfx.boop(); back(); });
-  $('#pwPay').addEventListener('click',()=>{ const url='/pass/?plan='+encodeURIComponent(plan); try{ if(window.top&&window.top!==window.self){ window.top.location.href=url; return; } }catch(e){} location.href=url; });
+  $('#pwPay').addEventListener('click',()=>{ const url='/pass/?plan='+encodeURIComponent(plan)+(promo?'&promo='+encodeURIComponent(promo.code):''); try{ if(window.top&&window.top!==window.self){ window.top.location.href=url; return; } }catch(e){} location.href=url; });
   function soon(title){ $('#pwSoonTitle').textContent='Coming soon'; $('#pwSoonText').textContent=title+' is on the way. It arrives in the next update.'; $('#pwOvSoon').classList.remove('hidden'); }
   $('#pwCode').addEventListener('click',()=>openCode());
   $('#pwHelp').addEventListener('click',()=>openContact());
@@ -1167,11 +1172,13 @@ const pay=(function(){
   function openCode(){ $('#pwCodeIn').value=''; $('#pwCodeErr').textContent=''; $('#pwOvCode').classList.remove('hidden'); setTimeout(()=>$('#pwCodeIn').focus(),60); }
   $('#pwCodeIn').addEventListener('keydown',e=>{ if(e.key==='Enter') $('#pwCodeGo').click(); });
   $('#pwCodeGo').addEventListener('click',async()=>{ const c=normCode($('#pwCodeIn').value), b=$('#pwCodeGo');
-    if(!c){ $('#pwCodeErr').textContent='Codes look like MOJI-XXXX-XXXX-XXXX.'; return; }
-    b.disabled=true; b.textContent='Turning on…'; $('#pwCodeErr').textContent='';
-    try{ const res=await fetch('/.netlify/functions/redeem-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:c,device_id:deviceId()}),credentials:'same-origin',cache:'no-store'});
+    const rawIn=$('#pwCodeIn').value.trim();
+    if(!c&&!/^[A-Za-z0-9_-]{2,40}$/.test(rawIn)){ $('#pwCodeErr').textContent='Pass codes look like MOJI-XXXX-XXXX-XXXX. Discount codes are one word.'; return; }
+    b.disabled=true; b.textContent='Checking…'; $('#pwCodeErr').textContent='';
+    try{ const res=await fetch('/.netlify/functions/redeem-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:c||rawIn,device_id:deviceId()}),credentials:'same-origin',cache:'no-store'});
       let d={}; try{ d=await res.json(); }catch(e){}
-      if(res.status===200&&d&&typeof d.token==='string'&&await savePass(d)){ $('#pwOvCode').classList.add('hidden'); store.set('allset',{plan:'redeem',email_masked:'',at:Date.now()}); showAllset(); }
+      if(res.status===200&&d&&d.discount&&d.discount.code){ promo=d.discount; $('#pwOvCode').classList.add('hidden'); toast(promo.code+': '+(promo.percent_off?promo.percent_off+'% off':'discount')+'. Pick your pass.'); if(current==='plans') buildPlans(); else go('plans'); }
+      else if(res.status===200&&d&&typeof d.token==='string'&&await savePass(d)){ $('#pwOvCode').classList.add('hidden'); store.set('allset',{plan:'redeem',email_masked:'',at:Date.now()}); showAllset(); }
       else $('#pwCodeErr').textContent=d&&typeof d.error==='string'&&d.error.length<200?d.error:'We could not turn the pass on. Please try again.';
     }catch(e){ $('#pwCodeErr').textContent='No connection. Please try again.'; }
     b.disabled=false; b.textContent='Turn on Mojialand'; });

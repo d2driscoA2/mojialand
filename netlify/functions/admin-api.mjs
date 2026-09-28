@@ -4,8 +4,9 @@ import { json, fail, readJson } from './_lib/http.mjs';
 import { rest, patchPass, safeErr } from './_lib/db.mjs';
 import { isSignedIn } from './_lib/admin.mjs';
 import { randomCode, codeHash, codeLast4 } from './_lib/codes.mjs';
+import { getStripe } from './_lib/stripe.mjs';
 
-const REQUIRED = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY', 'RESTORE_CODE_PEPPER'];
+const REQUIRED = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY', 'RESTORE_CODE_PEPPER', 'STRIPE_SECRET_KEY'];
 const HOUR = 3600e3;
 const DAY = 24 * HOUR;
 const enc = encodeURIComponent;
@@ -63,6 +64,22 @@ const actions = {
     await patchPass('id=eq.' + enc(id), { note: String(note || '').slice(0, 500) || null });
     return { pass: await passWithDevices(id) };
   },
+  // Refunds the pass's own Stripe payment in full and ends the pass. Add-on
+  // payments (add 48 hours, upgrade) are separate sessions: refund those in Stripe.
+  async 'passes.refund'({ id }) {
+    if (!UUID.test(String(id || ''))) throw new Error('bad id');
+    const p = await passWithDevices(id);
+    if (!p) throw new Error('pass not found');
+    if (p.source !== 'stripe' || !p.stripe_session_id) throw new Error('this pass was not paid through Stripe');
+    if (p.status === 'refunded') throw new Error('already refunded');
+    const session = await getStripe().checkout.sessions.retrieve(p.stripe_session_id);
+    const pi = session && session.payment_intent;
+    if (!pi) throw new Error('no payment to refund');
+    await getStripe().refunds.create({ payment_intent: typeof pi === 'string' ? pi : pi.id });
+    await patchPass('id=eq.' + enc(id), { status: 'refunded', note: ((p.note ? p.note + ' · ' : '') + 'refunded from admin ' + new Date().toISOString().slice(0, 10)).slice(0, 500) });
+    return { pass: await passWithDevices(id) };
+  },
+
   // Lets the family start over with their devices ("move it to a new device").
   async 'passes.devices_reset'({ id }) {
     if (!UUID.test(String(id || ''))) throw new Error('bad id');

@@ -6,8 +6,10 @@ import { json, fail, readJson, clientIp, maskEmail } from './_lib/http.mjs';
 import { rateHit, getPassBy, patchPass, addDevice, safeErr, DEVICE_RE } from './_lib/db.mjs';
 import { normalizeCode, codeHash } from './_lib/codes.mjs';
 import { makeTokenPayload, signToken } from './_lib/token.mjs';
+import { getStripe } from './_lib/stripe.mjs';
 
-const REQUIRED = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY', 'RESTORE_CODE_PEPPER', 'PASS_SIGNING_PRIVATE_KEY'];
+const REQUIRED = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY', 'RESTORE_CODE_PEPPER', 'PASS_SIGNING_PRIVATE_KEY', 'STRIPE_SECRET_KEY'];
+const PROMO_RE = /^[A-Za-z0-9_-]{2,40}$/;
 const HOUR = 3600e3;
 const NOT_FOUND = 'We could not find that code. Check each letter and try again.';
 
@@ -17,9 +19,24 @@ export const handler = async (event) => {
   if (event.httpMethod !== 'POST') return fail(405, 'Use POST.');
 
   const input = readJson(event);
-  const code = normalizeCode(input && input.code);
+  const raw = String((input && input.code) || '').trim();
+  const code = normalizeCode(raw);
   const device = input && input.device_id;
-  if (!code) return fail(400, NOT_FOUND);
+  // Not a pass code: maybe a Stripe promotion code (a discount at checkout).
+  if (!code) {
+    if (!PROMO_RE.test(raw)) return fail(400, NOT_FOUND);
+    if (!(await rateHit('redeem-promo', clientIp(event), 10, 60))) return fail(429, 'Too many tries. Please wait a few minutes.');
+    try {
+      const list = await getStripe().promotionCodes.list({ code: raw, active: true, limit: 1, expand: ['data.coupon'] });
+      const pc = list && list.data && list.data[0];
+      const c = pc && pc.coupon;
+      if (!pc || !c || c.valid === false) return fail(404, NOT_FOUND);
+      return json(200, { discount: { code: pc.code, percent_off: c.percent_off || null, amount_off: c.amount_off || null, name: c.name || '' } });
+    } catch (e) {
+      console.error('redeem-code: promo lookup failed (' + safeErr(e) + ')');
+      return fail(500, 'We could not check that code. Please try again in a minute.');
+    }
+  }
   if (typeof device !== 'string' || !DEVICE_RE.test(device)) return fail(400, 'This browser could not be counted. Please try again.');
 
   // Slow guessing: 10 tries a minute and 60 an hour per network.

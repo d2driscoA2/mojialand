@@ -482,6 +482,26 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await ctx.close();
 }
 
+// 9c2. Have a code? with a discount code shows the pass screen with the discount and passes it to checkout
+{
+  const { ctx, page } = await newPage();
+  let payUrl = '';
+  await page.route('**/.netlify/functions/redeem-code', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '{"discount":{"code":"FRIENDS50","percent_off":50,"amount_off":null,"name":"Friends"}}' }));
+  await page.goto(base + '/play/#passes'); await page.waitForSelector('#s-ngate:not(.hidden)');
+  { const ans = await page.getAttribute('#pwChoices', 'data-a'); await page.click('#pwChoices [data-n="' + ans + '"]'); }
+  await page.waitForSelector('#s-plans:not(.hidden)');
+  await page.click('#pwCode'); await page.fill('#pwCodeIn', 'friends50'); await page.click('#pwCodeGo');
+  await page.waitForSelector('#pwDiscount:not([hidden])');
+  check('discount: green line and halved prices', (await page.textContent('#pwDiscount')) === 'FRIENDS50 applied: 50% off' && (await page.textContent('#pwPay')) === 'Start 48 hours · $0.75');
+  await page.screenshot({ path: path.join(SHOTS, 'plans-discount-390.png') });
+  await page.evaluate(() => { window.__nav = null; });
+  await page.route('**/pass/**', (r) => { payUrl = r.request().url(); r.fulfill({ status: 200, contentType: 'text/html', body: '<title>x</title>' }); });
+  await page.click('#pwPay');
+  await page.waitForTimeout(500);
+  check('discount: checkout link carries plan and promo', /\/pass\/\?plan=pass&promo=FRIENDS50$/.test(payUrl), payUrl);
+  await ctx.close();
+}
+
 // 9d1. iPhone gets the manifest with no start_url, so the Home Screen app opens the page it was added from
 {
   const { ctx, page } = await newPage({ userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1' });
@@ -581,7 +601,7 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
     const b = r.request().postDataJSON(); calls.push(b.action);
     if (!signedIn) return r.fulfill({ status: 401, contentType: 'application/json', body: '{"error":"Please sign in."}' });
     const out = { 'passes.list': { passes: [pass] }, 'passes.note': { pass: { ...pass, note: b.note } }, 'passes.add48': { pass: { ...pass, ends_at: new Date(Date.now() + 49 * 3600e3).toISOString() } },
-      'codes.create': { code: 'GIFT-ABCD-EFGH-JKMN', pass: {} }, 'codes.batch': { codes: Array.from({ length: b.count }, (_, i) => ({ code: 'GIFT-B' + String(i).padStart(3, '0') + '-EFGH-JKMN', id: 'id' + i })) }, 'support.list': { messages: [{ id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', email: 'mom@example.com', topic: 'pass', message: 'Code not working\n\nCode ending AB12: pass ...', created_at: new Date().toISOString(), status: 'open' }] },
+      'codes.create': { code: 'GIFT-ABCD-EFGH-JKMN', pass: {} }, 'passes.refund': { pass: { ...pass, status: 'refunded' } }, 'codes.batch': { codes: Array.from({ length: b.count }, (_, i) => ({ code: 'GIFT-B' + String(i).padStart(3, '0') + '-EFGH-JKMN', id: 'id' + i })) }, 'support.list': { messages: [{ id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', email: 'mom@example.com', topic: 'pass', message: 'Code not working\n\nCode ending AB12: pass ...', created_at: new Date().toISOString(), status: 'open' }] },
       'support.set': { ok: true }, 'settings.get': { settings: [{ key: 'daily_minutes', value: 3, help: 'Free play each day.' }, { key: 'daily_reset', value: '04:00', help: 'Reset time.' }] }, 'settings.set': { ok: true } }[b.action];
     r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(out || { error: 'Unknown action.' }) });
   });
@@ -600,6 +620,10 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await page.click('#pList [data-act="note"]');
   await page.waitForFunction(() => /note from test/.test(document.querySelector('#pList').textContent));
   check('admin: note saved through prompt', true);
+  check('admin: Refund button on a Stripe pass', await page.isVisible('#pList [data-act="passes.refund"]'));
+  await page.click('#pList [data-act="passes.refund"]');
+  await page.waitForFunction(() => /refunded/.test(document.querySelector('#pList .pill').textContent));
+  check('admin: refund marks the pass refunded and hides the button', (await page.locator('#pList [data-act="passes.refund"]').count()) === 0);
   await page.screenshot({ path: path.join(SHOTS, 'admin-passes.png') });
   await page.click('[data-tab="codes"]');
   await page.click('#cGo');
