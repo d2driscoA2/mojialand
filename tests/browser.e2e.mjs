@@ -774,26 +774,30 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await page.click('#dtools [data-tool="crayon"]');
   // color a friend
   await page.click('#dbook');
-  check('draw: friend picker shows five friends and none', (await page.locator('#dfriends button').count()) === 6);
+  check('draw: coloring book shows 12 pages and a blank page', (await page.locator('#dpages .dpage').count()) === 13 && (await page.locator('#dpages .dpage svg').count()) === 12);
   await page.screenshot({ path: path.join(SHOTS, 'draw-friends-390.png') });
-  await page.click('#dfriends button[aria-label="smiley"]');
+  await page.click('#dpages .dpage[aria-label="smiley"]');
   check('draw: smiley outline appears, crayon selected', (await line()) > 1000 && /on/.test(await page.getAttribute('#dtools [data-tool="crayon"]', 'class')));
   await page.click('#dtools [data-tool="paint"]');
   for (let y = 40; y < box.height - 30; y += 18) await stroke(20, y, box.width - 20, y, 8);
   await page.waitForTimeout(200);
   check('draw: coloring the friend sets off the cheer', (await page.getAttribute('#dstage', 'data-cheered')) === 'smiley');
   await page.screenshot({ path: path.join(SHOTS, 'draw-friend-done-390.png') });
-  // fridge
+  await page.click('#dbook');
+  check('draw: finished page gets a gold star in the book', (await page.locator('#dpages .dpage[aria-label="smiley"] .gold').count()) === 1);
+  await page.click('#dfriend [data-dclose]');
+  // fridge scene
   await page.click('#dfridgeBtn');
-  check('draw: fridge opens with empty slots', await page.isVisible('#dfridge') && (await page.locator('#dfgrid .slot').count()) === 3);
-  await page.click('#dfput'); await page.waitForTimeout(300);
+  check('draw: fridge scene with 9 empty spots, first spot glows', await page.isVisible('#dfridge .fridge') && (await page.locator('#dfslots .fslot.empty').count()) === 9 && (await page.locator('#dfslots .fslot.glow').count()) === 1);
+  await page.screenshot({ path: path.join(SHOTS, 'draw-fridge-empty-390.png') });
+  await page.click('#dfslots .fslot.glow'); await page.waitForTimeout(800);
   const fr = await page.evaluate(() => JSON.parse(localStorage.getItem('mojia.fridge') || '[]'));
-  check('draw: drawing goes on the fridge (this device only)', fr.length === 1 && /^data:image\/jpeg;base64,/.test(fr[0].src) && fr[0].src.length < 600000, String(fr[0] && fr[0].src.length));
-  check('draw: fresh page after hanging the drawing', (await ink()) === 0 && (await line()) === 0);
+  check('draw: tapping a spot hangs the drawing there (this device only)', fr.length === 1 && fr[0].slot === 0 && /^data:image\/jpeg;base64,/.test(fr[0].src) && fr[0].src.length < 600000, String(fr[0] && fr[0].src.length));
+  check('draw: fresh page after hanging the drawing', (await ink()) === 0 && (await line()) === 0 && (await page.locator('#dfslots .fslot.full').count()) === 1);
   await page.screenshot({ path: path.join(SHOTS, 'draw-fridge-390.png') });
-  await page.click('#dfput'); await page.waitForTimeout(200);
+  await page.click('#dfslots .fslot.empty'); await page.waitForTimeout(200);
   check('draw: empty page does not go on the fridge', (await page.evaluate(() => JSON.parse(localStorage.getItem('mojia.fridge')).length)) === 1);
-  await page.click('#dfgrid button'); await page.waitForTimeout(300);
+  await page.click('#dfslots .fslot.full'); await page.waitForTimeout(300);
   check('draw: tapping a fridge drawing opens it', await page.isHidden('#dfridge') && (await ink()) > 50000);
   const fits = await page.evaluate(() => document.documentElement.scrollWidth <= 390 && document.querySelector('#s-draw .helprow').getBoundingClientRect().height < 60);
   check('draw: fits 390 wide, help row on one line', fits);
@@ -814,6 +818,33 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   check('draw: Grown-ups remove a drawing', (await page.locator('#pwPhGrid img').count()) === 0 && (await page.evaluate(() => JSON.parse(localStorage.getItem('mojia.fridge')).length)) === 0);
   check('draw: zero third-party requests', page.reqs.every((u) => u.startsWith(base) || u.startsWith('data:')));
   check('draw: no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
+  await ctx.close();
+}
+
+
+// 11b. Emoji Draw: full fridge door sends the oldest drawing to the basket
+{
+  const { ctx, page } = await newPage();
+  await page.addInitScript(() => { if (sessionStorage.getItem('seeded')) return; sessionStorage.setItem('seeded', '1'); localStorage.setItem('mojia.demos', 'false'); localStorage.setItem('mojia.welcomed', 'true');
+    const c = document.createElement('canvas'); c.width = 30; c.height = 40; const src = c.toDataURL('image/png');
+    localStorage.setItem('mojia.fridge', JSON.stringify(Array.from({ length: 9 }, (_, i) => ({ id: 'd' + i, src, t: 1000 + i, slot: i })))); });
+  await page.goto(base + '/play/');
+  await page.click('#splash');
+  await page.click('[data-go="draw"]');
+  await page.waitForSelector('#s-draw:not(.hidden)'); await page.waitForTimeout(300);
+  const box = await page.locator('#dmain').boundingBox();
+  await page.mouse.move(box.x + 40, box.y + 60); await page.mouse.down(); await page.mouse.move(box.x + 200, box.y + 90, { steps: 10 }); await page.mouse.up();
+  await page.click('#dfridgeBtn'); await page.waitForTimeout(300);
+  const st = await page.evaluate(() => JSON.parse(localStorage.getItem('mojia.fridge')).map((x) => x.id + ':' + x.slot).join(','));
+  check('draw: full door moves the oldest drawing to the basket', /d0:-1/.test(st) && (await page.locator('#dfslots .fslot.empty.glow').count()) === 1 && (await page.textContent('#dbasket b')) === '1', st);
+  await page.screenshot({ path: path.join(SHOTS, 'draw-fridge-full-390.png') });
+  await page.click('#dfslots .fslot.glow'); await page.waitForTimeout(600);
+  check('draw: new drawing takes the open spot', (await page.locator('#dfslots .fslot.full').count()) === 9);
+  await page.click('#dbasket');
+  check('draw: basket shows the older drawing', await page.isVisible('#dfbasketview') && (await page.locator('#dfgrid img').count()) === 1);
+  await page.click('#dfback');
+  check('draw: back from the basket shows the fridge', await page.isVisible('#dfridge .fridge'));
+  check('draw: fridge and basket: no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
   await ctx.close();
 }
 
