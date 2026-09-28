@@ -1102,7 +1102,14 @@ const pay=(function(){
     $('#pwOkText').textContent=(p.kind==='forever'?'Forever pass on.':'Pass on until '+fmtT(p.ends_at)+'.')+(mail?' Code emailed to '+mail+'.':'');
     $('#pwOkHS').hidden=standalone(); go('allset'); return true; }
   $('#pwOkHow').addEventListener('click',()=>{ ctx(); sfx.boop(); showHow(); });
-  $('#pwOkShare').addEventListener('click',()=>{ ctx(); sfx.boop(); soon('Send code to another device'); });
+  /* Send the pass to another device: the phone's share sheet (Messages, Mail, AirDrop). Falls back to a sheet with the link and code. */
+  async function sharePass(){ const p=getPass(); if(!p||!p.code){ soon('Send code to another device'); return; }
+    const link=location.origin+'/r/'+p.code.replace(/-/g,''); const text='Mojialand pass. Open this on your other device and tap Turn on Mojialand: '+link+' Or type the code '+p.code+' under Grown-ups, Have a code?';
+    if(navigator.share){ try{ await navigator.share({title:'Mojialand pass',text:text,url:link}); return; }catch(e){ if(e&&e.name==='AbortError') return; } }
+    $('#pwSoonTitle').textContent='Send to another device'; $('#pwSoonText').innerHTML='On the other device, open this link:<br><b style="user-select:text;-webkit-user-select:text;word-break:break-all">'+link+'</b><br>Or type the code under Grown-ups, Have a code?:<br><b style="user-select:text;-webkit-user-select:text">'+p.code+'</b>';
+    try{ await navigator.clipboard.writeText(text); toast('Copied'); }catch(e){}
+    $('#pwOvSoon').classList.remove('hidden'); }
+  $('#pwOkShare').addEventListener('click',()=>{ ctx(); sfx.boop(); sharePass(); });
   $('#pwOkBack').addEventListener('click',()=>{ ctx(); sfx.boop(); go('home'); });
   $$('.pw-ov').forEach(ov=>ov.addEventListener('click',e=>{ if(e.target===ov||e.target.closest('[data-pw-close]')){ ov.classList.add('hidden'); } }));
 
@@ -1201,7 +1208,7 @@ const pay=(function(){
     $('#pwHSbtn').hidden=on; }
   $('#pwGuList').addEventListener('click',e=>{ const b=e.target.closest('.pw-gurow'); if(!b) return; ctx(); sfx.boop(); const a=b.dataset.a;
     if(a==='add'||a==='up') openGate('plans','gate',a); else if(a==='buy') openGate('plans','gate','pass');
-    else if(a==='share') soon('Send code to another device'); else if(a==='code') openCode(); else if(a==='help') openContact(); });
+    else if(a==='share') sharePass(); else if(a==='code') openCode(); else if(a==='help') openContact(); });
 
   function onScreen(name){ if(name==='ngate'){ newGate(); claimHandoff().then(ok=>{ if(ok) showAllset(); }); } else if(name==='plans') buildPlans(); else if(name==='gate') buildGU(); if(name!=='rest') $('#pwZeroChip').classList.remove('shake'); $$('.pw-ov').forEach(o=>o.classList.add('hidden')); paintChips(); }
   async function start(route){ deviceId(); rollDay(); await restoreFromUrl(); await verifyStored(); if(await claimHandoff()) route='allset'; ackEnd(getPass()); paintChips();

@@ -208,8 +208,10 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   const fits = await page.evaluate(() => { const s = document.querySelector('#s-allset'); return s.scrollHeight <= s.clientHeight + 1; });
   check('All set fits at 390x844 with no scrolling', fits);
   await page.screenshot({ path: path.join(SHOTS, 'allset-48h-390.png') });
+  await page.evaluate(() => { navigator.share = undefined; });
   await page.click('#pwOkShare');
-  check('Send code: Coming soon sheet', await page.isVisible('#pwOvSoon'));
+  await page.waitForSelector('#pwOvSoon:not(.hidden)');
+  check('Send code: sheet shows the /r/ link and the code when no share sheet exists', /\/r\/MOJITESTCODE2345/.test(await page.textContent('#pwSoonText')) && /MOJI-TEST-CODE-2345/.test(await page.textContent('#pwSoonText')));
   await page.click('#pwOvSoon [data-pw-close]');
   await page.click('#pwOkBack');
   await page.waitForSelector('#s-home:not(.hidden)');
