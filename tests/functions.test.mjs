@@ -12,7 +12,6 @@ import { handler as confirmSession } from '../netlify/functions/confirm-session.
 import { handler as webhook } from '../netlify/functions/stripe-webhook.mjs';
 import { handler as redeem } from '../netlify/functions/redeem-code.mjs';
 import { handler as contact } from '../netlify/functions/contact.mjs';
-import { handler as manifest } from '../netlify/functions/manifest.mjs';
 import { handler as adminLogin } from '../netlify/functions/admin-login.mjs';
 import { handler as adminApi } from '../netlify/functions/admin-api.mjs';
 import { handler as redeemFn } from '../netlify/functions/redeem-code.mjs';
@@ -351,19 +350,6 @@ test('contact: validates, saves, emails support with reply-to; works when the da
   assert.equal(r.statusCode, 200, 'email still goes out');
 });
 
-test('manifest: plain without a token; start_url carries a well-formed token and code', async () => {
-  const get = (q) => manifest({ httpMethod: 'GET', headers: {}, queryStringParameters: q });
-  let r = await get({});
-  assert.equal(r.statusCode, 200); assert.equal(r.headers['Content-Type'], 'application/manifest+json');
-  let m = JSON.parse(r.body);
-  assert.equal(m.start_url, '/play/'); assert.equal(m.scope, '/'); assert.equal(m.display, 'standalone');
-  const tok = signToken(makeTokenPayload({ id: 'p1', kind: '48h', ends_at: new Date(Date.now() + 3600e3).toISOString() }, 'staging'), process.env.PASS_SIGNING_PRIVATE_KEY);
-  r = await get({ r: tok, c: 'moji-abcd-efgh-jkmn' });
-  m = JSON.parse(r.body);
-  assert.equal(m.start_url, '/play/?restore=' + encodeURIComponent(tok) + '&code=MOJI-ABCD-EFGH-JKMN');
-  r = await get({ r: '<script>', c: 'x' });
-  assert.equal(JSON.parse(r.body).start_url, '/play/');
-});
 
 const codeFromEmail = () => /code is (\d{3}) (\d{3})/.exec(db.emails.at(-1).text).slice(1).join('');
 async function adminSignIn() {
@@ -471,14 +457,15 @@ test('handoff: Safari offers, the Home Screen app on the same phone claims once;
   const { pass, code } = await grantPass(paidSession('cs_test_ho1', 'pass'));
   const tok = signToken(makeTokenPayload(pass, 'staging'), process.env.PASS_SIGNING_PRIVATE_KEY);
   const safari = { 'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1' };
-  const app = { 'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148' };
-  assert.equal((await handoff(ev({ action: 'offer', token: 'nope', code }, safari))).statusCode, 400);
-  let r = await handoff(ev({ action: 'offer', token: tok, code }, safari));
+  const app = { 'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148', 'x-nf-client-connection-ip': '198.51.100.7' };
+  const traits = '393|852|3|America/Detroit|en-US|6';
+  assert.equal((await handoff(ev({ action: 'offer', token: 'nope', code, traits }, safari))).statusCode, 400);
+  let r = await handoff(ev({ action: 'offer', token: tok, code, traits }, safari));
   assert.equal(r.statusCode, 200); assert.equal(db.handoffs.length, 1);
-  assert.ok(!JSON.stringify(db.handoffs).includes('203.0.113.9'), 'address stored only as a hash');
-  r = await handoff(ev({ action: 'claim', device_id: 'c'.repeat(32) }, { ...app, 'x-nf-client-connection-ip': '198.51.100.7' }));
-  assert.equal(r.statusCode, 404, 'another phone gets nothing');
-  r = await handoff(ev({ action: 'claim', device_id: 'c'.repeat(32) }, app));
+  assert.ok(!JSON.stringify(db.handoffs).includes('Detroit'), 'traits stored only as a hash');
+  r = await handoff(ev({ action: 'claim', device_id: 'c'.repeat(32), traits: '430|932|3|America/Detroit|en-US|6' }, app));
+  assert.equal(r.statusCode, 404, 'a different phone model gets nothing');
+  r = await handoff(ev({ action: 'claim', device_id: 'c'.repeat(32), traits }, app), 'same phone, different network address still claims');
   assert.equal(r.statusCode, 200);
   const d = JSON.parse(r.body);
   assert.equal(d.token, tok); assert.equal(d.code, code); assert.equal(d.kind, '48h');

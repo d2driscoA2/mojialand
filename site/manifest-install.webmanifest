@@ -2,6 +2,7 @@
   "name": "Mojialand",
   "short_name": "Mojialand",
   "description": "Emoji games for little hands.",
+  "start_url": "/play/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",

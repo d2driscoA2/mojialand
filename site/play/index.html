@@ -13,7 +13,7 @@
 <link rel="icon" type="image/svg+xml" href="/logo/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/logo/icon-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/logo/icon-180.png">
-<link rel="manifest" href="/manifest.webmanifest">
+<link rel="manifest" href="/manifest.webmanifest"><!-- no start_url: iPhone opens the Home Screen app at the page it was added from, which carries the pass. Android and desktop switch to manifest-install.webmanifest below. -->
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}</style>
 <title>Mojialand</title>
 </head>
@@ -668,6 +668,8 @@ textarea.pw-in{resize:none;min-height:88px}
 <script>
 (function(){
 'use strict';
+/* Android and desktop Chrome need start_url for the install prompt. iPhone must not have one (see the link tag). */
+(function(){ if(!/iPhone|iPad|iPod/.test(navigator.userAgent)&&!(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)){ const l=document.querySelector('link[rel="manifest"]'); if(l) l.setAttribute('href','/manifest-install.webmanifest'); } })();
 /* Play settings. Defaults here; the admin page's values come from the server and are kept for the next open. */
 const SETTINGS={first_visit_minutes:15,daily_minutes:3,daily_reset:'04:00',warning_minutes:10,credit_days:7,devices_per_code:5};
 (function(){ function apply(o){ if(!o||typeof o!=='object') return; for(const k of Object.keys(SETTINGS)){ if(!(k in o)) continue; const v=o[k]; if(k==='daily_reset'){ if(/^([01]\d|2[0-3]):[0-5]\d$/.test(String(v))) SETTINGS[k]=String(v); } else { const n=Number(v); if(Number.isFinite(n)&&n>=0&&n<=100000) SETTINGS[k]=n; } } }
@@ -1097,22 +1099,22 @@ const pay=(function(){
 
   /* Home Screen handoff: an iPhone Home Screen app has its own storage. While a pass is on this device,
      the manifest link points at a copy whose start_url carries the pass, so the Home Screen app opens with it. */
-  function syncManifest(){ const link=document.querySelector('link[rel="manifest"]'); if(!link) return; const p=store.get('pass',null);
-    const href=p&&typeof p==='object'&&typeof p.token==='string'&&vcache.payload&&vcache.token===p.token?'/.netlify/functions/manifest?r='+encodeURIComponent(p.token)+(p.code?'&c='+encodeURIComponent(String(p.code)):''):'/manifest.webmanifest';
-    if(link.getAttribute('href')!==href) link.setAttribute('href',href);
+  /* iPhone opens the Home Screen app at the page address it was added from, so the address carries the pass while one is on. */
+  function syncManifest(){ const p=store.get('pass',null); const on=p&&typeof p==='object'&&typeof p.token==='string'&&vcache.payload&&vcache.token===p.token;
     offerHandoff();
-    /* the page address carries the pass too, in case the Home Screen app starts from the page address instead of start_url */
-    try{ const want=href==='/manifest.webmanifest'?'':'?restore='+encodeURIComponent(p.token)+(p.code?'&code='+encodeURIComponent(String(p.code)):''); if(location.search!==want) history.replaceState(null,'',location.pathname+want+location.hash); }catch(e){} }
+    try{ const want=on?'?restore='+encodeURIComponent(p.token)+(p.code?'&code='+encodeURIComponent(String(p.code)):''):''; if(location.search!==want) history.replaceState(null,'',location.pathname+want+location.hash); }catch(e){} }
   let dbgRestore='none', dbgClaim='not tried';
   /* Home Screen handoff, third channel: Safari parks the pass on the server for 30 minutes; the Home Screen app claims it. */
   const isStandalone=()=>{ try{ return window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true; }catch(e){ return false; } };
+  /* traits Safari and the Home Screen app share on one phone; no network address (it changes between the two) */
+  function deviceTraits(){ let tz=''; try{ tz=Intl.DateTimeFormat().resolvedOptions().timeZone||''; }catch(e){} const sc=window.screen||{}; return [sc.width||0,sc.height||0,window.devicePixelRatio||1,tz,navigator.language||'',navigator.hardwareConcurrency||0].join('|'); }
   function offerHandoff(){ const p=store.get('pass',null); if(!p||typeof p.token!=='string'||!vcache.payload||vcache.token!==p.token||isStandalone()) return;
     const last=store.get('offered',null); if(last&&last.token===p.token&&Date.now()-Number(last.at)<5*MIN) return;
     store.set('offered',{token:p.token,at:Date.now()});
-    fetch('/.netlify/functions/handoff',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'offer',token:p.token,code:p.code||''}),credentials:'same-origin',cache:'no-store'}).catch(()=>{}); }
+    fetch('/.netlify/functions/handoff',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'offer',token:p.token,code:p.code||'',traits:deviceTraits()}),credentials:'same-origin',cache:'no-store'}).catch(()=>{}); }
   let claiming=false, lastClaim=0;
   async function claimHandoff(){ if(!isStandalone()||passOn(getPass())||claiming||Date.now()-lastClaim<60000) return false; claiming=true; lastClaim=Date.now();
-    try{ const res=await fetch('/.netlify/functions/handoff',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'claim',device_id:deviceId()}),credentials:'same-origin',cache:'no-store'});
+    try{ const res=await fetch('/.netlify/functions/handoff',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'claim',device_id:deviceId(),traits:deviceTraits()}),credentials:'same-origin',cache:'no-store'});
       let d={}; try{ d=await res.json(); }catch(e){}
       if(res.status===200&&d&&typeof d.token==='string'&&await savePass(d)){ dbgClaim='ok'; store.set('allset',{plan:'redeem',email_masked:'',at:Date.now()}); claiming=false; return true; }
       dbgClaim=res.status===404?'nothing waiting':'failed '+res.status;
@@ -1178,7 +1180,7 @@ const pay=(function(){
     else if(passOn(p)){ const m=Math.max(0,Math.ceil((p.ends_at-Date.now())/MIN)); h='<b>48-hour pass on</b><span>Ends '+fmtT(p.ends_at)+(m<=60?' ('+m+' min left)':'')+(p.code?' · Code '+p.code:'')+'</span>'; }
     else if(graceOn()){ const m=Math.max(1,Math.ceil((graceInfo().until-Date.now())/MIN)); h='<b>Your pass is on its way</b><span>Payment received. Free play for '+m+' more min while it arrives. Your code also comes by email.</span>'; }
     else { const s=Math.ceil(freeLeft()/1000); h='<b>Free play</b><span>'+SETTINGS.first_visit_minutes+' minutes on the first visit, then '+SETTINGS.daily_minutes+' minutes a day. Resets each morning.</span><span>Left today: '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0')+'</span>'+(standalone()?'<span>Paid already? Open your pass email and tap the button, or tap Have a code? below.</span>':''); }
-    if(/displayedux\.com$|netlify\.app$/.test(location.hostname)){ const lk=document.querySelector('link[rel="manifest"]'); h+='<span style="opacity:.6">Staging check: '+(standalone()?'Home Screen app':'browser')+' · opened with pass in address: '+dbgRestore+' · manifest carries pass: '+(lk&&/functions\/manifest/.test(lk.getAttribute('href')||'')?'yes':'no')+' · server handoff: '+dbgClaim+'</span>'; }
+    if(/displayedux\.com$|netlify\.app$/.test(location.hostname)){ h+='<span style="opacity:.6">Staging check: '+(standalone()?'Home Screen app':'browser')+' · opened with pass in address: '+dbgRestore+' · address carries pass now: '+(/restore=/.test(location.search)?'yes':'no')+' · server handoff: '+dbgClaim+'</span>'; }
     const el=$('#pwStatus'); if(el.innerHTML!==h) el.innerHTML=h; }
   function buildGU(){ paintStatus(); const p=getPass(), rows=[];
     if(passOn(p)){ rows.push(['📲 Send code to another device','›','share']); if(p.kind==='48h') rows.push(['Add 48 hours',money(PRICES.add),'add'],['Upgrade to Forever',money(PRICES.up),'up']); }

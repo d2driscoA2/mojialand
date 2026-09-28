@@ -457,12 +457,10 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   const { token, payload } = tokenFor('48h', Date.now() + 40 * 3600e3);
   await page.goto(base + '/play/');
   await page.waitForTimeout(500);
-  check('manifest link is the plain file with no pass', (await page.getAttribute('link[rel="manifest"]', 'href')) === '/manifest.webmanifest');
+  check('manifest link on a non-iPhone is the install file with start_url', (await page.getAttribute('link[rel="manifest"]', 'href')) === '/manifest-install.webmanifest');
   await page.evaluate(([tok, e]) => localStorage.setItem('mojia.pass', JSON.stringify({ code: 'MOJI-HAND-OFFF-2345', kind: '48h', ends_at: e, token: tok })), [token, payload.e]);
   await page.reload(); await page.waitForTimeout(800);
-  const href = await page.getAttribute('link[rel="manifest"]', 'href');
-  check('manifest link carries the pass token and code', href === '/.netlify/functions/manifest?r=' + encodeURIComponent(token) + '&c=MOJI-HAND-OFFF-2345', href);
-  check('page address carries the pass too', new URL(page.url()).search === '?restore=' + encodeURIComponent(token) + '&code=MOJI-HAND-OFFF-2345', page.url());
+  check('page address carries the pass', new URL(page.url()).search === '?restore=' + encodeURIComponent(token) + '&code=MOJI-HAND-OFFF-2345', page.url());
   check('body is fixed so the app never scrolls under the status bar', (await page.evaluate(() => getComputedStyle(document.body).position)) === 'fixed');
   await ctx.close();
 }
@@ -482,6 +480,17 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await ctx.close();
 }
 
+// 9d1. iPhone gets the manifest with no start_url, so the Home Screen app opens the page it was added from
+{
+  const { ctx, page } = await newPage({ userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1' });
+  await page.goto(base + '/play/'); await page.waitForTimeout(400);
+  check('iphone: manifest link stays the file without start_url', (await page.getAttribute('link[rel="manifest"]', 'href')) === '/manifest.webmanifest');
+  const m = JSON.parse(fs.readFileSync(path.join(site, 'manifest.webmanifest'), 'utf8'));
+  const mi = JSON.parse(fs.readFileSync(path.join(site, 'manifest-install.webmanifest'), 'utf8'));
+  check('manifest files: iPhone one has no start_url, install one has /play/, both scope /', !('start_url' in m) && mi.start_url === '/play/' && m.scope === '/' && mi.scope === '/');
+  await ctx.close();
+}
+
 // 9d2. Home Screen handoff through the server: Safari offers, the standalone app claims
 {
   const { ctx, page } = await newPage();
@@ -492,7 +501,7 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await page.goto(base + '/play/');
   await page.evaluate(([tok, e]) => localStorage.setItem('mojia.pass', JSON.stringify({ code: 'MOJI-HAND-OFFF-2345', kind: '48h', ends_at: e, token: tok })), [token, payload.e]);
   await page.reload(); await page.waitForTimeout(900);
-  check('safari: offers the pass to the server once', offers.length === 1 && offers[0].action === 'offer' && offers[0].token === token && offers[0].code === 'MOJI-HAND-OFFF-2345', JSON.stringify(offers).slice(0, 80));
+  check('safari: offers the pass to the server once, with device traits', offers.length === 1 && offers[0].action === 'offer' && offers[0].token === token && offers[0].code === 'MOJI-HAND-OFFF-2345' && /\|/.test(offers[0].traits), JSON.stringify(offers).slice(0, 80));
   await page.reload(); await page.waitForTimeout(700);
   check('safari: no second offer within 10 minutes', offers.length === 1);
   await ctx.close();
