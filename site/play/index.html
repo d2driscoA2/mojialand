@@ -474,27 +474,8 @@ textarea.pw-in{resize:none;min-height:88px}
 .gamebtn.drawbtn .dtx{display:flex;flex-direction:column;align-items:flex-start;line-height:1.1}
 .gamebtn.drawbtn small{color:var(--purple-d)}
 #s-draw{gap:10px}
-.drow{display:flex;gap:6px;align-items:center;min-height:52px}
-.dur{flex:0 0 auto;width:48px;height:52px;border-radius:16px;border:2px solid var(--purple);background:var(--white);font-size:24px;line-height:1;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);cursor:pointer;padding:0;transition:opacity .15s,transform .1s}
-.dur:active{transform:scale(.92)}
-.dur.off{opacity:.35;border-color:var(--line)}
-.dsep{flex:0 0 2px;height:36px;border-radius:2px;background:var(--line)}
-.dtools{flex:1;min-width:0;display:flex;gap:6px;overflow-x:auto;padding:4px 2px;scrollbar-width:none;scroll-snap-type:x proximity}
-.dtools::-webkit-scrollbar{display:none}
-.dtools.more{-webkit-mask-image:linear-gradient(to right,#000 80%,transparent);mask-image:linear-gradient(to right,#000 80%,transparent)}
-.dtool{width:50px;height:50px;flex:0 0 auto;border-radius:16px;border:2px solid var(--line);background:var(--white);font-size:27px;line-height:1;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);cursor:pointer;padding:0;position:relative;transition:transform .12s;scroll-snap-align:start}
-.dtool.on{border:3px solid var(--purple);background:var(--purple-l);transform:scale(1.06)}
 .dtool .mini{position:absolute;right:-5px;bottom:-5px;font-size:16px}
 .dtool:focus-visible,.dsw:focus-visible,.dur:focus-visible,.dsize:focus-visible{outline:3px solid var(--purple-d);outline-offset:2px}
-.drow2{display:flex;gap:6px;align-items:center;min-height:48px}
-.dsize{flex:0 0 auto;width:44px;height:44px;border-radius:999px;border:2px solid var(--line);background:var(--white);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);cursor:pointer;padding:0}
-.dsize i{display:block;border-radius:999px;background:var(--ink);transition:width .15s,height .15s}
-.dswatches{flex:1;min-width:0;display:flex;justify-content:space-between;align-items:center}
-.dsw{flex:0 0 44px;width:44px;height:44px;border:0;background:none;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:center}
-.dsw i{display:block;width:34px;height:34px;border-radius:999px;border:3px solid #fff;box-shadow:0 0 0 2px var(--line),var(--shadow);transition:transform .12s}
-.dsw.on i{box-shadow:0 0 0 3px var(--purple),var(--shadow);transform:scale(1.15)}
-#dtray{flex:1;min-width:0;padding:2px}
-#dtray .tile{width:44px;height:44px;font-size:26px}
 #dstage{touch-action:none;background:var(--white)}
 .dlayers{position:absolute;inset:0}
 .dlayers canvas{position:absolute;left:0;top:0;width:100%;height:100%;display:block}
@@ -565,6 +546,8 @@ textarea.pw-in{resize:none;min-height:88px}
 #s-draw .helpbtn.dicon svg{width:28px;height:28px}
 .dtool .mini,.dicon .mini{position:absolute;right:-5px;bottom:-5px;font-size:16px}
 #s-draw .helpbtn.dicon{position:relative}
+#s-draw .dbthumb{width:36px;height:40px;box-sizing:border-box;padding:3px 2px 3px 6px;border-radius:5px;background:#fff;box-shadow:0 0 0 2px #D5C6F2;display:flex;transform:rotate(-4deg)}
+#s-draw .dbthumb svg{width:100%;height:100%}
 /* ---------- HOME: big stamp canvas first, games below the fold (tile spec, September 28) ---------- */
 #s-home{overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 #s-home>*{flex-shrink:0}
@@ -620,6 +603,44 @@ textarea.pw-in{resize:none;min-height:88px}
 .hs-dr{stroke-dasharray:200;stroke-dashoffset:200;animation:hsdraw 3s ease-in-out infinite}
 @keyframes hsdraw{0%{stroke-dashoffset:200}60%,85%{stroke-dashoffset:0}100%{stroke-dashoffset:-200}}
 @media (prefers-reduced-motion: reduce){.hs-pi,.hs-pq,.hs-ball,.hs-bsh,.hs-card,.hs-face,.hs-march,.hs-dr,.hplay{animation:none}.hs-face{opacity:1}.hs-dr{stroke-dashoffset:0}}
+/* Draw toolbar, September 28 round 3: every tool visible (no scrolling), three size dots, undo and redo in the top bar */
+.dur2{display:flex;gap:8px}
+.dur.derase.on{border:3px solid var(--purple);background:var(--purple-l);transform:scale(1.06)}
+.dur{width:52px;height:48px;border-radius:16px;border:2px solid var(--purple);background:var(--white);font-size:24px;line-height:1;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);cursor:pointer;padding:0;transition:opacity .15s,transform .1s}
+.dur:active{transform:scale(.92)}
+.dur.off{opacity:.35;border-color:var(--line)}
+.dctl{display:flex;flex-direction:column;gap:8px}
+.dtools{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+.dtool{height:52px;border-radius:16px;border:2px solid var(--line);background:var(--white);font-size:28px;line-height:1;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);cursor:pointer;padding:0;position:relative;transition:transform .12s}
+.dtool.on{border:3px solid var(--purple);background:var(--purple-l);transform:scale(1.06);z-index:1}
+.dsizes{display:flex;gap:12px;justify-content:center}
+.dsize{width:52px;height:44px;border-radius:22px;border:2px solid var(--line);background:var(--white);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);cursor:pointer;padding:0}
+.dsize.on{border:3px solid var(--purple);background:var(--purple-l)}
+.dsize i{display:block;border-radius:999px;background:var(--ink)}
+.dswatches{display:flex;justify-content:space-between;align-items:center}
+.dsw{flex:0 0 44px;width:44px;height:44px;border:0;background:none;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.dsw i{display:block;width:34px;height:34px;border-radius:999px;border:3px solid #fff;box-shadow:0 0 0 2px var(--line),var(--shadow);transition:transform .12s}
+.dsw.on i{box-shadow:0 0 0 3px var(--purple),var(--shadow);transform:scale(1.15)}
+#dtray{padding:2px;min-height:48px}
+#dtray .tile{width:44px;height:44px;font-size:26px}
+.trailico{position:relative;width:40px;height:34px;display:block}
+.trailico i{position:absolute;font-style:normal;font-size:15px;line-height:1}
+.trailico i:nth-child(1){left:0;top:17px}.trailico i:nth-child(2){left:12px;top:6px}.trailico i:nth-child(3){left:24px;top:15px}
+@media (min-width:700px){ #s-draw .dswatches{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));justify-items:center;gap:8px 0} #s-draw .trailico{transform:scale(1.15)} }
+body.in-draw #app{max-width:none}
+@media (min-width:700px){
+  #s-draw{display:grid;grid-template-columns:minmax(260px,300px) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;column-gap:18px;row-gap:14px;padding-left:max(16px,calc((100% - 1240px)/2));padding-right:max(16px,calc((100% - 1240px)/2))}
+  #s-draw>.bar,#s-draw>.helprow{grid-column:1/-1}
+  #s-draw .dctl{grid-column:1;grid-row:2;align-self:start;background:var(--white);border:2px solid var(--line);border-radius:var(--r);padding:14px;gap:14px;box-shadow:var(--shadow);max-height:100%;overflow-y:auto}
+  #s-draw #dstage{grid-column:2;grid-row:2}
+  #s-draw .dtools{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  #s-draw .dtool{height:60px;font-size:32px}
+  #s-draw .dswatches{flex-wrap:wrap;justify-content:flex-start;gap:6px 8px}
+  #s-draw .dsizes{justify-content:space-between}
+  #s-draw .dsize{flex:1;height:52px}
+  #s-draw #dtray{display:flex;flex-wrap:wrap;overflow:visible;gap:8px}
+  #s-draw #dtray.hidden{display:none}
+}
 </style>
 
 <div id="app">
@@ -671,9 +692,8 @@ textarea.pw-in{resize:none;min-height:88px}
 
 <!-- DRAW -->
 <section class="screen hidden" id="s-draw" data-bg="grape">
-  <div class="bar"><button class="pill gear" data-go="home" aria-label="Back to home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7138D1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg></button><div class="gname"><span class="e">🖍️</span>Draw</div><div class="pw-slot"><span class="pw-chip" data-chip role="timer"><svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="14" fill="none" stroke="#F3ECFC" stroke-width="6"/><circle class="arc" cx="18" cy="18" r="14" fill="none" stroke="#FFC83D" stroke-width="6" stroke-linecap="round" stroke-dasharray="88" stroke-dashoffset="0" transform="rotate(-90 18 18)"/></svg><span class="t">15:00</span></span></div></div>
-  <div class="drow"><button class="dur off" id="dundo" aria-label="Undo"><span aria-hidden="true">↩️</span></button><button class="dur off" id="dredo" aria-label="Redo"><span aria-hidden="true">↪️</span></button><span class="dsep" aria-hidden="true"></span><div class="dtools" id="dtools" role="toolbar" aria-label="Drawing tools"></div></div>
-  <div class="drow2"><button class="dsize" id="dsize" aria-label="Size: medium"><i></i></button><div class="dswatches" id="dswatches" role="radiogroup" aria-label="Colors"></div><div class="tray hidden" id="dtray"></div></div>
+  <div class="bar"><button class="pill gear" data-go="home" aria-label="Back to home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7138D1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg></button><div class="dur2"><button class="dur off" id="dundo" aria-label="Undo"><span aria-hidden="true">↩️</span></button><button class="dur off" id="dredo" aria-label="Redo"><span aria-hidden="true">↪️</span></button><button class="dur derase" id="derase" aria-label="Eraser" aria-pressed="false"><svg viewBox="0 0 32 32" width="30" height="30" aria-hidden="true"><g transform="rotate(-35 16 16)"><rect x="4" y="10" width="24" height="12" rx="3" fill="#FF5FA2" stroke="#7138D1" stroke-width="2.2"/><rect x="17" y="10" width="11" height="12" rx="3" fill="#FFFFFF" stroke="#7138D1" stroke-width="2.2"/><path d="M8 13.5h6" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity=".7"/></g></svg></button></div><div class="pw-slot"><span class="pw-chip" data-chip role="timer"><svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="14" fill="none" stroke="#F3ECFC" stroke-width="6"/><circle class="arc" cx="18" cy="18" r="14" fill="none" stroke="#FFC83D" stroke-width="6" stroke-linecap="round" stroke-dasharray="88" stroke-dashoffset="0" transform="rotate(-90 18 18)"/></svg><span class="t">15:00</span></span></div></div>
+  <div class="dctl"><div class="dtools" id="dtools" role="toolbar" aria-label="Drawing tools"></div><div class="dsizes" id="dsizes" role="radiogroup" aria-label="Sizes"></div><div class="dswatches" id="dswatches" role="radiogroup" aria-label="Colors"></div><div class="tray hidden" id="dtray"></div></div>
   <div class="stage" id="dstage">
     <div class="dlayers" id="dlayers"><canvas id="dmain"></canvas><canvas id="dlive"></canvas><canvas id="dline"></canvas></div>
     <div class="dpanel dbookp hidden" id="dfriend" role="dialog" aria-label="Coloring book"><button class="dx" data-dclose aria-label="Close"><span aria-hidden="true">✖️</span></button><div class="dbookhead" aria-hidden="true"><span>📖</span><span>🖍️</span></div><div class="dpages" id="dpages"></div></div>
@@ -683,7 +703,7 @@ textarea.pw-in{resize:none;min-height:88px}
     </div>
     <div class="dpanel hidden" id="dconfirm" role="dialog" aria-label="Clear your drawing?"><div class="dcsnap"><img id="dcimg" alt=""><span class="dctrash" aria-hidden="true">🗑️</span></div><div class="dcbtns"><button class="big danger" id="dcyes" aria-label="Yes, clear my drawing"><span aria-hidden="true">🗑️</span></button><button class="big no" id="dcno" aria-label="Keep my drawing"><span aria-hidden="true">↩️</span></button></div></div>
   </div>
-  <div class="helprow"><button class="helpbtn" data-demo="draw"><span aria-hidden="true">❓</span>How to play</button><button class="helpbtn act dicon" id="dbook" aria-label="Coloring book"><span aria-hidden="true">📖</span><span class="mini" aria-hidden="true">🖍️</span></button><button class="helpbtn act dicon" id="dfridgeBtn" aria-label="Fridge"><svg viewBox="0 0 24 24" fill="none" stroke="#7138D1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="1.5" width="14" height="21" rx="3"/><path d="M5 8.5h14M8 4.2v2M8 11v4"/><rect x="11" y="12" width="5.5" height="6.5" rx="1" fill="#FF5FA2" stroke="none"/><circle cx="13.75" cy="11.6" r="1.3" fill="#FFC83D" stroke="none"/></svg></button><button class="helpbtn act danger dicon" id="dclear" aria-label="Clear"><span aria-hidden="true">🗑️</span></button></div>
+  <div class="helprow"><button class="helpbtn" data-demo="draw"><span aria-hidden="true">❓</span>How to play</button><button class="helpbtn act dicon" id="dbook" aria-label="Coloring book"><span class="dbthumb" id="dbthumb" aria-hidden="true"></span><span class="mini" aria-hidden="true">🖍️</span></button><button class="helpbtn act dicon" id="dfridgeBtn" aria-label="Fridge"><svg viewBox="0 0 24 24" fill="none" stroke="#7138D1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="1.5" width="14" height="21" rx="3"/><path d="M5 8.5h14M8 4.2v2M8 11v4"/><rect x="11" y="12" width="5.5" height="6.5" rx="1" fill="#FF5FA2" stroke="none"/><circle cx="13.75" cy="11.6" r="1.3" fill="#FFC83D" stroke="none"/></svg></button><button class="helpbtn act danger dicon" id="dclear" aria-label="Clear"><span aria-hidden="true">🗑️</span></button></div>
 </section>
 
 <!-- EMOJI PICKER (shared) -->
@@ -914,7 +934,7 @@ function confetti(host,x,y,n){ const cols=['#FF6FAE','#4CC9F0','#FFC83D','#8AE23
 const screens={home:'#s-home',pattern:'#s-pattern',bounce:'#s-bounce',match:'#s-match',parade:'#s-parade',draw:'#s-draw',gate:'#s-gate',rest:'#s-rest',ngate:'#s-ngate',plans:'#s-plans',allset:'#s-allset'};
 let current='home';
 const games={};
-function go(name){ stopDemo(); closeGlass(); if(games[current]&&games[current].leave) games[current].leave(); $$('.screen').forEach(s=>s.classList.add('hidden')); $(screens[name]).classList.remove('hidden'); current=name; homeNote(name); if(name==='home') homeRefresh(); onScreen(name); if(games[name]&&games[name].enter) games[name].enter(); if(games[name]&&settings.demos&&!demoDone[name]) setTimeout(()=>showGlass(name),350); }
+function go(name){ stopDemo(); closeGlass(); if(games[current]&&games[current].leave) games[current].leave(); $$('.screen').forEach(s=>s.classList.add('hidden')); $(screens[name]).classList.remove('hidden'); current=name; document.body.classList.toggle('in-draw',name==='draw'); homeNote(name); if(name==='home') homeRefresh(); onScreen(name); if(games[name]&&games[name].enter) games[name].enter(); if(games[name]&&settings.demos&&!demoDone[name]) setTimeout(()=>showGlass(name),350); }
 document.addEventListener('click',e=>{ const b=e.target.closest('[data-go]'); if(b){ ctx(); sfx.boop(); go(b.dataset.go);} const d=e.target.closest('[data-demo]'); if(d){ ctx(); sfx.boop(); showGlass(d.dataset.demo);} });
 
 /* ---------- how-to-play glass cards ---------- */
@@ -1184,11 +1204,11 @@ games.draw=(function(){
   const mx=cMain.getContext('2d'), lx=cLive.getContext('2d'), ox=cLine.getContext('2d');
   const scr=document.createElement('canvas'), sx=scr.getContext('2d');
   const COLORS=[['#7138D1','purple'],['#FF5FA2','pink'],['#FFC83D','yellow'],['#4DBCEC','blue'],['#72D69A','green'],['#30254A','black'],['#FFFFFF','white']];
-  const TOOLS=[['crayon','🖍️','Crayon'],['marker','🖊️','Marker'],['pen','✒️','Pen'],['paint','🖌️','Paint brush'],['rainbow','🌈','Rainbow brush'],['glitter','✨','Glitter'],['sprinkles','🧁','Sprinkles'],['eraser','🧽','Eraser'],['trail','','Emoji brush'],['stamp','','Emoji stamp']];
-  const SIZES={crayon:[8,16,28],marker:[6,12,22],pen:[2,4,7],paint:[16,30,48],rainbow:[8,16,28],glitter:[10,20,34],sprinkles:[20,30,44],eraser:[14,28,52],trail:[22,34,50],stamp:[40,64,96]};
-  const SIZE_NAMES=['small','medium','big'], DOT=[8,14,22];
+  const TOOLS=[['crayon','🖍️','Crayon'],['marker','🖊️','Marker'],['pen','✒️','Pen'],['paint','🖌️','Paint brush'],['sponge','🧽','Sponge'],['trail','','Emoji brush'],['rainbow','🌈','Rainbow brush'],['glitter','✨','Glitter'],['sprinkles','🧁','Sprinkles'],['scoop','🍦','Ice cream'],['waffle','🧇','Waffle cone'],['stamp','','Emoji stamp']];
+  const SIZES={crayon:[8,16,28],marker:[6,12,22],pen:[2,4,7],paint:[16,30,48],rainbow:[8,16,28],glitter:[10,20,34],sprinkles:[20,30,44],scoop:[20,34,52],waffle:[18,30,46],eraser:[14,28,52],sponge:[20,34,56],trail:[22,34,50],stamp:[40,64,96]};
+  const SIZE_NAMES=['small','medium','big'], DOT=[8,16,26];
   const EMO='"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
-  const INK=new Set(['crayon','marker','pen','paint','glitter','sprinkles']);
+  const INK=new Set(['crayon','marker','pen','paint','glitter','sprinkles','scoop','waffle']);
   /* Coloring book pages on a 200 by 200 grid. sil: outer shapes (filled for the coloring check, stroked as outline). det: inside lines. dots: filled eyes and details. */
   const C=(cx,cy,r,ry)=>'M'+cx+' '+(cy-(ry||r))+'a'+r+' '+(ry||r)+' 0 1 0 .01 0Z';
   const FRIENDS=[
@@ -1250,7 +1270,7 @@ games.draw=(function(){
   /* ---- canvas size ---- */
   function size(){ const r=cMain.getBoundingClientRect(); if(!r.width||!r.height) return; const nd=Math.min(2,window.devicePixelRatio||1); if(r.width===W&&r.height===H&&nd===dpr) return;
     W=r.width; H=r.height; dpr=nd; [cMain,cLive,cLine,scr].forEach(c=>{ c.width=Math.round(W*dpr); c.height=Math.round(H*dpr); }); [mx,lx,ox,sx].forEach(x=>x.setTransform(dpr,0,0,dpr,0,0)); grainPat=sx.createPattern(grain,'repeat'); samples=null; redraw(); }
-  window.addEventListener('resize',()=>{ if(current==='draw') size(); });
+  window.addEventListener('resize',()=>{ if(current==='draw') requestAnimationFrame(size); });
 
   /* ---- stroke renderers: each draws one whole stroke into the scratch canvas, then lands on the target ---- */
   function pts2(p){ const a=[]; for(let i=0;i<p.length;i+=2) a.push([p[i],p[i+1]]); return a; }
@@ -1296,8 +1316,21 @@ games.draw=(function(){
     x.globalAlpha=1;
     for(let i=0;i<a.length;i++){ const p=a[Math.max(0,i-1)], q=a[i], d=Math.hypot(q[0]-p[0],q[1]-p[1]), n=i===0?3:Math.round(d/Math.max(3,w/5));
       for(let k=0;k<n;k++){ const t=n>1?k/n:0, ang=r()*6.2832, rr=Math.sqrt(r())*w/2; bit(p[0]+(q[0]-p[0])*t+Math.cos(ang)*rr,p[1]+(q[1]-p[1])*t+Math.sin(ang)*rr); } } }
-  const RENDER={crayon:drawCrayon,marker:drawMarker,pen:drawPen,paint:drawPaint,rainbow:drawRainbow,glitter:drawGlitter,sprinkles:drawSprinkles};
-  function renderStroke(t,o,live){ if(o.tool==='eraser'){ t.save(); t.globalCompositeOperation='destination-out'; t.lineCap='round'; t.lineJoin='round'; t.lineWidth=o.w; t.strokeStyle='#000'; path(t,pts2(o.pts)); t.stroke(); t.restore(); return; }
+  /* Ice cream scoop: a creamy round stroke in the picked color with a soft shine on top and a shadow below. */
+  function drawScoop(x,o){ const a=pts2(o.pts), w=o.w; x.lineCap='round'; x.lineJoin='round'; x.globalAlpha=1;
+    x.save(); x.translate(0,w*.1); x.strokeStyle=mix(o.color,.22,[48,37,74]); x.lineWidth=w; path(x,a); x.stroke(); x.restore();
+    x.strokeStyle=o.color; x.lineWidth=w; path(x,a); x.stroke();
+    x.save(); x.translate(-w*.14,-w*.16); x.globalAlpha=.55; x.strokeStyle=mix(o.color,.5); x.lineWidth=w*.38; path(x,a); x.stroke(); x.restore(); x.globalAlpha=1; }
+  /* Waffle cone: a golden stroke with a criss-cross waffle pattern inside and a toasted edge. */
+  function drawWaffle(x,o){ const a=pts2(o.pts), w=o.w; x.lineCap='round'; x.lineJoin='round'; x.globalAlpha=1;
+    x.strokeStyle='#C98B3E'; x.lineWidth=w; path(x,a); x.stroke(); x.strokeStyle='#EDBE72'; x.lineWidth=w*.84; path(x,a); x.stroke();
+    let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9; a.forEach(p=>{ x0=Math.min(x0,p[0]); y0=Math.min(y0,p[1]); x1=Math.max(x1,p[0]); y1=Math.max(y1,p[1]); }); x0-=w; y0-=w; x1+=w; y1+=w;
+    const gap=Math.max(7,w*.34), L=(x1-x0)+(y1-y0); x.save(); x.globalCompositeOperation='source-atop'; x.strokeStyle='#C98B3E'; x.lineWidth=Math.max(1.5,w*.07); x.lineCap='butt'; x.beginPath();
+    for(let d=-L;d<L;d+=gap){ x.moveTo(x0+d,y0); x.lineTo(x0+d+(y1-y0),y1); x.moveTo(x0+d,y1); x.lineTo(x0+d+(y1-y0),y0); } x.stroke();
+    x.strokeStyle='rgba(255,255,255,.35)'; x.lineWidth=Math.max(1,w*.04); x.beginPath(); for(let d=-L;d<L;d+=gap){ x.moveTo(x0+d+2,y0); x.lineTo(x0+d+2+(y1-y0),y1); } x.stroke(); x.restore(); }
+  const RENDER={crayon:drawCrayon,marker:drawMarker,pen:drawPen,paint:drawPaint,rainbow:drawRainbow,glitter:drawGlitter,sprinkles:drawSprinkles,scoop:drawScoop,waffle:drawWaffle};
+  function renderStroke(t,o,live){ if(o.tool==='sponge'){ const q=pts2(o.pts); for(let i=1;i<q.length;i++) smearSeg(t,q[i-1],q[i],o.w); return; }
+    if(o.tool==='eraser'){ t.save(); t.globalCompositeOperation='destination-out'; t.lineCap='round'; t.lineJoin='round'; t.lineWidth=o.w; t.strokeStyle='#000'; path(t,pts2(o.pts)); t.stroke(); t.restore(); return; }
     sx.save(); sx.setTransform(1,0,0,1,0,0); sx.clearRect(0,0,scr.width,scr.height); sx.restore(); sx.save(); RENDER[o.tool](sx,o); sx.restore();
     t.save(); t.setTransform(1,0,0,1,0,0); t.globalAlpha=o.tool==='marker'?.82:o.tool==='crayon'?.95:1;
     t.globalCompositeOperation=(o.tool==='marker'&&!live&&o.color!=='#FFFFFF')?'multiply':'source-over'; t.drawImage(scr,0,0); t.restore(); }
@@ -1326,21 +1359,30 @@ games.draw=(function(){
   /* ---- drawing input ---- */
   function pt(ev){ const r=cMain.getBoundingClientRect(); return [ev.clientX-r.left,ev.clientY-r.top]; }
   function w(){ return SIZES[tool][sizeI]; }
-  function renderLive(){ liveRaf=0; if(!cur||cur.t!=='s'||cur.tool==='eraser') return; lx.clearRect(0,0,W,H); renderStroke(lx,cur,true); }
+  function renderLive(){ liveRaf=0; if(!cur||cur.t!=='s'||cur.tool==='eraser'||cur.tool==='sponge') return; lx.clearRect(0,0,W,H); renderStroke(lx,cur,true); }
   function liveSoon(){ if(!liveRaf) liveRaf=requestAnimationFrame(renderLive); }
   function addTrail(p){ const s=w(), it=[p[0],p[1],emo,s*(.8+Math.random()*.4),(Math.random()-.5)*.6]; cur.items.push(it); drawEmo(lx,it); if(settings.sound) tone(520+(trailN++%6)*60,0,.07,'sine',.1); }
   function stampAt(p){ const it=[p[0],p[1],emo,w(),(Math.random()-.5)*.3]; push({t:'e',items:[it]}); drawEmo(mx,it); sfx.boop(); const n=ops.filter(o=>o.t==='e').length; if(n%5===1) say(nameOf(emo)); checkFriend(); }
   function eraseSeg(a,b){ mx.save(); mx.globalCompositeOperation='destination-out'; mx.lineCap='round'; mx.lineWidth=cur.w; mx.strokeStyle='#000'; mx.beginPath(); mx.moveTo(a[0],a[1]); mx.lineTo(b[0]+.01,b[1]); mx.stroke(); mx.restore(); }
+  /* Wet sponge: each step lifts the paint under the sponge and drags it forward, and thins the color a little like water. Replays the same way on undo and redo. */
+  const smc=document.createElement('canvas'), smx=smc.getContext('2d');
+  function smearDab(t,a,b,r){ const d=Math.max(2,Math.round(2*r*dpr)); if(smc.width!==d){ smc.width=smc.height=d; }
+    smx.globalCompositeOperation='copy'; smx.drawImage(t.canvas,Math.round((a[0]-r)*dpr),Math.round((a[1]-r)*dpr),d,d,0,0,d,d);
+    smx.globalCompositeOperation='destination-in'; const g=smx.createRadialGradient(d/2,d/2,0,d/2,d/2,d/2); g.addColorStop(0,'rgba(0,0,0,.6)'); g.addColorStop(.6,'rgba(0,0,0,.4)'); g.addColorStop(1,'rgba(0,0,0,0)'); smx.fillStyle=g; smx.fillRect(0,0,d,d);
+    t.save(); t.globalCompositeOperation='destination-out'; const h=t.createRadialGradient(b[0],b[1],0,b[0],b[1],r); h.addColorStop(0,'rgba(0,0,0,.05)'); h.addColorStop(1,'rgba(0,0,0,0)'); t.fillStyle=h; t.beginPath(); t.arc(b[0],b[1],r,0,Math.PI*2); t.fill();
+    t.globalCompositeOperation='source-over'; t.drawImage(smc,b[0]-r,b[1]-r,2*r,2*r); t.restore(); }
+  function smearSeg(t,a,b,wd){ const r=wd/2, dist=Math.hypot(b[0]-a[0],b[1]-a[1]), step=Math.max(2,r*.22), n=Math.max(1,Math.ceil(dist/step)); let pa=a;
+    for(let i=1;i<=n;i++){ const pb=[a[0]+(b[0]-a[0])*i/n,a[1]+(b[1]-a[1])*i/n]; smearDab(t,pa,pb,r); pa=pb; } }
   function begin(p){ if(tool==='stamp'){ stampAt(p); return false; }
     if(tool==='trail'){ cur={t:'e',items:[]}; travel=0; addTrail(p); last=p; return true; }
     cur={t:'s',tool,color,w:w(),pts:[p[0],p[1]],seed:(Math.random()*1e9)|0}; last=p;
     cLive.style.mixBlendMode=tool==='marker'&&color!=='#FFFFFF'?'multiply':'normal';
-    if(tool==='eraser') eraseSeg(p,p); else renderLive();
-    if(settings.sound){ if(tool==='paint') sfx.whoosh(); else if(tool==='glitter') tone(1200,0,.06,'sine',.06); else if(tool==='sprinkles'){ tone(900,0,.04,'triangle',.07); tone(1300,.05,.04,'triangle',.06); } else tone(tool==='crayon'?240:tool==='pen'?520:360,0,.08,'triangle',.08); } return true; }
+    if(tool==='eraser') eraseSeg(p,p); else if(tool!=='sponge') renderLive();
+    if(settings.sound){ if(tool==='paint') sfx.whoosh(); else if(tool==='glitter') tone(1200,0,.06,'sine',.06); else if(tool==='sponge'){ tone(160,0,.12,'sine',.1); tone(220,.05,.1,'sine',.06); } else if(tool==='sprinkles'){ tone(900,0,.04,'triangle',.07); tone(1300,.05,.04,'triangle',.06); } else tone(tool==='crayon'?240:tool==='pen'?520:360,0,.08,'triangle',.08); } return true; }
   function move(p){ if(!cur) return; const d=Math.hypot(p[0]-last[0],p[1]-last[1]); if(d<1.5) return;
     if(cur.t==='e'){ travel+=d; last=p; if(travel>=Math.max(26,cur.items.length?w()*.9:0)){ travel=0; addTrail(p); } return; }
-    cur.pts.push(p[0],p[1]); if(cur.tool==='eraser') eraseSeg(last,p); else liveSoon(); last=p; }
-  function end(){ if(!cur) return; const o=cur; cur=null; cancelAnimationFrame(liveRaf); liveRaf=0; lx.clearRect(0,0,W,H); if(o.t==='e'&&!o.items.length) return; push(o); if(o.tool!=='eraser') renderOp(mx,o); checkFriend(); }
+    cur.pts.push(p[0],p[1]); if(cur.tool==='eraser') eraseSeg(last,p); else if(cur.tool==='sponge'){ smearSeg(mx,last,p,cur.w); if(settings.sound&&Math.random()<.08) tone(180+Math.random()*60,0,.06,'sine',.05); } else liveSoon(); last=p; }
+  function end(){ if(!cur) return; const o=cur; cur=null; cancelAnimationFrame(liveRaf); liveRaf=0; lx.clearRect(0,0,W,H); if(o.t==='e'&&!o.items.length) return; push(o); if(o.tool!=='eraser'&&o.tool!=='sponge') renderOp(mx,o); checkFriend(); }
   stage.addEventListener('pointerdown',ev=>{ if(ev.target.closest('.dpanel')) return; if(pid!==null) return; ctx(); size(); if(!W) return; ev.preventDefault();
     if(begin(pt(ev))){ pid=ev.pointerId; try{ stage.setPointerCapture(pid); }catch(e){} } });
   stage.addEventListener('pointermove',ev=>{ if(ev.pointerId!==pid) return; const list=ev.getCoalescedEvents?ev.getCoalescedEvents():[]; (list.length?list:[ev]).forEach(e=>move(pt(e))); });
@@ -1348,18 +1390,17 @@ games.draw=(function(){
   stage.addEventListener('pointerup',up); stage.addEventListener('pointercancel',up);
 
   /* ---- tools, sizes, colors, emoji tray ---- */
-  const toolsEl=$('#dtools'), swEl=$('#dswatches'), trayEl=$('#dtray'), sizeEl=$('#dsize');
+  const toolsEl=$('#dtools'), swEl=$('#dswatches'), trayEl=$('#dtray'), sizesEl=$('#dsizes');
   TOOLS.forEach(([id,ico,label])=>{ const b=document.createElement('button'); b.className='dtool'+(id===tool?' on':''); b.dataset.tool=id; b.setAttribute('aria-label',label); if(ico) b.innerHTML='<span aria-hidden="true">'+ico+'</span>';
     b.onclick=()=>{ ctx(); sfx.boop(); setTool(id); say(label); }; toolsEl.appendChild(b); });
-  function fadeTools(){ toolsEl.classList.toggle('more',toolsEl.scrollLeft+toolsEl.clientWidth<toolsEl.scrollWidth-4); }
-  toolsEl.addEventListener('scroll',fadeTools,{passive:true});
-  function paintEmoTools(){ $('#dtools [data-tool=trail]').innerHTML='<span aria-hidden="true">'+emo+'</span><span class="mini" aria-hidden="true">〰️</span>'; $('#dtools [data-tool=stamp]').innerHTML='<span aria-hidden="true">'+emo+'</span><span class="mini" aria-hidden="true">👆</span>'; }
-  function paintSize(){ const i=sizeEl.querySelector('i'), d=DOT[sizeI]; i.style.width=i.style.height=d+'px';
-    i.style.background=tool==='rainbow'?'conic-gradient(#FF5FA2,#FFC83D,#72D69A,#4DBCEC,#7138D1,#FF5FA2)':tool==='eraser'?'#FFFFFF':(tool==='trail'||tool==='stamp')?'#30254A':color;
-    i.style.boxShadow=(tool==='eraser'||color==='#FFFFFF')?'0 0 0 2px #E9E2F7':'none'; sizeEl.setAttribute('aria-label','Size: '+SIZE_NAMES[sizeI]); }
-  sizeEl.onclick=()=>{ ctx(); sizeI=(sizeI+1)%3; paintSize(); tone([330,440,560][sizeI],0,.1,'sine',.15); say(SIZE_NAMES[sizeI]); sizeEl.animate([{transform:'scale(1)'},{transform:'scale(1.15)'},{transform:'scale(1)'}],{duration:220}); };
-  function setTool(id){ tool=id; $$('#dtools .dtool').forEach(b=>b.classList.toggle('on',b.dataset.tool===id)); const em=(id==='trail'||id==='stamp'); swEl.classList.toggle('hidden',em); trayEl.classList.toggle('hidden',!em); paintSize();
-    const b=$('#dtools [data-tool='+id+']'); if(b&&b.scrollIntoView) try{ b.scrollIntoView({block:'nearest',inline:'nearest',behavior:'smooth'}); }catch(e){} }
+  $('#derase').onclick=()=>{ ctx(); sfx.boop(); if(tool==='eraser'){ setTool('crayon'); say('Crayon'); } else { closePanels(); setTool('eraser'); say('Eraser'); } };
+  function paintEmoTools(){ $('#dtools [data-tool=trail]').innerHTML='<span class="trailico" aria-hidden="true"><i>'+emo+'</i><i>'+emo+'</i><i>'+emo+'</i></span>'; $('#dtools [data-tool=stamp]').innerHTML='<span aria-hidden="true">'+emo+'</span><span class="mini" aria-hidden="true">👆</span>'; }
+  const SIZEB=[0,1,2].map(i=>{ const b=document.createElement('button'); b.className='dsize'; b.setAttribute('role','radio'); b.setAttribute('aria-label',SIZE_NAMES[i]); b.innerHTML='<i></i>';
+    b.onclick=()=>{ ctx(); sizeI=i; paintSize(); tone([330,440,560][i],0,.1,'sine',.15); say(SIZE_NAMES[i]); }; sizesEl.appendChild(b); return b; });
+  function paintSize(){ const bg=tool==='rainbow'?'conic-gradient(#FF5FA2,#FFC83D,#72D69A,#4DBCEC,#7138D1,#FF5FA2)':tool==='waffle'?'#EDBE72':tool==='sponge'?'#4DBCEC':tool==='eraser'?'#FFFFFF':(tool==='trail'||tool==='stamp')?'#30254A':color;
+    SIZEB.forEach((b,i)=>{ const d=DOT[i], el=b.querySelector('i'); el.style.width=el.style.height=d+'px'; el.style.background=bg; el.style.boxShadow=(tool==='eraser'||color==='#FFFFFF'||tool==='waffle')?'0 0 0 2px #D5C6F2':'none'; b.classList.toggle('on',i===sizeI); b.setAttribute('aria-checked',String(i===sizeI)); }); }
+  function setTool(id){ tool=id; $$('#dtools .dtool').forEach(b=>b.classList.toggle('on',b.dataset.tool===id)); const eb=$('#derase'); eb.classList.toggle('on',id==='eraser'); eb.setAttribute('aria-pressed',String(id==='eraser')); const em=(id==='trail'||id==='stamp'); swEl.classList.toggle('hidden',em); trayEl.classList.toggle('hidden',!em); paintSize();
+ }
   COLORS.forEach(([hex,name],i)=>{ const b=document.createElement('button'); b.className='dsw'+(i?'':' on'); b.innerHTML='<i style="background:'+hex+'"></i>'; b.setAttribute('role','radio'); b.setAttribute('aria-checked',String(!i)); b.setAttribute('aria-label',name);
     b.onclick=()=>{ ctx(); sfx.boop(); color=hex; $$('#dswatches .dsw').forEach(x=>{ x.classList.toggle('on',x===b); x.setAttribute('aria-checked',String(x===b)); }); if(!INK.has(tool)) setTool('crayon'); paintSize(); say(name); }; swEl.appendChild(b); });
   function emoTile(e){ const t=document.createElement('button'); t.className='tile'+(e===emo?' on':''); t.textContent=e; t.setAttribute('aria-label',nameOf(e)); t.onclick=()=>{ ctx(); sfx.boop(); pickEmo(e); say(nameOf(e)); }; return t; }
@@ -1383,6 +1424,9 @@ games.draw=(function(){
     FRIENDS.forEach((F,i)=>{ const b=document.createElement('button'); b.className='dpage'+(curF&&curF.id===F.id?' on':''); b.style.setProperty('--r',((i*53%7)-3)+'deg'); b.setAttribute('aria-label',F.name); b.innerHTML=thumb(F)+(done[F.id]?'<span class="gold" aria-hidden="true">⭐</span>':'');
       b.onclick=()=>{ ctx(); sfx.chime(); push({t:'f',id:F.id}); cheered=false; redraw(); closePanels(); setTool('crayon'); say('Color the '+F.name+'!'); }; g.appendChild(b); }); }
   function openFriend(){ closePanels(); renderBook(); $('#dfriend').classList.remove('hidden'); $('#dfriend').scrollTop=0; }
+  $('#dbthumb').innerHTML=thumb(FRIENDS[0]);
+  /* A kid who opens Draw to an empty canvas, or clears it, sees the page picker first: blank paper or a picture to color. */
+  function pickPage(){ if(!isEmpty()) return; openFriend(); say('Pick a page!'); }
   $('#dbook').onclick=()=>{ ctx(); sfx.boop(); openFriend(); say('The coloring book! Pick a page.'); };
 
   /* ---- Undo, Redo, and Clear (picture-only check: red trash clears, green arrow keeps, 5 seconds or a tap outside keeps) ---- */
@@ -1395,7 +1439,7 @@ games.draw=(function(){
   $('#dcno').onclick=()=>{ ctx(); keep(); };
   $('#dconfirm').addEventListener('click',e=>{ if(e.target===e.currentTarget){ ctx(); keep(); } });
   $('#dcyes').onclick=()=>{ ctx(); clearTimeout(confirmT); closePanels(); sfx.poof(); push({t:'c'}); cheered=false;
-    layers.animate([{transform:'scale(1) rotate(0)',opacity:1},{transform:'scale(.15) rotate(18deg)',opacity:0}],{duration:420,easing:'cubic-bezier(.45,0,.2,1)'}).onfinish=()=>{ redraw(); layers.animate([{opacity:0},{opacity:1}],{duration:200}); }; };
+    layers.animate([{transform:'scale(1) rotate(0)',opacity:1},{transform:'scale(.15) rotate(18deg)',opacity:0}],{duration:420,easing:'cubic-bezier(.45,0,.2,1)'}).onfinish=()=>{ redraw(); layers.animate([{opacity:0},{opacity:1}],{duration:200}); setTimeout(pickPage,250); }; };
 
   /* ---- fridge: a drawn refrigerator with 9 spots on the door and a basket for older drawings. Kept on this device only, no account. ---- */
   const FKEY='mojia.fridge', SLOTS=9, BASKET=12, MAGNETS=['#FF5FA2','#FFC83D','#4DBCEC','#72D69A','#7138D1'];
@@ -1447,7 +1491,7 @@ games.draw=(function(){
   function trailDemo(){ size(); const items=[]; for(let i=0;i<=6;i++) items.push([W*.2+i*W*.1,H*.65+Math.sin(i)*H*.05,emo,32,0]); const o={t:'e',items}; push(o); renderOp(mx,o); sfx.chime(); }
 
   return {
-    enter(){ requestAnimationFrame(()=>{ size(); fadeTools(); syncUR(); }); },
+    enter(){ requestAnimationFrame(()=>{ size(); syncUR(); pickPage(); }); },
     leave(){ closePanels(); if(cur){ cur=null; pid=null; lx.clearRect(0,0,W,H); } drawer.close(); },
     openPhotos,
     async demo(tap,stopped){ closePanels(); say('Pick a crayon and a color.'); await tap($('#dtools [data-tool=crayon]')); if(stopped()) return; await tap($$('#dswatches .dsw')[1]); if(stopped()) return;

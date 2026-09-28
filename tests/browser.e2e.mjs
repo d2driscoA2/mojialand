@@ -689,11 +689,16 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await page.click('[data-go="draw"]');
   await page.waitForSelector('#s-draw:not(.hidden)');
   await page.waitForTimeout(300);
+  check('draw: empty canvas opens the page picker first', await page.isVisible('#dfriend') && (await page.getAttribute('#dpages .dpage:first-child', 'aria-label')) === 'Blank page' && (await page.locator('#dpages .dpage').count()) === 13);
+  check('draw: book button shows a unicorn page, no words', (await page.locator('#dbook .dbthumb svg path').count()) > 3 && ((await page.textContent('#dbook')).replace(/[\s🖍️️]/gu, '')) === '');
+  await page.screenshot({ path: path.join(SHOTS, 'draw-picker-390.png') });
+  await page.click('#dpages .dpage.blank');
+  check('draw: blank page closes the picker', await page.isHidden('#dfriend'));
   const ink = () => page.evaluate(() => { const c = document.querySelector('#dmain'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 0) n++; return n; });
   const line = () => page.evaluate(() => { const c = document.querySelector('#dline'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 0) n++; return n; });
   const box = await page.locator('#dmain').boundingBox();
   const stroke = async (x0, y0, x1, y1, steps = 12) => { await page.mouse.move(box.x + x0, box.y + y0); await page.mouse.down(); for (let i = 1; i <= steps; i++) await page.mouse.move(box.x + x0 + (x1 - x0) * i / steps, box.y + y0 + (y1 - y0) * i / steps); await page.mouse.up(); };
-  check('draw: ten tools, seven brand colors', (await page.locator('#dtools .dtool').count()) === 10 && (await page.locator('#dswatches .dsw').count()) === 7);
+  check('draw: twelve tools, three sizes, seven brand colors', (await page.locator('#dtools .dtool').count()) === 12 && (await page.locator('#dsizes .dsize').count()) === 3 && (await page.locator('#dswatches .dsw').count()) === 7);
   const small = await page.evaluate(() => [...document.querySelectorAll('#s-draw button')].filter((b) => b.offsetParent && (b.getBoundingClientRect().width < 44 || b.getBoundingClientRect().height < 44)).map((b) => b.id || b.className || b.getAttribute('aria-label')));
   check('draw: every visible button is at least 44 px', small.length === 0, small.join(','));
   const pal = await page.evaluate(() => [...document.querySelectorAll('#dswatches .dsw i')].map((b) => getComputedStyle(b).backgroundColor));
@@ -724,8 +729,8 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await page.click('#dredo');
   check('draw: Redo puts the mark back', (await ink()) === a5, String(await ink()));
   await page.click('#dundo');
-  check('draw: undo and redo sit in the top row with the tools', await page.evaluate(() => { const u = document.querySelector('#dundo').getBoundingClientRect(), t = document.querySelector('#dtools').getBoundingClientRect(), s = document.querySelector('#dstage').getBoundingClientRect(); return Math.abs(u.top - t.top) < 12 && u.bottom < s.top; }));
-  check('draw: colors and size sit above the canvas', await page.evaluate(() => document.querySelector('#dswatches').getBoundingClientRect().bottom < document.querySelector('#dstage').getBoundingClientRect().top && document.querySelector('#dsize').getBoundingClientRect().bottom < document.querySelector('#dstage').getBoundingClientRect().top));
+  check('draw: undo and redo sit in the top bar, all tools show without scrolling', await page.evaluate(() => { const u = document.querySelector('#dundo').getBoundingClientRect(), r = document.querySelector('#dredo').getBoundingClientRect(), t = document.querySelector('#dtools'), tb = t.getBoundingClientRect(); return u.bottom <= tb.top && Math.abs(u.top - r.top) < 2 && getComputedStyle(t).overflowX === "visible" && [...t.children].every((b) => { const x = b.getBoundingClientRect(); return x.right <= innerWidth && x.left >= 0; }); }));
+  check('draw: colors and size sit above the canvas', await page.evaluate(() => document.querySelector('#dswatches').getBoundingClientRect().bottom < document.querySelector('#dstage').getBoundingClientRect().top && document.querySelector('#dsizes').getBoundingClientRect().bottom < document.querySelector('#dstage').getBoundingClientRect().top));
   // Clear check: keep, time out, then clear, then Undo restores
   await page.click('#dclear'); await page.waitForTimeout(350);
   check('draw: Clear opens the picture check with a snapshot', await page.isVisible('#dconfirm') && /^data:image\/jpeg/.test(await page.getAttribute('#dcimg', 'src')));
@@ -737,6 +742,7 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   check('draw: the check closes after 5 seconds and keeps the drawing', await page.isHidden('#dconfirm') && (await ink()) === a4);
   await page.click('#dclear'); await page.click('#dcyes'); await page.waitForTimeout(800);
   check('draw: red trash clears', (await ink()) === 0);
+  check('draw: after Clear the page picker opens', await page.isVisible('#dfriend'));
   await page.click('#dundo');
   check('draw: Undo brings back a cleared drawing', (await ink()) === a4, String(await ink()));
   await page.click('#dclear'); await page.click('#dcyes'); await page.waitForTimeout(800);
@@ -747,12 +753,12 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await stroke(40, 60, 300, 60);
   const pen1 = await ink();
   check('draw: pen draws a thin line', pen1 > 200 && pen1 < 6000, String(pen1));
-  await page.click('#dsize'); // big
-  check('draw: size button cycles to big', (await page.getAttribute('#dsize', 'aria-label')) === 'Size: big');
+  await page.click('#dsizes .dsize:nth-child(3)'); // big
+  check('draw: tapping the big dot picks big', (await page.getAttribute('#dsizes .dsize:nth-child(3)', 'aria-checked')) === 'true' && (await page.getAttribute('#dsizes .dsize:nth-child(2)', 'aria-checked')) === 'false');
   await stroke(40, 110, 300, 110);
   const pen2 = await ink();
   check('draw: big pen draws wider than medium', pen2 - pen1 > pen1 * 1.2, pen1 + ' then +' + (pen2 - pen1));
-  await page.click('#dsize'); // small
+  await page.click('#dsizes .dsize:nth-child(1)'); // small
   await page.click('#dtools [data-tool="rainbow"]'); await stroke(40, 170, 300, 170);
   const rb = await page.evaluate(() => { const c = document.querySelector('#dmain'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; const hues = new Set(); for (let i = 0; i < d.length; i += 4 * 7) if (d[i + 3] > 200) hues.add(Math.round(d[i] / 64) + ',' + Math.round(d[i + 1] / 64) + ',' + Math.round(d[i + 2] / 64)); return hues.size; });
   check('draw: rainbow brush lays down many colors', rb >= 6, String(rb));
@@ -762,19 +768,46 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   check('draw: sprinkles brush tosses many colored bits', (await ink()) > s0 && sp >= 5, String(sp));
   await page.screenshot({ path: path.join(SHOTS, 'draw-sprinkles-390.png') });
   const g0 = await ink();
-  await page.click('#dsize'); await page.click('#dtools [data-tool="glitter"]'); await stroke(40, 240, 300, 240);
+  await page.click('#dsizes .dsize:nth-child(2)'); await page.click('#dtools [data-tool="glitter"]'); await stroke(40, 240, 300, 240);
   check('draw: glitter adds sparkles', (await ink()) > g0, String((await ink()) - g0));
+  // ice cream: waffle cone then a scoop on top
+  const w0 = await ink();
+  await page.click('#dtools [data-tool="waffle"]'); await stroke(150, 330, 190, 400, 10);
+  const waf = await page.evaluate(() => { const c = document.querySelector('#dmain'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let tan = 0, dark = 0; for (let i = 0; i < d.length; i += 4) { if (d[i + 3] < 200) continue; const r = d[i], g = d[i + 1], b = d[i + 2]; if (r > 200 && g > 150 && g < 215 && b < 140) tan++; else if (r > 180 && r < 215 && g > 115 && g < 150 && b < 90) dark++; } return { tan, dark }; });
+  check('draw: waffle cone draws tan with a darker crosshatch', (await ink()) > w0 && waf.tan > 300 && waf.dark > 50, JSON.stringify(waf));
+  const i0 = await ink();
+  await page.click('#dtools [data-tool="scoop"]'); await page.click('#dswatches .dsw:nth-child(2)'); await stroke(140, 320, 200, 320, 8);
+  check('draw: ice cream scoop adds a round scoop', (await ink()) - i0 > 1500, String((await ink()) - i0));
+  check('draw: scoop and waffle tools show a picture, no words', ((await page.textContent('#dtools [data-tool="scoop"]')) + (await page.textContent('#dtools [data-tool="waffle"]'))).replace(/[\s🍦🧇️]/gu, '') === '');
+  await page.screenshot({ path: path.join(SHOTS, 'draw-icecream-390.png') });
   await page.click('#dtools [data-tool="crayon"]'); await page.click('#dswatches .dsw:nth-child(1)'); await stroke(40, 320, 300, 320);
   const holes = await page.evaluate(() => { const c = document.querySelector('#dmain'); const k = c.getContext('2d'); const y = Math.round((320 - 8) * 2); const d = k.getImageData(100, y, 400, 6).data; let empty = 0, full = 0; for (let i = 3; i < d.length; i += 4) { if (d[i] < 20) empty++; else full++; } return { empty, full }; });
   check('draw: crayon edge shows paper grain gaps', holes.empty > 150 && holes.full > 150, JSON.stringify(holes));
   await page.click('#dtools [data-tool="paint"]'); await stroke(20, 400, 360, 400, 40);
   await page.screenshot({ path: path.join(SHOTS, 'draw-tools2-390.png') });
   const e0 = await ink();
-  await page.click('#dtools [data-tool="eraser"]'); await stroke(20, 60, 360, 400, 30);
+  check('draw: eraser sits in the top bar with undo and redo, not in the tool grid', (await page.locator('#dtools [data-tool="eraser"]').count()) === 0 && await page.evaluate(() => { const e = document.querySelector('#derase').getBoundingClientRect(), r = document.querySelector('#dredo').getBoundingClientRect(); return Math.abs(e.top - r.top) < 2 && e.left > r.left && e.width >= 44 && e.height >= 44; }) && !!(await page.$('#derase svg')));
+  await page.click('#derase');
+  check('draw: eraser button lights up when picked, grid tools go dark', /\bon\b/.test(await page.getAttribute('#derase', 'class')) && (await page.getAttribute('#derase', 'aria-pressed')) === 'true' && (await page.locator('#dtools .dtool.on').count()) === 0);
+  await stroke(20, 60, 360, 400, 30);
   const e1 = await ink();
   check('draw: eraser removes ink', e1 < e0, e0 + ' -> ' + e1);
   await page.click('#dundo');
   check('draw: Undo brings back erased ink', (await ink()) === e0, String(await ink()));
+  // wet sponge smears the paint: pulls color into blank paper, keeps a record for undo and redo
+  const sig = () => page.evaluate(() => { const c = document.querySelector('#dmain'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let h = 0; for (let i = 0; i < d.length; i += 4) h = (h * 31 + d[i] + d[i + 1] * 3 + d[i + 2] * 7 + d[i + 3] * 11) >>> 0; return h; });
+  const below = () => page.evaluate(() => { const c = document.querySelector('#dmain'), k = c.width / c.getBoundingClientRect().width; const d = c.getContext('2d').getImageData(Math.round(150 * k), Math.round(430 * k), Math.round(100 * k), Math.round(40 * k)).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 20) n++; return n; });
+  const sp0 = await sig(), b0 = await below();
+  await page.click('#dtools [data-tool="sponge"]');
+  check('draw: picking the sponge turns the eraser off', !/\bon\b/.test(await page.getAttribute('#derase', 'class')) && /\bon\b/.test(await page.getAttribute('#dtools [data-tool="sponge"]', 'class')));
+  await stroke(200, 380, 200, 470, 20);
+  const sp1 = await sig(), b1 = await below();
+  check('draw: sponge smears paint onto blank paper below the stroke', sp1 !== sp0 && b1 > b0 + 200, b0 + ' -> ' + b1);
+  await page.click('#dundo');
+  check('draw: Undo removes the smear', (await sig()) === sp0);
+  await page.click('#dredo');
+  check('draw: Redo puts back the same smear', (await sig()) === sp1);
+  await page.screenshot({ path: path.join(SHOTS, 'draw-sponge-390.png') });
   await page.click('#dclear'); await page.waitForTimeout(350); await page.click('#dcyes'); await page.waitForTimeout(800);
   await page.click('#dtools [data-tool="crayon"]');
   // color a friend
@@ -838,6 +871,7 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await page.click('[data-go="draw"]');
   await page.waitForSelector('#s-draw:not(.hidden)'); await page.waitForTimeout(300);
   const box = await page.locator('#dmain').boundingBox();
+  await page.click('#dpages .dpage.blank');
   await page.mouse.move(box.x + 40, box.y + 60); await page.mouse.down(); await page.mouse.move(box.x + 200, box.y + 90, { steps: 10 }); await page.mouse.up();
   await page.click('#dfridgeBtn'); await page.waitForTimeout(300);
   const st = await page.evaluate(() => JSON.parse(localStorage.getItem('mojia.fridge')).map((x) => x.id + ':' + x.slot).join(','));
