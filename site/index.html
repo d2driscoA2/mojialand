@@ -760,7 +760,7 @@ var CONFIG = {
    var f=document.createElement("iframe"); f.src=CONFIG.gameUrl; f.title="Mojialand game"; f.setAttribute("allow","autoplay");
    host.appendChild(f); f.focus();
   } else {
-   host.innerHTML='<div class="offsite"><div class="in"><img src="img/icon.webp" alt=""><h3>Ready to play</h3><p>The game opens full screen on mojialand.displayedux.com.</p><a class="btn btn-primary" href="'+CONFIG.gameUrl+'" target="_blank" rel="noopener">Open Mojialand</a></div></div>';
+   host.innerHTML='<div class="offsite"><div class="in"><img src="img/icon.webp" alt=""><h3>Ready to play</h3><p>The game opens full screen in a new tab.</p><a class="btn btn-primary" href="'+CONFIG.gameUrl+'" target="_blank" rel="noopener">Open Mojialand</a></div></div>';
   }
  }
  function closePlayer(){ player.hidden=true; host.innerHTML=""; document.body.style.overflow=""; if(lastFocus) lastFocus.focus(); }
