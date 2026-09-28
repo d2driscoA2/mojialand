@@ -482,10 +482,14 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await page.click('[data-go="pattern"]');
   await page.waitForSelector('#s-pattern:not(.hidden)');
   await page.waitForTimeout(800);
+  check('pattern: the next dot pulses', (await page.locator('#pdots i.next').count()) === 1 && (await page.locator('#pdots i.on').count()) === 0);
   for (let i = 0; i < 3; i++) {
     await page.waitForSelector('#pchoices .choice[data-ok="1"]');
     await page.click('#pchoices .choice[data-ok="1"]');
-    await page.waitForTimeout(1300);
+    await page.waitForTimeout(300);
+    if (i === 0) check('pattern: first right answer lights one dot', (await page.locator('#pdots i.on').count()) === 1);
+    if (i === 2) { await page.waitForTimeout(400); check('pattern: third dot sets off the party and confetti', await page.locator('#pdots.full').count() === 1 && (await page.locator('#s-pattern .confetti').count()) > 0); await page.screenshot({ path: path.join(SHOTS, 'pattern-dots-full-390.png') }); }
+    await page.waitForTimeout(1000);
   }
   await page.waitForSelector('#preward:not(.hidden)', { timeout: 5000 });
   const txt = await page.textContent('#preward');
