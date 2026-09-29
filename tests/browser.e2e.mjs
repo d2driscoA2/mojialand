@@ -17,12 +17,12 @@ import { liveView, historyView, campaignsView, lastDays } from '../netlify/funct
 async function analyticsSamples() {
   process.env.SUPABASE_URL = 'https://db.example.test'; process.env.SUPABASE_SERVICE_KEY = 'k';
   const SLOT = 300e3, asOf = Math.floor(Date.now() / SLOT) * SLOT - SLOT, G = ['pattern', 'bounce', 'match', 'parade', 'draw'];
-  const PL = [['MI', 'Troy', 9], ['MI', 'Royal Oak', 7], ['MI', 'Ann Arbor', 8], ['MI', 'Detroit', 6], ['MI', 'Novi', 4], ['MI', 'Grand Rapids', 4], ['OH', 'Columbus', 3], ['OH', 'Toledo', 2], ['IN', 'Indianapolis', 3], ['IL', 'Chicago', 3], ['TX', 'Austin', 1], ['CA', 'Los Angeles', 1], ['NY', 'New York', 2], ['KS', 'Salina', 0.3]];
+  const PL = [['MI', 'Troy', 9], ['MI', 'Royal Oak', 7], ['MI', 'Ann Arbor', 8], ['MI', 'Detroit', 6], ['MI', 'Novi', 4], ['MI', 'Grand Rapids', 4], ['OH', 'Columbus', 3], ['OH', 'Toledo', 2], ['IN', 'Indianapolis', 3], ['IL', 'Chicago', 3], ['TX', 'Austin', 1], ['CA', 'Los Angeles', 1], ['NY', 'New York', 2], ['KS', 'Salina', 0.3], ['MI', 'Birmingham', 1.1], ['MI', 'Southfield', 1.1], ['MI', 'Farmington Hills', 1.1], ['MI', 'Rochester Hills', 1.1]];
   const live = [], days = [], hours = [];
   let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   for (const [st, ci, w] of PL) for (const g of G) {
     for (let k = 0; k < 6; k++) { const n = Math.round(w * rnd() * 0.9); if (n) live.push({ slot_start: new Date(asOf - k * SLOT).toISOString(), country: 'US', state: st, city: ci, game: g, n }); }
-    for (const d of lastDays(30, Date.now())) { const o = Math.round(w * 1.3 * rnd()); if (o) days.push({ d, co: 'US', st, ci, g, m: rnd() < 0.58 ? 'app' : 'web', o, b0: Math.round(o * 0.2), b1: Math.round(o * 0.3), b2: Math.round(o * 0.35), b3: Math.round(o * 0.15) }); }
+    for (const d of lastDays(180, Date.now())) { const o = Math.round(w * 1.3 * rnd()); if (o) days.push({ d, co: 'US', st, ci, g, m: rnd() < 0.58 ? 'app' : 'web', o, b0: Math.round(o * 0.2), b1: Math.round(o * 0.3), b2: Math.round(o * 0.35), b3: Math.round(o * 0.15) }); }
     for (let h = 6; h < 22; h++) hours.push({ h, co: 'US', st, ci, g, o: Math.round(w * 3 * rnd() * (h > 15 && h < 20 ? 2 : 1)) });
   }
   const today = lastDays(1, Date.now())[0];
@@ -35,7 +35,7 @@ async function analyticsSamples() {
     const body = u.includes('plays_live') ? live : u.includes('analytics_history') ? { days, hours } : camp;
     return new Response(JSON.stringify(body), { status: 200 });
   };
-  const out = { live: await liveView(), history: await historyView(7), history1: await historyView(1), campaigns: await campaignsView() };
+  const out = { live: await liveView(), history: await historyView(7), history1: await historyView(1), history90: await historyView(90), campaigns: await campaignsView() };
   globalThis.fetch = saved;
   return out;
 }
@@ -640,7 +640,7 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
     if (signedIn && /^(analytics|campaigns)\./.test(b.action)) {
       if (b.action === 'campaigns.create' && !/^[a-z0-9][a-z0-9-]{1,23}$/.test(b.label || '')) return r.fulfill({ status: 400, contentType: 'application/json', body: '{"error":"Use 2 to 24 lowercase letters, numbers or dashes for the label."}' });
       const made = b.action === 'campaigns.create' ? { campaigns: [{ ...AN.campaigns.campaigns[0], label: b.label, name: b.name, open: 0, play: 0, gift: 0, pass48: 0, forever: 0, cities: [], rolls: {}, daily: [{ d: AN.campaigns.campaigns[0].daily.at(-1).d, n: 0 }], avgDays: null }, ...AN.campaigns.campaigns] } : null;
-      const o = { 'analytics.live': AN.live, 'analytics.history': b.range === 1 ? AN.history1 : AN.history, 'campaigns.list': AN.campaigns, 'campaigns.create': made, 'campaigns.active': AN.campaigns }[b.action];
+      const o = { 'analytics.live': AN.live, 'analytics.history': b.range === 1 ? AN.history1 : b.range === 90 ? AN.history90 : AN.history, 'campaigns.list': AN.campaigns, 'campaigns.create': made, 'campaigns.active': AN.campaigns }[b.action];
       return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(o) });
     }
     if (!signedIn) return r.fulfill({ status: 401, contentType: 'application/json', body: '{"error":"Please sign in."}' });
@@ -701,7 +701,8 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   // Analytics tab
   await page.click('[data-tab="analytics"]');
   await page.waitForSelector('#anLiveMap svg .anBub');
-  check('analytics: live counter and map bubbles', Number((await page.textContent('#anTotal')).replace(/,/g, '')) === AN.live.total && (await page.locator('#anLiveMap .anBub').count()) === AN.live.cities.length && AN.live.cities.length > 0, AN.live.total + ' / ' + AN.live.cities.length);
+  await page.waitForTimeout(300);
+  check('analytics: live counter and map bubbles', Number((await page.textContent('#anTotal')).replace(/,/g, '')) === AN.live.total && (await page.locator('#anLiveMap .anBub').count()) === AN.live.cities.length + AN.live.counties.length && AN.live.cities.length > 0, AN.live.total + ' / ' + AN.live.cities.length + ' + ' + AN.live.counties.length);
   check('analytics: small places show as +N on the state, never by name', !JSON.stringify(AN).includes('Salina') && (await page.locator('#anLiveMap .anRoll').count()) >= 1);
   check('analytics: live boards filled', (await page.locator('#anBusy .anRow').count()) >= 1 && (await page.locator('#anGames .anRow').count()) === 5 && (await page.locator('#anFeed .it').count()) >= 1);
   await page.focus('#anLiveMap .anBub');
@@ -719,6 +720,29 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   check('analytics: Today shows plays by hour', calls.filter((c) => c === 'analytics.history').length === 2);
   await page.click('#anRanges [data-r="7"]');
   await page.waitForFunction(() => /per day/.test(document.querySelector('#anOtTitle').textContent));
+  check('analytics: usage trend with the week before', (await page.locator('#anTrendPlays polyline.anCur').count()) === 1 && (await page.locator('#anTrendPlays polyline.anPrev').count()) === 1 && /vs the 7 days before/.test(await page.textContent('#anKpis')));
+  check('analytics: small towns show as a county bubble', AN.history.counties.some((k) => k.name === 'Oakland') && (await page.locator('#anHistMap .anBub.cty').count()) >= 1, JSON.stringify(AN.history.counties.map((k) => k.name + ' ' + k.total)));
+  await page.$eval('#anHistMap path.anState[data-st="MI"]', (el) => el.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+  await page.waitForSelector('#anHistMap path.anCounty');
+  await page.waitForTimeout(600);
+  check('analytics: tap a state zooms in with its counties and a place list', (await page.locator('#anHistMap path.anCounty').count()) === 83 && /Michigan/.test(await page.textContent('#anHistMap .anCrumbs')) && /Troy/.test(await page.textContent('#anHistPlaces')) && /Small towns in Oakland County/.test(await page.textContent('#anHistPlaces')));
+  await page.screenshot({ path: path.join(SHOTS, 'admin-analytics-state.png'), fullPage: false, clip: { x: 0, y: 0, width: 1024, height: 1400 } }).catch(() => {});
+  await page.$eval('#anHistMap path.anCounty[data-id="26125"]', (el) => el.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+  await page.waitForFunction(() => /Oakland County, Michigan/.test(document.querySelector('#anHistPlaces').textContent));
+  await page.waitForTimeout(600);
+  check('analytics: tap a county lists its towns', /Troy/.test(await page.textContent('#anHistPlaces')) && !/Ann Arbor/.test(await page.textContent('#anHistPlaces')));
+  await page.locator('#anHistMap').screenshot({ path: path.join(SHOTS, 'admin-analytics-county.png') });
+  await page.click('#anHistMap .anBack');
+  await page.waitForFunction(() => !/Oakland County, Michigan/.test(document.querySelector('#anHistPlaces').textContent));
+  await page.click('#anHistMap .anBack');
+  await page.waitForFunction(() => document.querySelectorAll('#anHistMap path.anCounty').length === 0);
+  check('analytics: Back returns to the whole US', (await page.textContent('#anHistPlaces')) === '');
+  await page.click('#anRanges [data-r="90"]');
+  await page.waitForFunction(() => /per week/.test(document.querySelector('#anTrendPlaysT').textContent));
+  check('analytics: 90 days groups by week and compares with the 90 days before', /vs the 90 days before/.test(await page.textContent('#anKpis')) && (await page.locator('#anTrendPlays polyline.anPrev').count()) === 1 && await page.isHidden('#anReplayRow'));
+  await page.screenshot({ path: path.join(SHOTS, 'admin-analytics-90.png'), fullPage: true });
+  await page.click('#anRanges [data-r="7"]');
+  await page.waitForFunction(() => /per day/.test(document.querySelector('#anTrendPlaysT').textContent));
   await page.screenshot({ path: path.join(SHOTS, 'admin-analytics-history.png'), fullPage: true });
   await page.click('#anViews [data-v="campaigns"]');
   await page.waitForSelector('#anCamps .anCamp');

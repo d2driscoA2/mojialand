@@ -1,8 +1,9 @@
 // Builds what the admin Analytics tab shows. Small places are folded into
-// their state here, on the server, so the admin page never receives a city
-// count below the small-number rule.
+// their county or state here, on the server, so the admin page never receives
+// a city or county count below the small-number rule.
 import { rest } from './db.mjs';
 import { GAMES, LABEL_RE } from './analytics.mjs';
+import UC from './uscounty.json' with { type: 'json' };
 
 export const TZ = 'America/Detroit';
 export const LIVE_MIN = 3; // a city shows with 3 or more games open
@@ -40,12 +41,77 @@ export function lastDays(n, now, tz = TZ) {
   return out;
 }
 
-// US city rows keep their city; everything else becomes state-only or "other".
-function placeKey(r) {
-  if (r.co !== 'US' || !r.st) return null;
-  return r.st + '|' + (r.ci || '');
+// ---------- places: city, county, state. The small-number rule works at
+// every level: a small city folds into its county, a small county into its state.
+export function countyOf(st, ci) {
+  return (ci && UC.cities[st + '|' + ci]) || '';
 }
+export const countyName = (id) => UC.names[id] || '';
+const isUS = (r) => r.co === 'US' && !!r.st;
 const top = (by) => by.indexOf(Math.max(...by));
+const addBy = (a, b) => { for (let i = 0; i < a.length; i++) a[i] += b[i] || 0; };
+
+// entries: [{st, ci, n, by}] for US places only. Returns shown cities,
+// shown counties (what is left in them after shown cities) and state rolls.
+export function foldPlaces(entries, min) {
+  const cities = new Map();
+  const rolls = {};
+  const rollBy = {};
+  for (const e of entries) {
+    if (!e.ci) { rolls[e.st] = (rolls[e.st] || 0) + e.n; addBy((rollBy[e.st] = rollBy[e.st] || zeros()), e.by || []); continue; }
+    const k = e.st + '|' + e.ci;
+    if (!cities.has(k)) cities.set(k, { city: e.ci, state: e.st, county: countyOf(e.st, e.ci), total: 0, byGame: zeros(), minutes: 0 });
+    const c = cities.get(k);
+    c.total += e.n;
+    addBy(c.byGame, e.by || []);
+    c.minutes += e.min || 0;
+  }
+  const shown = [];
+  const left = new Map();
+  for (const c of cities.values()) {
+    if (c.total >= min) { shown.push(c); continue; }
+    if (!c.county) { rolls[c.state] = (rolls[c.state] || 0) + c.total; addBy((rollBy[c.state] = rollBy[c.state] || zeros()), c.byGame); continue; }
+    if (!left.has(c.county)) left.set(c.county, { id: c.county, name: countyName(c.county), state: c.state, total: 0, byGame: zeros(), minutes: 0 });
+    const k = left.get(c.county);
+    k.total += c.total;
+    addBy(k.byGame, c.byGame);
+    k.minutes += c.minutes;
+  }
+  const counties = [];
+  for (const k of left.values()) {
+    if (k.total >= min) counties.push(k);
+    else { rolls[k.state] = (rolls[k.state] || 0) + k.total; addBy((rollBy[k.state] = rollBy[k.state] || zeros()), k.byGame); }
+  }
+  shown.sort((a, b) => b.total - a.total);
+  counties.sort((a, b) => b.total - a.total);
+  return { cities: shown, counties, rolls, rollBy };
+}
+// Adds one fold result into a running total (used across days).
+function mergeFold(acc, f) {
+  for (const c of f.cities) {
+    const k = c.state + '|' + c.city;
+    if (!acc.cities.has(k)) acc.cities.set(k, { ...c, byGame: zeros(), total: 0, minutes: 0 });
+    const x = acc.cities.get(k);
+    x.total += c.total; x.minutes += c.minutes; addBy(x.byGame, c.byGame);
+  }
+  for (const c of f.counties) {
+    if (!acc.counties.has(c.id)) acc.counties.set(c.id, { ...c, byGame: zeros(), total: 0, minutes: 0 });
+    const x = acc.counties.get(c.id);
+    x.total += c.total; x.minutes += c.minutes; addBy(x.byGame, c.byGame);
+  }
+  for (const [st, v] of Object.entries(f.rolls)) acc.rolls[st] = (acc.rolls[st] || 0) + v;
+  for (const [st, v] of Object.entries(f.rollBy)) addBy((acc.rollBy[st] = acc.rollBy[st] || zeros()), v);
+}
+// State totals (everything, shown or not) for the state level of the map.
+function stateTotals(entries) {
+  const out = {};
+  for (const e of entries) {
+    if (!out[e.st]) out[e.st] = { state: e.st, total: 0, byGame: zeros() };
+    out[e.st].total += e.n;
+    addBy(out[e.st].byGame, e.by || []);
+  }
+  return Object.values(out).sort((a, b) => b.total - a.total);
+}
 
 // ---------- live
 export async function liveView(now = Date.now()) {
@@ -59,42 +125,40 @@ export async function liveView(now = Date.now()) {
     if (!bySlot.has(r.t)) bySlot.set(r.t, []);
     bySlot.get(r.t).push(r);
   }
-  const fold = (list) => {
-    const cities = new Map();
-    const rolls = {};
+  const slotView = (list) => {
     const byGame = zeros();
     let total = 0;
     let other = 0;
+    const entries = [];
     for (const r of list) {
       total += r.n;
       byGame[gi(r.g)] += r.n;
-      const k = placeKey(r);
-      if (!k) { other += r.n; continue; }
-      if (!r.ci) { rolls[r.st] = (rolls[r.st] || 0) + r.n; continue; }
-      if (!cities.has(k)) cities.set(k, { city: r.ci, state: r.st, total: 0, byGame: zeros() });
-      const c = cities.get(k);
-      c.total += r.n;
-      c.byGame[gi(r.g)] += r.n;
+      if (!isUS(r)) { other += r.n; continue; }
+      const by = zeros();
+      by[gi(r.g)] = r.n;
+      entries.push({ st: r.st, ci: r.ci, n: r.n, by });
     }
-    const shown = [];
-    for (const c of cities.values()) {
-      if (c.total >= LIVE_MIN) shown.push(c);
-      else rolls[c.state] = (rolls[c.state] || 0) + c.total;
-    }
-    shown.sort((a, b) => b.total - a.total);
-    return { total, byGame, cities: shown, rolls, other };
+    const f = foldPlaces(entries, LIVE_MIN);
+    return { total, byGame, other, ...f, states: stateTotals(entries) };
   };
-  const cur = fold(bySlot.get(asOf) || []);
+  const cur = slotView(bySlot.get(asOf) || []);
+  delete cur.rollBy;
   const feed = [];
   for (const t of [...bySlot.keys()].sort((a, b) => b - a)) {
-    for (const c of fold(bySlot.get(t)).cities) feed.push({ t: new Date(t).toISOString(), city: c.city, state: c.state, game: GAMES[top(c.byGame)], n: c.total });
+    for (const c of slotView(bySlot.get(t)).cities) feed.push({ t: new Date(t).toISOString(), city: c.city, state: c.state, game: GAMES[top(c.byGame)], n: c.total });
   }
+  cur.cities.forEach((c) => { c.countyName = countyName(c.county); delete c.minutes; });
+  cur.counties.forEach((c) => { delete c.minutes; });
   return { asOf: new Date(asOf).toISOString(), games: GAMES, ...cur, feed: feed.slice(0, 8), rule: LIVE_MIN };
 }
 
 // ---------- history
+export const RANGES = [1, 7, 30, 60, 90, 365];
+const KEEP_DAYS = 400;
+const minutesOf = (b) => b.reduce((a, v, i) => a + v * BUCKET_MIN[i], 0);
+
 export async function historyView(range, now = Date.now()) {
-  const n = [1, 7, 30].includes(Number(range)) ? Number(range) : 7;
+  const n = RANGES.includes(Number(range)) ? Number(range) : 7;
   const from = localMidnight(now, n - 1);
   const { data } = await rest('POST', 'rpc/analytics_history', { body: { p_from: new Date(from).toISOString(), p_tz: TZ } });
   const days = lastDays(n, now);
@@ -103,6 +167,7 @@ export async function historyView(range, now = Date.now()) {
   const dayRows = (Array.isArray(src.days) ? src.days : []).filter((r) => dayIx.has(r.d) && gi(r.g) >= 0);
 
   const perDay = days.map(() => zeros());
+  const perDayMinutes = days.map(() => 0);
   const byGame = zeros();
   const closes = zeros();
   const minutesGame = zeros();
@@ -110,46 +175,41 @@ export async function historyView(range, now = Date.now()) {
   let plays = 0;
   let app = 0;
   let other = 0;
-  // city-day totals decide who shows
-  const cityDay = new Map();
+  const dayEntries = days.map(() => []);
+  const allEntries = [];
   for (const r of dayRows) {
     const o = Number(r.o) || 0;
     const b = [r.b0, r.b1, r.b2, r.b3].map((v) => Number(v) || 0);
     const j = gi(r.g);
-    perDay[dayIx.get(r.d)][j] += o;
+    const di = dayIx.get(r.d);
+    perDay[di][j] += o;
+    perDayMinutes[di] += minutesOf(b);
     byGame[j] += o;
     plays += o;
     if (r.m === 'app') app += o;
     b.forEach((v, i) => { buckets[i] += v; closes[j] += v; minutesGame[j] += v * BUCKET_MIN[i]; });
-    const k = placeKey(r);
-    if (!k) { other += o; continue; }
-    const ck = k + '|' + r.d;
-    if (!cityDay.has(ck)) cityDay.set(ck, { k, st: r.st, ci: r.ci, o: 0, by: zeros(), min: 0 });
-    const c = cityDay.get(ck);
-    c.o += o;
-    c.by[j] += o;
-    c.min += b.reduce((a, v, i) => a + v * BUCKET_MIN[i], 0);
+    if (!isUS(r)) { other += o; continue; }
+    const by = zeros();
+    by[j] = o;
+    const e = { st: r.st, ci: r.ci || '', n: o, by, min: minutesOf(b) };
+    dayEntries[di].push(e);
+    allEntries.push(e);
   }
-  const cities = new Map();
-  const rolls = {};
-  const shownKeys = new Set();
-  for (const c of cityDay.values()) {
-    if (c.ci && c.o >= DAY_MIN) {
-      shownKeys.add(c.k);
-      if (!cities.has(c.k)) cities.set(c.k, { city: c.ci, state: c.st, total: 0, byGame: zeros(), minutes: 0 });
-      const x = cities.get(c.k);
-      x.total += c.o;
-      c.by.forEach((v, i) => { x.byGame[i] += v; });
-      x.minutes += c.min;
-    } else if (c.o > 0) rolls[c.st] = (rolls[c.st] || 0) + c.o;
-  }
-  const cityList = [...cities.values()].sort((a, b) => b.total - a.total);
-  cityList.forEach((c) => { c.minutes = Math.round(c.minutes); });
+  // The rule applies day by day, then the days add up.
+  const acc = { cities: new Map(), counties: new Map(), rolls: {}, rollBy: {} };
+  for (const list of dayEntries) mergeFold(acc, foldPlaces(list, DAY_MIN));
+  const cityList = [...acc.cities.values()].sort((a, b) => b.total - a.total);
+  cityList.forEach((c) => { c.minutes = Math.round(c.minutes); c.countyName = countyName(c.county); });
+  const countyList = [...acc.counties.values()].sort((a, b) => b.total - a.total);
+  countyList.forEach((c) => { c.minutes = Math.round(c.minutes); });
+  const shownCity = new Set(cityList.map((c) => c.state + '|' + c.city));
+  const shownCounty = new Set(countyList.map((c) => c.id));
 
-  // hours of the day (local): for busiest hours, today's chart, and the replay
+  // hours of the day (local): busiest hours, today's chart and the replay
   const hours = new Array(24).fill(0);
   const hoursGame = Array.from({ length: 24 }, zeros);
   const cityHours = {};
+  const countyHours = {};
   const stateHours = {};
   for (const r of Array.isArray(src.hours) ? src.hours : []) {
     const h = Number(r.h);
@@ -157,21 +217,46 @@ export async function historyView(range, now = Date.now()) {
     if (!(h >= 0 && h < 24) || gi(r.g) < 0) continue;
     hours[h] += o;
     hoursGame[h][gi(r.g)] += o;
-    const k = placeKey(r);
-    if (!k) continue;
-    if (shownKeys.has(k)) (cityHours[k] = cityHours[k] || new Array(24).fill(0))[h] += o;
+    if (!isUS(r)) continue;
+    const ck = r.st + '|' + (r.ci || '');
+    const cty = countyOf(r.st, r.ci);
+    if (r.ci && shownCity.has(ck)) (cityHours[ck] = cityHours[ck] || new Array(24).fill(0))[h] += o;
+    else if (cty && shownCounty.has(cty)) (countyHours[cty] = countyHours[cty] || new Array(24).fill(0))[h] += o;
     else (stateHours[r.st] = stateHours[r.st] || new Array(24).fill(0))[h] += o;
   }
+
+  // the period before, for the change figures (not for Today, and only inside the 400 days kept)
+  let prev = null;
+  if (n > 1 && 2 * n <= KEEP_DAYS) {
+    const pDays = lastDays(2 * n, now).slice(0, n);
+    const pIx = new Map(pDays.map((d, i) => [d, i]));
+    const { data: pd } = await rest('POST', 'rpc/analytics_history', { body: { p_from: new Date(localMidnight(now, 2 * n - 1)).toISOString(), p_tz: TZ } });
+    const pRows = (pd && Array.isArray(pd.days) ? pd.days : []).filter((r) => pIx.has(r.d) && gi(r.g) >= 0);
+    prev = { days: pDays, perDay: pDays.map(() => 0), perDayMinutes: pDays.map(() => 0), plays: 0, minutes: 0 };
+    for (const r of pRows) {
+      const o = Number(r.o) || 0;
+      const m = minutesOf([r.b0, r.b1, r.b2, r.b3].map((v) => Number(v) || 0));
+      prev.perDay[pIx.get(r.d)] += o;
+      prev.perDayMinutes[pIx.get(r.d)] += m;
+      prev.plays += o;
+      prev.minutes += m;
+    }
+    prev.minutes = Math.round(prev.minutes);
+    prev.perDayMinutes = prev.perDayMinutes.map(Math.round);
+  }
+
   const minutes = Math.round(minutesGame.reduce((a, b) => a + b, 0));
-  const states = new Set([...cityList.map((c) => c.state), ...Object.keys(rolls)]);
+  const closed = buckets.reduce((a, b) => a + b, 0);
+  const states = stateTotals(allEntries);
   return {
-    range: n, tz: TZ, games: GAMES, days, perDay, byGame,
+    range: n, tz: TZ, games: GAMES, days, perDay, perDayMinutes: perDayMinutes.map(Math.round), byGame,
     avgMinutes: minutesGame.map((m, i) => (closes[i] ? Math.round((m / closes[i]) * 10) / 10 : 0)),
     buckets, plays, minutes,
-    minutesPerPlay: buckets.reduce((a, b) => a + b, 0) ? Math.round((minutes / buckets.reduce((a, b) => a + b, 0)) * 10) / 10 : 0,
+    minutesPerPlay: closed ? Math.round((minutes / closed) * 10) / 10 : 0,
     appShare: plays ? Math.round((app / plays) * 100) : 0,
-    cities: cityList, rolls, other, cityCount: cityList.length, stateCount: states.size,
-    hours, hoursGame, cityHours, stateHours, rule: DAY_MIN,
+    cities: cityList, counties: countyList, rolls: acc.rolls, rollBy: acc.rollBy, states, other,
+    cityCount: cityList.length, stateCount: states.length,
+    hours, hoursGame, cityHours, countyHours, stateHours, rule: DAY_MIN, prev,
     todayHour: Number(parts(now, TZ).hour),
   };
 }
@@ -184,7 +269,7 @@ export async function campaignsView(now = Date.now()) {
   const list = (Array.isArray(src.campaigns) ? src.campaigns : []).map((c) => ({
     label: c.label, name: c.name, note: c.note || '', active: c.active !== false, created_at: c.created_at,
     start: localDate(new Date(c.created_at).getTime()),
-    open: 0, play: 0, gift: 0, pass48: 0, forever: 0, daysSum: 0, daily: {}, cities: [], rolls: {}, other: 0,
+    open: 0, play: 0, gift: 0, pass48: 0, forever: 0, daysSum: 0, daily: {}, places: [], other: 0,
   }));
   const by = new Map(list.map((c) => [c.label, c]));
   for (const r of Array.isArray(src.days) ? src.days : []) {
@@ -199,16 +284,18 @@ export async function campaignsView(now = Date.now()) {
     const c = by.get(r.l);
     if (!c) continue;
     const nn = Number(r.n) || 0;
-    if (r.co !== 'US' || !r.st) c.other += nn;
-    else if (r.ci && nn >= CAMP_MIN) c.cities.push({ city: r.ci, state: r.st, n: nn });
-    else c.rolls[r.st] = (c.rolls[r.st] || 0) + nn;
+    if (!isUS(r)) c.other += nn;
+    else c.places.push({ st: r.st, ci: r.ci || '', n: nn });
   }
   for (const c of list) {
-    c.cities.sort((a, b) => b.n - a.n);
+    const f = foldPlaces(c.places, CAMP_MIN);
+    c.cities = f.cities.map((x) => ({ city: x.city, state: x.state, county: x.county, countyName: countyName(x.county), n: x.total }));
+    c.counties = f.counties.map((x) => ({ id: x.id, name: x.name, state: x.state, n: x.total }));
+    c.rolls = f.rolls;
+    delete c.places;
     const bought = c.pass48 + c.forever;
     c.avgDays = bought ? Math.round((c.daysSum / bought) * 10) / 10 : null;
     delete c.daysSum;
-    // opens per day from the start day to today
     const series = [];
     let t = Date.parse(c.start + 'T12:00:00Z');
     const end = Date.parse(today + 'T12:00:00Z');

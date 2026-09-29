@@ -35,6 +35,21 @@
 #anRoot .anTools .anSeg button{min-height:36px;padding:6px 12px;font-size:13px}
 #anRoot .anState{fill:#fff;stroke:#D9CCEE;stroke-width:.8;vector-effect:non-scaling-stroke}
 #anRoot .anState.hot{fill:#EDE3FB}
+#anRoot .anState{cursor:pointer;transition:fill-opacity .3s,opacity .3s}
+#anRoot .anState:hover{fill:#F6F0FE}
+#anRoot .anState.dim{opacity:.35}
+#anRoot .anState.sel{fill:#FFFFFF;stroke:var(--purple);stroke-width:1.6}
+#anRoot .anCounty{fill:#FFFFFF;fill-opacity:1;stroke:#C9B8EA;stroke-width:.6;vector-effect:non-scaling-stroke;cursor:pointer}
+#anRoot .anCounty.has{fill:#7138D1}
+#anRoot .anCounty:hover{stroke:var(--purple);stroke-width:1.4}
+#anRoot .anCounty.sel{stroke:var(--deep);stroke-width:2.4}
+#anRoot .anCounty:focus-visible{outline:none;stroke:var(--blue);stroke-width:3}
+#anRoot .anBub.cty circle.ring{fill:#fff;stroke:#7138D1;stroke-width:2;stroke-dasharray:4 3}
+#anRoot .anTools .anBack{border:2px solid var(--line);background:rgba(255,255,255,.95);color:var(--deep);border-radius:999px;min-height:36px;padding:6px 12px;font:900 13px Nunito,sans-serif;cursor:pointer;margin-left:auto}
+#anRoot .anPlaces{background:#FBF8FF;border:2px solid var(--line);border-radius:18px;padding:12px 14px;margin-top:4px}
+#anRoot .anChange{font-weight:900}
+#anRoot .anChange.up{color:#1E7A4A}
+#anRoot .anChange.down{color:var(--red)}
 #anRoot .anRoll{pointer-events:none}
 #anRoot .anRoll rect{fill:#fff;stroke:#D9CCEE}
 #anRoot .anRoll text{font:900 11px Nunito,sans-serif;fill:var(--deep)}

@@ -636,7 +636,48 @@ test('admin campaigns: make, validate, list with small places folded', async () 
   [s, d] = await call({ action: 'campaigns.list' });
   const c = d.campaigns[0];
   assert.equal(c.open, 9); assert.equal(c.pass48, 2); assert.equal(c.avgDays, 1.5);
-  assert.deepEqual(c.cities, [{ city: 'Troy', state: 'MI', n: 6 }]);
+  assert.deepEqual(c.cities, [{ city: 'Troy', state: 'MI', county: '26125', countyName: 'Oakland', n: 6 }]);
   assert.deepEqual(c.rolls, { MI: 3 });
   assert.deepEqual(c.daily, [{ d: today, n: 9 }]);
+});
+
+test('analytics: small cities fold into a county first, then the state', async () => {
+  const { foldPlaces, countyOf } = await import('../netlify/functions/_lib/analytics-admin.mjs');
+  assert.equal(countyOf('MI', 'Troy'), '26125');
+  const by = (n) => [n, 0, 0, 0, 0];
+  const f = foldPlaces([
+    { st: 'MI', ci: 'Troy', n: 6, by: by(6) },
+    { st: 'MI', ci: 'Novi', n: 3, by: by(3) },
+    { st: 'MI', ci: 'Royal Oak', n: 2, by: by(2) },
+    { st: 'MI', ci: 'Ann Arbor', n: 2, by: by(2) },
+    { st: 'MI', ci: '', n: 1, by: by(1) },
+  ], 5);
+  assert.deepEqual(f.cities.map((c) => [c.city, c.county, c.total]), [['Troy', '26125', 6]]);
+  assert.deepEqual(f.counties.map((c) => [c.name, c.total]), [['Oakland', 5]], 'Novi and Royal Oak together pass the rule as Oakland County');
+  assert.deepEqual(f.rolls, { MI: 3 }, 'Ann Arbor alone stays hidden inside Michigan');
+});
+
+test('admin analytics: 90-day range compares with the 90 days before; bad ranges fall back to 7', async () => {
+  const cookie = await adminSignIn();
+  const d = lastDays(180, Date.now());
+  db.rpcData.analytics_history = {
+    days: [
+      { d: d[179], co: 'US', st: 'MI', ci: 'Troy', g: 'draw', m: 'app', o: 8, b0: 0, b1: 8, b2: 0, b3: 0 },
+      { d: d[100], co: 'US', st: 'MI', ci: 'Troy', g: 'draw', m: 'app', o: 4, b0: 0, b1: 0, b2: 0, b3: 0 },
+      { d: d[10], co: 'US', st: 'MI', ci: 'Troy', g: 'match', m: 'web', o: 2, b0: 2, b1: 0, b2: 0, b3: 0 },
+    ],
+    hours: [],
+  };
+  let r = JSON.parse((await adminApi(ev({ action: 'analytics.history', range: 90 }, { cookie }))).body);
+  assert.equal(r.range, 90);
+  assert.equal(r.days.length, 90);
+  assert.equal(r.plays, 12);
+  assert.equal(r.prev.plays, 2);
+  assert.equal(r.perDayMinutes.at(-1), 28);
+  assert.equal(db.rpcCalls.length, 2, 'one call for the period, one for the period before');
+  r = JSON.parse((await adminApi(ev({ action: 'analytics.history', range: 365 }, { cookie }))).body);
+  assert.equal(r.days.length, 365);
+  assert.equal(r.prev, null, 'no comparison past the 400 days kept');
+  r = JSON.parse((await adminApi(ev({ action: 'analytics.history', range: 12 }, { cookie }))).body);
+  assert.equal(r.range, 7);
 });
