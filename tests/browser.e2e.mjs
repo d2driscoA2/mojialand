@@ -787,7 +787,9 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await page.screenshot({ path: path.join(SHOTS, 'draw-tools2-390.png') });
   const e0 = await ink();
   check('draw: eraser sits in the top bar with undo and redo, not in the tool grid', (await page.locator('#dtools [data-tool="eraser"]').count()) === 0 && await page.evaluate(() => { const e = document.querySelector('#derase').getBoundingClientRect(), r = document.querySelector('#dredo').getBoundingClientRect(); return Math.abs(e.top - r.top) < 2 && e.left > r.left && e.width >= 44 && e.height >= 44; }) && !!(await page.$('#derase svg')));
+  check('draw: eraser has a gray border until picked', await page.evaluate(() => getComputedStyle(document.querySelector('#derase')).borderTopColor === 'rgb(233, 226, 247)'));
   await page.click('#derase');
+  check('draw: picked eraser gets the purple border', await page.evaluate(() => getComputedStyle(document.querySelector('#derase')).borderTopColor === 'rgb(113, 56, 209)'));
   check('draw: eraser button lights up when picked, grid tools go dark', /\bon\b/.test(await page.getAttribute('#derase', 'class')) && (await page.getAttribute('#derase', 'aria-pressed')) === 'true' && (await page.locator('#dtools .dtool.on').count()) === 0);
   await stroke(20, 60, 360, 400, 30);
   const e1 = await ink();
