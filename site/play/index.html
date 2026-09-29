@@ -682,6 +682,7 @@ textarea.pw-in{resize:none;min-height:88px}
 .dsw{flex:0 0 44px;width:44px;height:44px;border:0;background:none;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .dsw i{display:block;width:34px;height:34px;border-radius:999px;border:3px solid #fff;box-shadow:0 0 0 2px var(--line),var(--shadow);transition:transform .12s}
 .dsw.on i{box-shadow:0 0 0 3px var(--purple),var(--shadow);transform:scale(1.15)}
+.dswatches.off .dsw i{filter:grayscale(1);opacity:.35;transform:none;box-shadow:0 0 0 2px var(--line)}
 #dtray{padding:2px;min-height:48px}
 #dtray .tile{width:44px;height:44px;font-size:26px}
 .trailico{position:relative;width:40px;height:34px;display:block}
@@ -1290,7 +1291,7 @@ games.draw=(function(){
   const COLORS=[['#7138D1','purple'],['#FF5FA2','pink'],['#F4565C','red'],['#FF8A3D','orange'],['#FFC83D','yellow'],['#72D69A','green'],['#4DBCEC','blue'],['#A7663F','brown'],['#30254A','black'],['#FFFFFF','white']];
   const RAINBOW=['#F4565C','#FF8A3D','#FFC83D','#72D69A','#4DBCEC','#7138D1','#FF5FA2'];
   const TOOLS=[['crayon','🖍️','Crayon'],['marker','🖊️','Marker'],['pen','✒️','Pen'],['paint','🖌️','Paint brush'],['sponge','🧽','Sponge'],['trail','','Emoji brush'],['rainbow','🌈','Rainbow brush'],['glitter','✨','Glitter'],['sprinkles','🧁','Sprinkles'],['scoop','🍦','Ice cream'],['waffle','🧇','Waffle cone'],['stamp','','Emoji stamp']];
-  const SIZES={crayon:[8,16,28],marker:[6,12,22],pen:[2,4,7],paint:[16,30,48],rainbow:[8,16,28],glitter:[10,20,34],sprinkles:[20,30,44],scoop:[20,34,52],waffle:[18,30,46],eraser:[14,28,52],sponge:[20,34,56],trail:[22,34,50],stamp:[40,64,96]};
+  const SIZES={crayon:[8,16,40],marker:[6,12,34],pen:[2,4,12],paint:[16,30,68],rainbow:[8,16,28],glitter:[10,20,34],sprinkles:[20,30,44],scoop:[20,34,52],waffle:[18,30,46],eraser:[14,28,52],sponge:[20,34,56],trail:[22,34,50],stamp:[40,64,96]};
   const SIZE_NAMES=['small','medium','big'], DOT=[8,16,26];
   const EMO='"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
   const INK=new Set(['crayon','marker','pen','paint','glitter','sprinkles','scoop','waffle']);
@@ -1483,11 +1484,11 @@ games.draw=(function(){
     x.save(); x.translate(0,w*.1); x.strokeStyle=mix(o.color,.22,[48,37,74]); x.lineWidth=w; path(x,a); x.stroke(); x.restore();
     x.strokeStyle=o.color; x.lineWidth=w; path(x,a); x.stroke();
     x.save(); x.translate(-w*.14,-w*.16); x.globalAlpha=.55; x.strokeStyle=mix(o.color,.5); x.lineWidth=w*.38; path(x,a); x.stroke(); x.restore(); x.globalAlpha=1; }
-  /* Waffle cone: a golden stroke with a criss-cross waffle pattern inside and a toasted edge. */
-  function drawWaffle(x,o){ const a=pts2(o.pts), w=o.w; x.lineCap='round'; x.lineJoin='round'; x.globalAlpha=1;
-    x.strokeStyle='#C98B3E'; x.lineWidth=w; path(x,a); x.stroke(); x.strokeStyle='#EDBE72'; x.lineWidth=w*.84; path(x,a); x.stroke();
+  /* Waffle cone: a stroke in the picked color with a criss-cross waffle pattern inside and a toasted edge. */
+  function drawWaffle(x,o){ const a=pts2(o.pts), w=o.w, edge=mix(o.color,.3,[48,37,74]); x.lineCap='round'; x.lineJoin='round'; x.globalAlpha=1;
+    x.strokeStyle=edge; x.lineWidth=w; path(x,a); x.stroke(); x.strokeStyle=o.color; x.lineWidth=w*.84; path(x,a); x.stroke();
     let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9; a.forEach(p=>{ x0=Math.min(x0,p[0]); y0=Math.min(y0,p[1]); x1=Math.max(x1,p[0]); y1=Math.max(y1,p[1]); }); x0-=w; y0-=w; x1+=w; y1+=w;
-    const gap=Math.max(7,w*.34), L=(x1-x0)+(y1-y0); x.save(); x.globalCompositeOperation='source-atop'; x.strokeStyle='#C98B3E'; x.lineWidth=Math.max(1.5,w*.07); x.lineCap='butt'; x.beginPath();
+    const gap=Math.max(7,w*.34), L=(x1-x0)+(y1-y0); x.save(); x.globalCompositeOperation='source-atop'; x.strokeStyle=edge; x.lineWidth=Math.max(1.5,w*.07); x.lineCap='butt'; x.beginPath();
     for(let d=-L;d<L;d+=gap){ x.moveTo(x0+d,y0); x.lineTo(x0+d+(y1-y0),y1); x.moveTo(x0+d,y1); x.lineTo(x0+d+(y1-y0),y0); } x.stroke();
     x.strokeStyle='rgba(255,255,255,.35)'; x.lineWidth=Math.max(1,w*.04); x.beginPath(); for(let d=-L;d<L;d+=gap){ x.moveTo(x0+d+2,y0); x.lineTo(x0+d+2+(y1-y0),y1); } x.stroke(); x.restore(); }
   const RENDER={crayon:drawCrayon,marker:drawMarker,pen:drawPen,paint:drawPaint,rainbow:drawRainbow,glitter:drawGlitter,sprinkles:drawSprinkles,scoop:drawScoop,waffle:drawWaffle};
@@ -1585,11 +1586,11 @@ games.draw=(function(){
     sx.save(); sx.setTransform(1,0,0,1,0,0); sx.clearRect(0,0,scr.width,scr.height); sx.restore(); sx.save(); RENDER[tool](sx,o); sx.restore();
     pvx.save(); pvx.setTransform(1,0,0,1,0,0); pvx.globalAlpha=tool==='marker'?.82:tool==='crayon'?.95:1; pvx.drawImage(scr,0,0,pv.width,pv.height,0,0,pv.width,pv.height); pvx.restore();
     sx.save(); sx.setTransform(1,0,0,1,0,0); sx.clearRect(0,0,scr.width,scr.height); sx.restore(); }
-  function paintSize(){ const fill=tool==='rainbow'?'url(#dwrain)':tool==='waffle'?'#EDBE72':tool==='sponge'?'#4DBCEC':tool==='eraser'?'#FFFFFF':(tool==='trail'||tool==='stamp')?'#D5C6F2':color;
+  function paintSize(){ const fill=tool==='rainbow'?'url(#dwrain)':tool==='sponge'?'#4DBCEC':tool==='eraser'?'#FFFFFF':(tool==='trail'||tool==='stamp')?'#D5C6F2':color;
     wpath.setAttribute('fill',fill); knob.style.left=(14+sizeT*(slEl.clientWidth-28))+'px'; slEl.setAttribute('aria-valuenow',String(Math.round(sizeT*100)));
     try{ previewDraw(); }catch(e){} }
   window.addEventListener('resize',()=>requestAnimationFrame(paintSize));
-  function setTool(id){ tool=id; $$('#dtools .dtool').forEach(b=>b.classList.toggle('on',b.dataset.tool===id)); const eb=$('#derase'); eb.classList.toggle('on',id==='eraser'); eb.setAttribute('aria-pressed',String(id==='eraser')); const em=(id==='trail'||id==='stamp'); swEl.classList.toggle('hidden',em); trayEl.classList.toggle('hidden',!em); paintSize();
+  function setTool(id){ tool=id; $$('#dtools .dtool').forEach(b=>b.classList.toggle('on',b.dataset.tool===id)); const eb=$('#derase'); eb.classList.toggle('on',id==='eraser'); eb.setAttribute('aria-pressed',String(id==='eraser')); const em=(id==='trail'||id==='stamp'); swEl.classList.toggle('hidden',em); swEl.classList.toggle('off',!em&&!INK.has(id)); trayEl.classList.toggle('hidden',!em); paintSize();
  }
   COLORS.forEach(([hex,name],i)=>{ const b=document.createElement('button'); b.className='dsw'+(i?'':' on'); b.innerHTML='<i style="background:'+hex+'"></i>'; b.setAttribute('role','radio'); b.setAttribute('aria-checked',String(!i)); b.setAttribute('aria-label',name);
     b.onclick=()=>{ ctx(); sfx.boop(); color=hex; $$('#dswatches .dsw').forEach(x=>{ x.classList.toggle('on',x===b); x.setAttribute('aria-checked',String(x===b)); }); if(!INK.has(tool)) setTool('crayon'); paintSize(); say(name); }; swEl.appendChild(b); });

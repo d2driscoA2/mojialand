@@ -790,9 +790,14 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   check('draw: glitter adds sparkles', (await ink()) > g0, String((await ink()) - g0));
   // ice cream: waffle cone then a scoop on top
   const w0 = await ink();
-  await page.click('#dtools [data-tool="waffle"]'); await stroke(150, 330, 190, 400, 10);
-  const waf = await page.evaluate(() => { const c = document.querySelector('#dmain'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let tan = 0, dark = 0; for (let i = 0; i < d.length; i += 4) { if (d[i + 3] < 200) continue; const r = d[i], g = d[i + 1], b = d[i + 2]; if (r > 200 && g > 150 && g < 215 && b < 140) tan++; else if (r > 180 && r < 215 && g > 115 && g < 150 && b < 90) dark++; } return { tan, dark }; });
-  check('draw: waffle cone draws tan with a darker crosshatch', (await ink()) > w0 && waf.tan > 300 && waf.dark > 50, JSON.stringify(waf));
+  await page.click('#dtools [data-tool="rainbow"]');
+  const offR = await page.evaluate(() => { const e = document.querySelector('#dswatches'); return e.classList.contains('off') && parseFloat(getComputedStyle(e.querySelector('.dsw i')).opacity) < .5; });
+  await page.click('#derase'); const offE = await page.evaluate(() => document.querySelector('#dswatches').classList.contains('off'));
+  await page.click('#dtools [data-tool="waffle"]'); const onW = await page.evaluate(() => !document.querySelector('#dswatches').classList.contains('off'));
+  check('draw: colors gray out for rainbow and eraser, and stay bright for the waffle cone', offR && offE && onW, JSON.stringify({ offR, offE, onW }));
+  await page.click('#dswatches .dsw:nth-child(7)'); await stroke(150, 330, 190, 400, 10);
+  const waf = await page.evaluate(() => { const c = document.querySelector('#dmain'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let fill = 0, dark = 0; for (let i = 0; i < d.length; i += 4) { if (d[i + 3] < 200) continue; const r = d[i], g = d[i + 1], b = d[i + 2]; if (r > 65 && r < 90 && g > 178 && g < 198 && b > 226) fill++; else if (r < 80 && g > 125 && g < 160 && b > 165 && b < 205) dark++; } return { fill, dark }; });
+  check('draw: waffle cone draws in the picked color (blue) with a darker crosshatch', (await ink()) > w0 && waf.fill > 300 && waf.dark > 50 && (await page.evaluate(() => document.querySelector('#dtools .dtool.on').dataset.tool)) === 'waffle', JSON.stringify(waf));
   const i0 = await ink();
   await page.click('#dtools [data-tool="scoop"]'); await page.click('#dswatches .dsw:nth-child(2)'); await stroke(140, 320, 200, 320, 8);
   check('draw: ice cream scoop adds a round scoop', (await ink()) - i0 > 1500, String((await ink()) - i0));
