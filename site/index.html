@@ -114,11 +114,8 @@ section{padding-block:72px}
 /* Games */
 .games-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:end;gap:16px;margin-bottom:32px}
 .games-head h2{font-size:clamp(34px,4.4vw,52px)}
-/* Game tiles match the app home (Mojialand-Home-Tiles-Handoff.md): featured card, then colored tiles with a white scene window and a purple play button. */
-.gtile{appearance:none;border:0;font:inherit;text-align:left;cursor:pointer;color:var(--ink);transition:transform .15s ease;display:flex}
-.gtile:active{transform:scale(.97)}
-@media (hover:hover){.gtile:hover{transform:translateY(-3px)}}
-.gtile:focus-visible{outline:4px solid var(--blue);outline-offset:4px}
+/* Game tiles match the app home (Mojialand-Home-Tiles-Handoff.md): featured card, then colored tiles with a white scene window. Display only: the hero and header buttons open the app. */
+.gtile{color:var(--ink);display:flex}
 .gtile .gname{display:block;font-weight:900;line-height:1.05;letter-spacing:-.01em}
 .gtile .tag,.gtile .gdesc,.gtile .skill{display:block}
 .gfeat{width:100%;background:var(--purple);color:#fff;border-radius:28px;padding:14px;gap:22px;align-items:stretch;box-shadow:0 10px 22px rgba(48,37,74,.18);margin-bottom:18px}
@@ -131,10 +128,6 @@ section{padding-block:72px}
 .gfeat .gdesc{font-size:16px;max-width:52ch;opacity:.95}
 .gfeat .foot{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:8px}
 .gfeat .skill{font-size:12px;letter-spacing:.16em;text-transform:uppercase;font-weight:900;opacity:.9}
-.gplay{display:flex;align-items:center;justify-content:center;border-radius:999px;background:var(--purple);flex:none;width:44px;height:44px;animation:gring 2.2s ease-out infinite}
-.gplay.big{width:56px;height:56px;background:#fff;animation-name:gringw}
-@keyframes gring{0%{box-shadow:0 0 0 0 rgba(113,56,209,.5);transform:scale(1)}15%{transform:scale(1.08)}30%{transform:scale(1)}70%{box-shadow:0 0 0 14px rgba(113,56,209,0)}100%{box-shadow:0 0 0 0 rgba(113,56,209,0)}}
-@keyframes gringw{0%{box-shadow:0 0 0 0 rgba(255,255,255,.55);transform:scale(1)}15%{transform:scale(1.08)}30%{transform:scale(1)}70%{box-shadow:0 0 0 14px rgba(255,255,255,0)}100%{box-shadow:0 0 0 0 rgba(255,255,255,0)}}
 .tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
 .gcell{flex-direction:column;gap:10px;padding:10px 10px 18px;border-radius:26px;box-shadow:0 8px 18px rgba(48,37,74,.14)}
 .gcell .win{height:130px;flex:none;border-radius:18px;background:rgba(255,255,255,.92);overflow:hidden;display:flex;align-items:center;justify-content:center}
@@ -365,45 +358,45 @@ footer .fine.credit a{color:#fff;text-decoration:underline;text-underline-offset
     <p class="lede" style="max-width:42ch">Every game teaches itself with a picture card the first time. No reading needed.</p>
    </div>
 
-   <button class="gtile gfeat" type="button" data-play>
+   <article class="gtile gfeat">
     <span class="win" aria-hidden="true"><div><div style="display:flex;align-items:center;gap:2px"><svg width="96" height="60" viewBox="0 0 96 60" aria-hidden="true"><path class="hs-dr" d="M6 46 C 22 6, 40 6, 48 30 S 74 56, 90 14" fill="none" stroke="#FF5FA2" stroke-width="7" stroke-linecap="round"/></svg><span class="em" style="font-size:28px">🖍️</span></div></div></span>
     <span class="col">
      <span class="gchip">New!</span>
      <span class="gname">Draw</span>
      <span class="tag">Draw with your friends</span>
      <span class="gdesc">Crayons, markers, paint, glitter, and an emoji brush that leaves a trail of friends. Color a page from the coloring book, then hang the art on the fridge.</span>
-     <span class="foot"><span class="skill">Create and imagine</span><span class="gplay big" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 20 20" aria-hidden="true"><path d="M6 3.5v13l11-6.5z" fill="#7138D1"/></svg></span></span>
+     <span class="foot"><span class="skill">Create and imagine</span></span>
     </span>
-   </button>
+   </article>
    <div class="tiles">
-    <button class="gtile gcell t-pattern" type="button" data-play>
+    <article class="gtile gcell t-pattern">
      <span class="win" aria-hidden="true"><div style="display:flex;align-items:center;gap:3px;font-size:26px;line-height:1"><span class="em hs-pi">🦄</span><span class="em hs-pi hs-pi2">🐴</span><span class="em hs-pi hs-pi3">🦄</span><span class="hs-pq">?</span></div></span>
-     <span class="hrow"><span class="gname">Pattern</span><span class="gplay" style="animation-delay:0.5s" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 20 20" aria-hidden="true"><path d="M6 3.5v13l11-6.5z" fill="#FFFFFF"/></svg></span></span>
+     <span class="hrow"><span class="gname">Pattern</span></span>
      <span class="tag">What comes next?</span>
      <span class="gdesc">Finish the row. Six levels move from easy pairs to longer patterns, each in a new scene. Win a medal at every level.</span>
      <span class="skill">Patterns</span>
-    </button>
-    <button class="gtile gcell t-bounce" type="button" data-play>
+    </article>
+    <article class="gtile gcell t-bounce">
      <span class="win" aria-hidden="true"><div style="position:relative;width:120px;height:100px"><div class="hs-bsh" style="position:absolute;left:42px;bottom:12px;width:36px;height:8px;border-radius:50%;background:rgba(48,37,74,.18)"></div><div class="em hs-ball" style="position:absolute;left:43px;bottom:16px;font-size:34px">🎾</div></div></span>
-     <span class="hrow"><span class="gname">Bounce</span><span class="gplay" style="animation-delay:1.0s" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 20 20" aria-hidden="true"><path d="M6 3.5v13l11-6.5z" fill="#FFFFFF"/></svg></span></span>
+     <span class="hrow"><span class="gname">Bounce</span></span>
      <span class="tag">Drop and bounce!</span>
      <span class="gdesc">Tap to drop friends into a bouncy box and watch them spring. Pick from 164 emoji.</span>
      <span class="skill">Cause and effect</span>
-    </button>
-    <button class="gtile gcell t-match" type="button" data-play>
+    </article>
+    <article class="gtile gcell t-match">
      <span class="win" aria-hidden="true"><div style="display:flex;gap:10px"><div class="hs-card flip"><div class="hs-face em">😊</div></div><div class="hs-card"></div><div class="hs-card flip"><div class="hs-face em">😊</div></div></div></span>
-     <span class="hrow"><span class="gname">Match</span><span class="gplay" style="animation-delay:1.5s" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 20 20" aria-hidden="true"><path d="M6 3.5v13l11-6.5z" fill="#FFFFFF"/></svg></span></span>
+     <span class="hrow"><span class="gname">Match</span></span>
      <span class="tag">Find the pairs</span>
      <span class="gdesc">Flip two cards and find the pairs. Stars, medals, and bigger boards across 18 levels.</span>
      <span class="skill">Memory</span>
-    </button>
-    <button class="gtile gcell t-parade" type="button" data-play>
+    </article>
+    <article class="gtile gcell t-parade">
      <span class="win" aria-hidden="true"><div style="width:100%;overflow:hidden"><div class="hs-march em"><span>🦄</span><span>🐶</span><span>🦖</span><span>🦈</span><span>🍕</span><span>🦄</span><span>🐶</span><span>🦖</span><span>🦈</span><span>🍕</span></div></div></span>
-     <span class="hrow"><span class="gname">Parade</span><span class="gplay" style="animation-delay:2.0s" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 20 20" aria-hidden="true"><path d="M6 3.5v13l11-6.5z" fill="#FFFFFF"/></svg></span></span>
+     <span class="hrow"><span class="gname">Parade</span></span>
      <span class="tag">Follow the leader</span>
      <span class="gdesc">Tap to drop a lollipop and the parade chases it through seven worlds. Add friends to grow the line.</span>
      <span class="skill">Create and explore</span>
-    </button>
+    </article>
    </div>
   </div>
  </section>
