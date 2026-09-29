@@ -947,9 +947,9 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
 {
   const { ctx, page } = await newPage({ viewport: { width: 921, height: 640 }, deviceScaleFactor: 2, isMobile: false });
   await page.goto(base + '/play/');
-  await page.waitForTimeout(3200);
+  await page.waitForTimeout(2000);
   const sp = await page.evaluate(() => { const vis = (sel) => { const e = document.querySelector(sel), r = e.getBoundingClientRect(), cs = getComputedStyle(e); return r.width > 0 && r.right <= innerWidth && r.bottom <= innerHeight && parseFloat(cs.opacity) > 0.9; }; return { ready: document.querySelector('#splash').classList.contains('ready'), logo: vis('#splash .sp-word') && document.querySelector('#splash .sp-word').complete && document.querySelector('#splash .sp-word').naturalWidth > 0, tag: vis('#splash .sp-tag'), cta: vis('#splash .sp-cta') }; });
-  check('welcome on a sideways iPad: logo loads, tagline and Tap to Play show within 3 seconds', sp.ready && sp.logo && sp.tag && sp.cta, JSON.stringify(sp));
+  check('welcome on a sideways iPad: logo loads, tagline and Tap to Play show within 2 seconds', sp.ready && sp.logo && sp.tag && sp.cta, JSON.stringify(sp));
   await page.screenshot({ path: path.join(SHOTS, 'ipad-side-welcome.png') });
   check('welcome: no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
   await ctx.close();
