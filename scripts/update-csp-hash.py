@@ -35,6 +35,9 @@ if STAGING:
             h = h.replace('</body>', BADGE + '</body>', 1)
             f.write_text(h, encoding='utf-8')
     (site_dir / 'robots.txt').write_text('User-agent: *\nDisallow: /\n', encoding='utf-8')
+else:
+    # Live: let search engines read the website, skip private pages, point to the sitemap.
+    (site_dir / 'robots.txt').write_text('User-agent: *\nDisallow: /admin/\nDisallow: /pass/\nDisallow: /r/\n\nSitemap: https://mojialand.com/sitemap.xml\n', encoding='utf-8')
 
 
 # Pass token public key. Only a public EC P-256 key is allowed in a page:
