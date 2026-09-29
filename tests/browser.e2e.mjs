@@ -689,11 +689,10 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await page.click('[data-go="draw"]');
   await page.waitForSelector('#s-draw:not(.hidden)');
   await page.waitForTimeout(300);
-  check('draw: empty canvas opens the page picker first', await page.isVisible('#dfriend') && (await page.getAttribute('#dpages .dpage:first-child', 'aria-label')) === 'Blank page' && (await page.locator('#dpages .dpage').count()) === 37);
+  check('draw: Draw opens straight to a blank canvas, no page picker', await page.isHidden('#dfriend'));
+  check('draw: coloring book button pulses on the first visit', /\bbookpulse\b/.test(await page.getAttribute('#dbook', 'class')) && (await page.evaluate(() => getComputedStyle(document.querySelector('#dbook')).animationName)) === 'dbookhint');
   check('draw: book button shows a unicorn page, no words', (await page.locator('#dbook .dbthumb svg path').count()) > 3 && ((await page.textContent('#dbook')).replace(/[\s🖍️️]/gu, '')) === '');
-  await page.screenshot({ path: path.join(SHOTS, 'draw-picker-390.png') });
-  await page.click('#dpages .dpage.blank');
-  check('draw: blank page closes the picker', await page.isHidden('#dfriend'));
+  await page.screenshot({ path: path.join(SHOTS, 'draw-open-390.png') });
   const ink = () => page.evaluate(() => { const c = document.querySelector('#dmain'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 0) n++; return n; });
   const line = () => page.evaluate(() => { const c = document.querySelector('#dline'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 0) n++; return n; });
   const box = await page.locator('#dmain').boundingBox();
@@ -744,7 +743,7 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   check('draw: the check closes after 5 seconds and keeps the drawing', await page.isHidden('#dconfirm') && (await ink()) === a4);
   await page.click('#dclear'); await page.click('#dcyes'); await page.waitForTimeout(800);
   check('draw: red trash clears', (await ink()) === 0);
-  check('draw: after Clear the page picker opens', await page.isVisible('#dfriend'));
+  check('draw: after Clear the canvas stays open, no page picker', await page.isHidden('#dfriend'));
   await page.click('#dundo');
   check('draw: Undo brings back a cleared drawing', (await ink()) === a4, String(await ink()));
   await page.click('#dclear'); await page.click('#dcyes'); await page.waitForTimeout(800);
@@ -823,6 +822,7 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await page.click('#dtools [data-tool="crayon"]');
   // color a friend
   await page.click('#dbook');
+  check('draw: opening the book stops the pulse for good', !/\bbookpulse\b/.test(await page.getAttribute('#dbook', 'class')) && (await page.evaluate(() => localStorage.getItem('mojia.bookHint'))) === '3');
   check('draw: coloring book shows 36 pages and a blank page', (await page.locator('#dpages .dpage').count()) === 37 && (await page.locator('#dpages .dpage svg').count()) === 36);
   await page.screenshot({ path: path.join(SHOTS, 'draw-friends-390.png') });
   const pgNames = await page.evaluate(() => [...document.querySelectorAll('#dpages .dpage')].map((b) => b.getAttribute('aria-label')));
@@ -887,7 +887,6 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await page.click('[data-go="draw"]');
   await page.waitForSelector('#s-draw:not(.hidden)'); await page.waitForTimeout(300);
   const box = await page.locator('#dmain').boundingBox();
-  await page.click('#dpages .dpage.blank');
   await page.mouse.move(box.x + 40, box.y + 60); await page.mouse.down(); await page.mouse.move(box.x + 200, box.y + 90, { steps: 10 }); await page.mouse.up();
   await page.click('#dfridgeBtn'); await page.waitForTimeout(300);
   const st = await page.evaluate(() => JSON.parse(localStorage.getItem('mojia.fridge')).map((x) => x.id + ':' + x.slot).join(','));
@@ -907,18 +906,21 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
 // 11c. Emoji Draw on upright iPad: tools in a side panel so the drawing area is as big as possible
 {
   const { ctx, page } = await newPage({ viewport: { width: 480, height: 691 }, deviceScaleFactor: 2, isMobile: false });
-  await page.addInitScript(() => { localStorage.setItem('mojia.demos', 'false'); localStorage.setItem('mojia.welcomed', 'true'); });
+  await page.addInitScript(() => { localStorage.setItem('mojia.demos', 'false'); localStorage.setItem('mojia.welcomed', 'true'); if (!sessionStorage.getItem('hinted')) { sessionStorage.setItem('hinted', '1'); localStorage.setItem('mojia.bookHint', '2'); } });
   await page.goto(base + '/play/');
   await page.click('#splash');
   await page.click('[data-go="draw"]');
   await page.waitForSelector('#s-draw:not(.hidden)'); await page.waitForTimeout(400);
-  await page.click('#dpages .dpage.blank');
   const g = await page.evaluate(() => { const c = document.querySelector('#dmain').getBoundingClientRect(), p = document.querySelector('#s-draw .dctl'), pr = p.getBoundingClientRect(); return { area: Math.round(c.width * c.height), side: pr.right <= c.left, fits: p.scrollHeight <= p.clientHeight + 1, sw: [...document.querySelectorAll('#dswatches .dsw')].every((b) => { const r = b.getBoundingClientRect(); return r.bottom <= pr.bottom && r.width >= 44; }) }; });
   check('draw iPad upright: tools sit in a side panel, drawing area over 140,000 square points', g.side && g.area > 140000, JSON.stringify(g));
   check('draw iPad upright: every tool, the slider, and all 7 colors fit without scrolling', g.fits && g.sw, JSON.stringify(g));
   const small = await page.evaluate(() => [...document.querySelectorAll('#s-draw button,#dslider')].filter((b) => b.offsetParent && (b.getBoundingClientRect().width < 44 || b.getBoundingClientRect().height < 44)).map((b) => b.id || b.className));
   check('draw iPad upright: every control is at least 44 px', small.length === 0, small.join(','));
   await page.screenshot({ path: path.join(SHOTS, 'draw-ipad-upright.png') });
+  check('draw: book still pulses on the third visit', /\bbookpulse\b/.test(await page.getAttribute('#dbook', 'class')));
+  await page.click('#s-draw [data-go="home"]'); await page.waitForTimeout(300);
+  await page.click('[data-go="draw"]'); await page.waitForSelector('#s-draw:not(.hidden)'); await page.waitForTimeout(300);
+  check('draw: book stops pulsing after 3 visits', !/\bbookpulse\b/.test(await page.getAttribute('#dbook', 'class')));
   check('draw iPad upright: no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
   await ctx.close();
 }

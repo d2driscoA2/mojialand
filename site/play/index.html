@@ -546,6 +546,9 @@ textarea.pw-in{resize:none;min-height:88px}
 #s-draw .helpbtn.dicon svg{width:28px;height:28px}
 .dtool .mini,.dicon .mini{position:absolute;right:-5px;bottom:-5px;font-size:16px}
 #s-draw .helpbtn.dicon{position:relative}
+#s-draw #dbook.bookpulse{animation:dbookhint 2.4s ease-in-out infinite}
+@keyframes dbookhint{0%,60%,100%{box-shadow:0 0 0 0 rgba(113,56,209,0),var(--shadow);border-color:var(--line)}15%{box-shadow:0 0 0 5px rgba(113,56,209,.28),var(--shadow);border-color:var(--purple)}45%{box-shadow:0 0 0 14px rgba(113,56,209,0),var(--shadow);border-color:var(--line)}}
+@media (prefers-reduced-motion: reduce){#s-draw #dbook.bookpulse{animation:none;box-shadow:0 0 0 4px rgba(113,56,209,.25),var(--shadow)}}
 #s-draw .dbthumb{width:36px;height:40px;box-sizing:border-box;padding:3px 2px 3px 6px;border-radius:5px;background:#fff;box-shadow:0 0 0 2px #D5C6F2;display:flex;transform:rotate(-4deg)}
 #s-draw .dbthumb svg{width:100%;height:100%}
 /* ---------- HOME: big stamp canvas first, games below the fold (tile spec, September 28) ---------- */
@@ -1543,8 +1546,9 @@ games.draw=(function(){
   function openFriend(){ closePanels(); renderBook(); $('#dfriend').classList.remove('hidden'); $('#dfriend').scrollTop=0; }
   $('#dbthumb').innerHTML=thumb(FRIENDS[0]);
   /* A kid who opens Draw to an empty canvas, or clears it, sees the page picker first: blank paper or a picture to color. */
-  function pickPage(){ if(!isEmpty()) return; openFriend(); say('Pick a page!'); }
-  $('#dbook').onclick=()=>{ ctx(); sfx.boop(); openFriend(); say('The coloring book! Pick a page.'); };
+  /* The book button pulses gently on a kid's first 3 visits to Draw, until the book gets opened once (Danny, September 28). */
+  function bookHint(){ const n=store.get('bookHint',0); $('#dbook').classList.toggle('bookpulse',n<3); if(n<3) store.set('bookHint',n+1); }
+  $('#dbook').onclick=()=>{ ctx(); sfx.boop(); store.set('bookHint',3); $('#dbook').classList.remove('bookpulse'); openFriend(); say('The coloring book! Pick a page.'); };
 
   /* ---- Undo, Redo, and Clear (picture-only check: red trash clears, green arrow keeps, 5 seconds or a tap outside keeps) ---- */
   $('#dundo').onclick=()=>{ ctx(); closePanels(); if(!ops.length){ sfx.hmm(); return; } redo.push(ops.pop()); cheered=false; redraw(); tone(440,0,.08,'sine',.15); tone(330,.07,.12,'sine',.15); };
@@ -1556,7 +1560,7 @@ games.draw=(function(){
   $('#dcno').onclick=()=>{ ctx(); keep(); };
   $('#dconfirm').addEventListener('click',e=>{ if(e.target===e.currentTarget){ ctx(); keep(); } });
   $('#dcyes').onclick=()=>{ ctx(); clearTimeout(confirmT); closePanels(); sfx.poof(); push({t:'c'}); cheered=false;
-    layers.animate([{transform:'scale(1) rotate(0)',opacity:1},{transform:'scale(.15) rotate(18deg)',opacity:0}],{duration:420,easing:'cubic-bezier(.45,0,.2,1)'}).onfinish=()=>{ redraw(); layers.animate([{opacity:0},{opacity:1}],{duration:200}); setTimeout(pickPage,250); }; };
+    layers.animate([{transform:'scale(1) rotate(0)',opacity:1},{transform:'scale(.15) rotate(18deg)',opacity:0}],{duration:420,easing:'cubic-bezier(.45,0,.2,1)'}).onfinish=()=>{ redraw(); layers.animate([{opacity:0},{opacity:1}],{duration:200}); }; };
 
   /* ---- fridge: a drawn refrigerator with 9 spots on the door and a basket for older drawings. Kept on this device only, no account. ---- */
   const FKEY='mojia.fridge', SLOTS=9, BASKET=12, MAGNETS=['#FF5FA2','#FFC83D','#4DBCEC','#72D69A','#7138D1'];
@@ -1608,7 +1612,7 @@ games.draw=(function(){
   function trailDemo(){ size(); const items=[]; for(let i=0;i<=6;i++) items.push([W*.2+i*W*.1,H*.65+Math.sin(i)*H*.05,emo,32,0]); const o={t:'e',items}; push(o); renderOp(mx,o); sfx.chime(); }
 
   return {
-    enter(){ requestAnimationFrame(()=>{ size(); syncUR(); pickPage(); }); },
+    enter(){ requestAnimationFrame(()=>{ size(); syncUR(); }); bookHint(); },
     leave(){ closePanels(); if(cur){ cur=null; pid=null; lx.clearRect(0,0,W,H); } drawer.close(); },
     openPhotos,
     async demo(tap,stopped){ closePanels(); say('Pick a crayon and a color.'); await tap($('#dtools [data-tool=crayon]')); if(stopped()) return; await tap($$('#dswatches .dsw')[1]); if(stopped()) return;
