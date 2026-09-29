@@ -943,6 +943,18 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await ctx.close();
 }
 
+// 11e. Welcome screen on a sideways iPad: logo, tagline, and Tap to Play all show
+{
+  const { ctx, page } = await newPage({ viewport: { width: 921, height: 640 }, deviceScaleFactor: 2, isMobile: false });
+  await page.goto(base + '/play/');
+  await page.waitForTimeout(3200);
+  const sp = await page.evaluate(() => { const vis = (sel) => { const e = document.querySelector(sel), r = e.getBoundingClientRect(), cs = getComputedStyle(e); return r.width > 0 && r.right <= innerWidth && r.bottom <= innerHeight && parseFloat(cs.opacity) > 0.9; }; return { ready: document.querySelector('#splash').classList.contains('ready'), logo: vis('#splash .sp-word') && document.querySelector('#splash .sp-word').complete && document.querySelector('#splash .sp-word').naturalWidth > 0, tag: vis('#splash .sp-tag'), cta: vis('#splash .sp-cta') }; });
+  check('welcome on a sideways iPad: logo loads, tagline and Tap to Play show within 3 seconds', sp.ready && sp.logo && sp.tag && sp.cta, JSON.stringify(sp));
+  await page.screenshot({ path: path.join(SHOTS, 'ipad-side-welcome.png') });
+  check('welcome: no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
+  await ctx.close();
+}
+
 // 11d. Sideways iPad: every game uses the full screen width
 {
   const { ctx, page } = await newPage({ viewport: { width: 921, height: 640 }, deviceScaleFactor: 2, isMobile: false });
@@ -965,6 +977,12 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   check('sideways iPad: Pattern, Match, and Parade stages span the screen; Bounce keeps its emoji rail', ['pattern', 'match', 'parade'].every((g) => widths[g] >= 850) && widths.bounce >= 780, JSON.stringify(widths));
   check('sideways iPad: Match lays the cards out wide (more columns than rows)', widths.matchCols[0] > widths.matchCols[1], JSON.stringify(widths.matchCols));
   check('sideways iPad: Pattern picture cards grow with the screen', widths.choice > 140, String(widths.choice));
+  await page.evaluate(() => document.querySelector('#s-home [data-go="draw"]').click()); await page.waitForTimeout(400);
+  await page.click('#dtools [data-tool="stamp"]'); await page.click('#dtray .tile:last-child'); await page.waitForTimeout(500);
+  const dr = await page.evaluate(() => { const d = document.querySelector('#drawer').getBoundingClientRect(), tabs = [...document.querySelectorAll('#drawer .dtabs .dtab')].map((t) => t.getBoundingClientRect()), tile = document.querySelector('#drawer .dgrid .tile').getBoundingClientRect(); return { inRow: tabs.every((t) => Math.abs(t.top - tabs[0].top) < 2 && t.top >= d.top && t.bottom < d.top + 90), pos: getComputedStyle(document.querySelector('#drawer .dtabs .dtab')).position, tile: Math.round(tile.width), width: Math.round(d.width) }; });
+  check('sideways iPad: emoji drawer keeps category buttons in a row and kid-sized tiles', dr.inRow && dr.pos === 'static' && dr.tile >= 56 && dr.tile <= 90 && dr.width <= 860, JSON.stringify(dr));
+  await page.screenshot({ path: path.join(SHOTS, 'ipad-side-drawer.png') });
+  await page.click('#drawer .dclose'); await page.waitForTimeout(300);
   check('sideways iPad: games, no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
   await ctx.close();
 }

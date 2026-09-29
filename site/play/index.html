@@ -10,6 +10,7 @@
 <meta name="description" content="Mojialand: four little emoji games for kids 3 and up. Pattern, Bounce, Match, Parade. No reading, no timers, no losing.">
 <meta property="og:title" content="Mojialand">
 <meta property="og:description" content="Four little emoji games for kids 3 and up.">
+<link rel="preload" as="image" href="/logo/logo-3d-1000.webp" type="image/webp" fetchpriority="high">
 <link rel="icon" type="image/svg+xml" href="/logo/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/logo/icon-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/logo/icon-180.png">
@@ -152,8 +153,10 @@ body.drawer-open .addbtn{display:none}
 .dtab{flex:0 0 auto;height:56px;padding:0 12px;border:0;border-radius:999px;background:#fff;display:flex;align-items:center;gap:6px;font:inherit;font-weight:800;font-size:13px;color:var(--ink);cursor:pointer}
 .dtab .e{font-size:26px;line-height:1}
 .dtab.on{background:var(--purple);color:#fff}
-.dgrid{flex:1;min-height:0;overflow-y:auto;display:grid;grid-template-columns:repeat(5,1fr);gap:8px;align-content:start;padding:2px}
+.dgrid{flex:1;min-height:0;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(62px,1fr));gap:8px;align-content:start;padding:2px}
 .dgrid .tile{width:auto;height:auto;aspect-ratio:1;font-size:34px}
+/* Wide screens: the drawer stays a centered sheet so the emoji tiles keep a kid-sized grid. */
+@media (min-width:700px){.drawer{width:min(100%,860px);margin:0 auto}.dgrid .tile{font-size:38px}}
 .dclose{height:52px;border:0;border-radius:999px;background:var(--purple);color:#fff;font-family:var(--display);font-weight:900;font-size:16px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;box-shadow:var(--shadow);flex:0 0 auto}
 .dclose .e{font-size:20px}
 /* bounce */
@@ -335,6 +338,10 @@ body.drawer-open .addbtn{display:none}
 @keyframes spPop{from{opacity:0;scale:0}to{opacity:1;scale:1}}
 @keyframes spReveal{from{opacity:0;transform:translateY(20px) scale(.9)}to{opacity:1;transform:none}}
 @keyframes spFloat{0%,100%{translate:0 0}50%{translate:0 -5px}}
+/* Safety net: if an animation stalls (slow device, logo still loading), the logo, tagline, and Tap to Play still show 2.8 seconds in. */
+#splash.ready .sp-text,#splash.ready .sp-word,#splash.ready .sp-tag,#splash.ready .sp-cta{opacity:1!important}
+#splash.ready .sp-word,#splash.ready .sp-tag{animation:none!important;transform:none!important}
+#splash.ready .sp-cta{animation-name:none!important;transform:none!important}
 @media (prefers-reduced-motion:reduce){#splash.run *,#splash.run .sp-hero span{animation:none!important}#splash .sp-space{display:none}#splash .sp-cta{opacity:1}#splash{transition:none}}
 #splash .sp-cta button:focus-visible,.big:focus-visible,.gamebtn:focus-visible,.pill:focus-visible,.choice:focus-visible,.tile:focus-visible,.mt:focus-visible{outline:3px solid var(--purple-d);outline-offset:2px}
 /* home brand header (v1.4) */
@@ -556,18 +563,18 @@ textarea.pw-in{resize:none;min-height:88px}
 .dtool .mini,.dicon .mini{position:absolute;right:-5px;bottom:-5px;font-size:16px}
 #s-draw .helpbtn.dicon{position:relative}
 /* Hide tools: a tab on the canvas edge. Open: a small light tab with an arrow toward the tools. Hidden: a bright purple tab with the kid's crayon and color, pointing back out. */
-.dtab{position:absolute;z-index:6;left:50%;top:6px;transform:translateX(-50%);min-width:56px;height:44px;padding:0 12px;border-radius:22px;border:2px solid var(--line);background:rgba(255,255,255,.92);color:var(--purple);display:flex;align-items:center;justify-content:center;gap:4px;box-shadow:var(--shadow);cursor:pointer}
-.dtab:focus-visible{outline:3px solid var(--purple-d);outline-offset:2px}
-.dtab .dtabtool{display:none;font-size:30px;line-height:1;position:relative}
-.dtab .dtabtool i{position:absolute;right:-4px;bottom:-2px;width:14px;height:14px;border-radius:999px;border:2px solid #fff}
-#s-draw.dfull .dtab{height:64px;min-width:96px;padding:0 16px;border:3px solid #fff;background:var(--purple);color:#fff;box-shadow:0 6px 16px rgba(113,56,209,.4)}
-#s-draw.dfull .dtab .dtabtool{display:block}
-#s-draw.dfull .dtab .dtabarrow{transform:rotate(180deg)}
-#s-draw.dfull .dtab.nudge{animation:dtabnudge 1.1s ease-in-out 3}
+.dhtab{position:absolute;z-index:6;left:50%;top:6px;transform:translateX(-50%);min-width:56px;height:44px;padding:0 12px;border-radius:22px;border:2px solid var(--line);background:rgba(255,255,255,.92);color:var(--purple);display:flex;align-items:center;justify-content:center;gap:4px;box-shadow:var(--shadow);cursor:pointer}
+.dhtab:focus-visible{outline:3px solid var(--purple-d);outline-offset:2px}
+.dhtab .dtabtool{display:none;font-size:30px;line-height:1;position:relative}
+.dhtab .dtabtool i{position:absolute;right:-4px;bottom:-2px;width:14px;height:14px;border-radius:999px;border:2px solid #fff}
+#s-draw.dfull .dhtab{height:64px;min-width:96px;padding:0 16px;border:3px solid #fff;background:var(--purple);color:#fff;box-shadow:0 6px 16px rgba(113,56,209,.4)}
+#s-draw.dfull .dhtab .dtabtool{display:block}
+#s-draw.dfull .dhtab .dtabarrow{transform:rotate(180deg)}
+#s-draw.dfull .dhtab.nudge{animation:dtabnudge 1.1s ease-in-out 3}
 @keyframes dtabnudge{0%,100%{box-shadow:0 6px 16px rgba(113,56,209,.4)}50%{box-shadow:0 0 0 12px rgba(113,56,209,.25),0 6px 16px rgba(113,56,209,.4)}}
 #s-draw.dfull .dctl{display:none}
-@media (min-width:460px){ .dtab{left:6px;top:50%;transform:translateY(-50%);width:44px;min-width:44px;height:64px;padding:0} .dtab .dtabarrow{transform:rotate(-90deg)} #s-draw.dfull .dtab{width:auto;min-width:72px;height:96px;flex-direction:column;padding:8px 10px} #s-draw.dfull .dtab .dtabarrow{transform:rotate(90deg)} #s-draw.dfull #dstage{grid-column:1/-1} }
-@media (prefers-reduced-motion: reduce){ #s-draw.dfull .dtab.nudge{animation:none} }
+@media (min-width:460px){ .dhtab{left:6px;top:50%;transform:translateY(-50%);width:44px;min-width:44px;height:64px;padding:0} .dhtab .dtabarrow{transform:rotate(-90deg)} #s-draw.dfull .dhtab{width:auto;min-width:72px;height:96px;flex-direction:column;padding:8px 10px} #s-draw.dfull .dhtab .dtabarrow{transform:rotate(90deg)} #s-draw.dfull #dstage{grid-column:1/-1} }
+@media (prefers-reduced-motion: reduce){ #s-draw.dfull .dhtab.nudge{animation:none} }
 #s-draw #dbook.bookpulse{animation:dbookhint 2.4s ease-in-out infinite}
 @keyframes dbookhint{0%,60%,100%{box-shadow:0 0 0 0 rgba(113,56,209,0),var(--shadow);border-color:var(--line)}15%{box-shadow:0 0 0 5px rgba(113,56,209,.28),var(--shadow);border-color:var(--purple)}45%{box-shadow:0 0 0 14px rgba(113,56,209,0),var(--shadow);border-color:var(--line)}}
 @media (prefers-reduced-motion: reduce){#s-draw #dbook.bookpulse{animation:none;box-shadow:0 0 0 4px rgba(113,56,209,.25),var(--shadow)}}
@@ -763,7 +770,7 @@ body.in-draw #app{max-width:none}
 <section class="screen hidden" id="s-draw" data-bg="grape">
   <div class="bar"><button class="pill gear" data-go="home" aria-label="Back to home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7138D1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg></button><div class="dur2"><button class="dur off" id="dundo" aria-label="Undo"><span aria-hidden="true">↩️</span></button><button class="dur off" id="dredo" aria-label="Redo"><span aria-hidden="true">↪️</span></button><button class="dur derase" id="derase" aria-label="Eraser" aria-pressed="false"><svg viewBox="0 0 32 32" width="30" height="30" aria-hidden="true"><g transform="rotate(-35 16 16)"><rect x="4" y="10" width="24" height="12" rx="3" fill="#FF5FA2" stroke="#7138D1" stroke-width="2.2"/><rect x="17" y="10" width="11" height="12" rx="3" fill="#FFFFFF" stroke="#7138D1" stroke-width="2.2"/><path d="M8 13.5h6" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity=".7"/></g></svg></button></div><div class="pw-slot"><span class="pw-chip" data-chip role="timer"><svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="14" fill="none" stroke="#F3ECFC" stroke-width="6"/><circle class="arc" cx="18" cy="18" r="14" fill="none" stroke="#FFC83D" stroke-width="6" stroke-linecap="round" stroke-dasharray="88" stroke-dashoffset="0" transform="rotate(-90 18 18)"/></svg><span class="t">15:00</span></span></div></div>
   <div class="dctl"><div class="dtools" id="dtools" role="toolbar" aria-label="Drawing tools"></div><div class="dsizes" id="dsizes"><div class="dprev" aria-hidden="true"><canvas id="dprev"></canvas></div><div class="dslider" id="dslider" role="slider" tabindex="0" aria-label="Size" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50"><svg class="dwedge" viewBox="0 0 200 40" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="dwrain" x1="0" x2="1"><stop offset="0" stop-color="#F4565C"/><stop offset=".17" stop-color="#FF8A3D"/><stop offset=".33" stop-color="#FFC83D"/><stop offset=".5" stop-color="#72D69A"/><stop offset=".67" stop-color="#4DBCEC"/><stop offset=".83" stop-color="#7138D1"/><stop offset="1" stop-color="#FF5FA2"/></linearGradient></defs><path id="dwpath" d="M2 20 L198 2 L198 38 Z"/></svg><span class="dknob" id="dknob"></span></div></div><div class="dswatches" id="dswatches" role="radiogroup" aria-label="Colors"></div><div class="tray hidden" id="dtray"></div></div>
-  <div class="stage" id="dstage"><button class="dtab" id="dtab" aria-label="Hide tools" aria-expanded="true"><span class="dtabtool" id="dtabtool" aria-hidden="true"></span><svg class="dtabarrow" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg></button>
+  <div class="stage" id="dstage"><button class="dhtab" id="dtab" aria-label="Hide tools" aria-expanded="true"><span class="dtabtool" id="dtabtool" aria-hidden="true"></span><svg class="dtabarrow" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg></button>
     <div class="dlayers" id="dlayers"><canvas id="dmain"></canvas><canvas id="dlive"></canvas><canvas id="dline"></canvas></div>
     <div class="dpanel dbookp hidden" id="dfriend" role="dialog" aria-label="Coloring book"><button class="dx" data-dclose aria-label="Close"><span aria-hidden="true">✖️</span></button><div class="dbookhead" aria-hidden="true"><span>📖</span><span>🖍️</span></div><div class="dpages" id="dpages"></div></div>
     <div class="dpanel dfridge hidden" id="dfridge" role="dialog" aria-label="The fridge"><button class="dx" id="dfclose" data-dclose aria-label="Close"><span aria-hidden="true">✖️</span></button>
@@ -867,7 +874,7 @@ body.in-draw #app{max-width:none}
       <div class="sp-cloud"><i style="left:0;width:26%;height:70%"></i><i style="left:16%;width:30%;height:100%"></i><i style="left:38%;width:28%;height:86%"></i><i style="left:58%;width:28%;height:100%"></i><i style="left:76%;width:24%;height:72%"></i></div>
     </div>
     <div class="sp-text" id="spText">
-      <img class="sp-word" src="/logo/logo-3d-1000.webp" width="1000" height="332" alt="Mojialand" draggable="false">
+      <img class="sp-word" src="/logo/logo-3d-1000.webp" width="1000" height="332" alt="Mojialand" draggable="false" fetchpriority="high" decoding="async">
       <div class="sp-tag" aria-label="Play, create, explore, together"><span aria-hidden="true">PLAY<b style="color:var(--pink)">•</b>CREATE<b style="color:var(--yellow)">•</b>EXPLORE<b style="color:var(--blue)">•</b>TOGETHER</span></div>
     </div>
     <div class="sp-cta"><button type="button" id="spGo">Tap to Play</button></div>
@@ -1422,7 +1429,9 @@ games.draw=(function(){
 
   /* ---- canvas size ---- */
   function size(){ const r=cMain.getBoundingClientRect(); if(!r.width||!r.height) return; const nd=Math.min(2,window.devicePixelRatio||1); if(r.width===W&&r.height===H&&nd===dpr) return;
-    W=r.width; H=r.height; dpr=nd; [cMain,cLive,cLine,scr].forEach(c=>{ c.width=Math.round(W*dpr); c.height=Math.round(H*dpr); }); [mx,lx,ox,sx].forEach(x=>x.setTransform(dpr,0,0,dpr,0,0)); grainPat=sx.createPattern(grain,'repeat'); samples=null; redraw(); try{ paintSize(); }catch(e){} }
+    const keep=W&&nd===dpr&&!friendNow()&&cMain.width>0; let old=null; if(keep){ old=document.createElement('canvas'); old.width=cMain.width; old.height=cMain.height; old.getContext('2d').drawImage(cMain,0,0); }
+    W=r.width; H=r.height; dpr=nd; [cMain,cLive,cLine,scr].forEach(c=>{ c.width=Math.round(W*dpr); c.height=Math.round(H*dpr); }); [mx,lx,ox,sx].forEach(x=>x.setTransform(dpr,0,0,dpr,0,0)); grainPat=sx.createPattern(grain,'repeat'); samples=null;
+    if(old){ mx.save(); mx.setTransform(1,0,0,1,0,0); mx.drawImage(old,0,0); mx.restore(); drawFriend(); syncUR(); } else redraw(); try{ paintSize(); }catch(e){} }
   window.addEventListener('resize',()=>{ if(current==='draw') requestAnimationFrame(size); });
 
   /* ---- stroke renderers: each draws one whole stroke into the scratch canvas, then lands on the target ---- */
@@ -1484,11 +1493,15 @@ games.draw=(function(){
   const RENDER={crayon:drawCrayon,marker:drawMarker,pen:drawPen,paint:drawPaint,rainbow:drawRainbow,glitter:drawGlitter,sprinkles:drawSprinkles,scoop:drawScoop,waffle:drawWaffle};
   function renderStroke(t,o,live){ if(o.tool==='sponge'){ const q=pts2(o.pts); for(let i=1;i<q.length;i++) smearSeg(t,q[i-1],q[i],o.w); return; }
     if(o.tool==='eraser'){ t.save(); t.globalCompositeOperation='destination-out'; t.lineCap='round'; t.lineJoin='round'; t.lineWidth=o.w; t.strokeStyle='#000'; path(t,pts2(o.pts)); t.stroke(); t.restore(); return; }
-    sx.save(); sx.setTransform(1,0,0,1,0,0); sx.clearRect(0,0,scr.width,scr.height); sx.restore(); sx.save(); RENDER[o.tool](sx,o); sx.restore();
+    const bb=strokeBox(o), bx=bb[0], by=bb[1], bw=bb[2], bh=bb[3]; if(bw<=0||bh<=0) return;
+    sx.save(); sx.setTransform(1,0,0,1,0,0); sx.clearRect(bx,by,bw,bh); sx.restore(); sx.save(); RENDER[o.tool](sx,o); sx.restore();
     t.save(); t.setTransform(1,0,0,1,0,0); t.globalAlpha=o.tool==='marker'?.82:o.tool==='crayon'?.95:1;
-    t.globalCompositeOperation=(o.tool==='marker'&&!live&&o.color!=='#FFFFFF')?'multiply':'source-over'; t.drawImage(scr,0,0); t.restore(); }
+    t.globalCompositeOperation=(o.tool==='marker'&&!live&&o.color!=='#FFFFFF')?'multiply':'source-over'; t.drawImage(scr,bx,by,bw,bh,bx,by,bw,bh); t.restore(); }
+  /* Device-pixel box around a stroke, padded for brushes that scatter (glitter, sprinkles), clamped to the canvas. */
+  function strokeBox(o){ const q=o.pts; let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9; for(let i=0;i<q.length;i+=2){ if(q[i]<x0)x0=q[i]; if(q[i]>x1)x1=q[i]; if(q[i+1]<y0)y0=q[i+1]; if(q[i+1]>y1)y1=q[i+1]; } const pad=o.w*2.5+24;
+    const bx=Math.max(0,Math.floor((x0-pad)*dpr)), by=Math.max(0,Math.floor((y0-pad)*dpr)); return [bx,by,Math.min(scr.width,Math.ceil((x1+pad)*dpr))-bx,Math.min(scr.height,Math.ceil((y1+pad)*dpr))-by]; }
   function drawEmo(x,it){ x.save(); x.globalAlpha=1; x.translate(it[0],it[1]); x.rotate(it[4]); x.font=it[3]+'px '+EMO; x.textAlign='center'; x.textBaseline='middle'; x.fillText(it[2],0,0); x.restore(); }
-  function renderOp(x,o){ if(o.t==='s') renderStroke(x,o,false); else if(o.t==='e') o.items.forEach(it=>drawEmo(x,it)); else if(o.t==='i') x.drawImage(o.img,0,0,W,H); }
+  function renderOp(x,o){ if(o.t==='s') renderStroke(x,o,false); else if(o.t==='e') o.items.forEach(it=>drawEmo(x,it)); else if(o.t==='i') x.drawImage(o.img,0,0,o.w||W,o.h||H); }
 
   function startIndex(){ for(let i=ops.length-1;i>=0;i--){ if(ops[i].t==='c'||ops[i].t==='i') return i; } return 0; }
   function friendNow(){ let f=null; for(const o of ops){ if(o.t==='c'||o.t==='i') f=null; else if(o.t==='f') f=o.id; } return friendById(f); }
@@ -1499,7 +1512,7 @@ games.draw=(function(){
     ox.lineJoin='round'; ox.lineCap='round'; ox.strokeStyle='#30254A'; ox.lineWidth=5; F.silP.concat(F.detP).forEach(p=>ox.stroke(p)); ox.fillStyle='#30254A'; F.dotP.forEach(p=>ox.fill(p)); ox.restore(); }
   function redraw(){ if(!W) return; mx.clearRect(0,0,W,H); lx.clearRect(0,0,W,H); const s=startIndex(); for(let i=s;i<ops.length;i++){ const o=ops[i]; if(o.t!=='c'&&o.t!=='f') renderOp(mx,o); } samples=null; drawFriend(); syncUR(); }
   /* Undo keeps the last 160 steps; older marks fold into one picture. A new mark empties Redo. */
-  function push(o){ if(ops.length>=160){ const snap=document.createElement('canvas'); snap.width=cMain.width; snap.height=cMain.height; snap.getContext('2d').drawImage(cMain,0,0); const F=friendNow(); ops=[{t:'i',img:snap}]; if(F) ops.push({t:'f',id:F.id}); } ops.push(o); redo=[]; syncUR(); }
+  function push(o){ if(ops.length>=160){ const snap=document.createElement('canvas'); snap.width=cMain.width; snap.height=cMain.height; snap.getContext('2d').drawImage(cMain,0,0); const F=friendNow(); ops=[{t:'i',img:snap,w:W,h:H}]; if(F) ops.push({t:'f',id:F.id}); } ops.push(o); redo=[]; syncUR(); }
   function syncUR(){ $('#dundo').classList.toggle('off',!ops.length); $('#dredo').classList.toggle('off',!redo.length); }
 
   /* ---- color a friend: cheer when most of the friend is colored ---- */
@@ -1973,7 +1986,7 @@ const splash=(function(){
     space.style.setProperty('--mx',(t.left+t.width/2-s0.left)+'px'); space.style.setProperty('--my',(t.top+t.height/2-s0.top)+'px');
     space.style.setProperty('--mw',(t.width*.72)+'px'); space.style.setProperty('--mh',(t.height*1.3)+'px'); }
   window.addEventListener('resize',layout); window.addEventListener('orientationchange',()=>setTimeout(layout,300));
-  function show(){ timers.forEach(clearTimeout); timers=[]; el.classList.remove('run','leaving','hidden'); void el.offsetWidth; layout(); el.classList.add('run');
+  function show(){ timers.forEach(clearTimeout); timers=[]; el.classList.remove('run','leaving','hidden','ready'); void el.offsetWidth; layout(); el.classList.add('run'); timers.push(setTimeout(()=>el.classList.add('ready'),2800));
     if(reduced()) smiley.textContent='😀'; else FACES.forEach(([ms,f])=>timers.push(setTimeout(()=>{ smiley.textContent=f; },ms))); }
   function hide(){ if(el.classList.contains('hidden')||el.classList.contains('leaving')) return; timers.forEach(clearTimeout); store.set('welcomed',true); unlock(); ctx(); sfx.chime();
     el.classList.add('leaving'); setTimeout(()=>{ el.classList.add('hidden'); el.classList.remove('run','leaving'); },reduced()?0:460); }
