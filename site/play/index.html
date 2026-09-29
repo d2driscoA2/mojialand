@@ -35,7 +35,8 @@
 html,body{height:100%;margin:0;overflow:hidden;}
 body{position:fixed;inset:0;width:100%;background:var(--cream);color:var(--ink);font-family:var(--body);font-weight:700;touch-action:manipulation;user-select:none;-webkit-user-select:none}
 #app{height:100%;max-width:480px;margin:0 auto;position:relative;background:var(--cream)}
-@media (min-width:600px) and (orientation:landscape) and (pointer:coarse){#app{max-width:760px}}
+/* Tablets and computers: every game uses the full screen width (Danny, September 28). Very wide screens keep the content within 1240 px. */
+@media (min-width:600px){#app{max-width:none}.screen{padding-left:max(16px,calc((100% - 1240px)/2));padding-right:max(16px,calc((100% - 1240px)/2))}}
 .screen{position:absolute;inset:0;display:flex;flex-direction:column;gap:14px;padding:max(14px,env(safe-area-inset-top,0px)) 16px max(14px,env(safe-area-inset-bottom,0px))}
 .screen[data-bg]{background:var(--cream);color:var(--ink)}
 .bar{display:flex;justify-content:space-between;align-items:center;min-height:48px}
@@ -199,7 +200,13 @@ body.drawer-open .addbtn{display:none}
 .pscene{position:absolute;inset:0;transition:background 1.2s;overflow:hidden}
 .pscene .d{position:absolute;line-height:1;pointer-events:none;transition:opacity .8s}
 .pscene .path{position:absolute;left:8%;right:8%;top:50%;height:74px;transform:translateY(-58px);border-radius:999px;background:rgba(255,255,255,.55);box-shadow:inset 0 0 0 3px rgba(255,255,255,.5)}
-#s-pattern .center{z-index:2}
+#s-pattern .center{z-index:2;gap:calc(26px*var(--pk,1))}
+/* Pattern grows with the screen: --pk is set from the stage size (1 on phones, up to 2 on big screens). */
+#s-pattern .pc{width:calc(54px*var(--pk,1));height:calc(54px*var(--pk,1));font-size:calc(32px*var(--pk,1));border-radius:calc(16px*var(--pk,1))}
+#s-pattern .prow{gap:calc(8px*var(--pk,1))}
+#s-pattern .choices{max-width:calc(360px*var(--pk,1));gap:calc(12px*var(--pk,1))}
+#s-pattern .choice{width:calc(120px*var(--pk,1));height:calc(120px*var(--pk,1));font-size:calc(66px*var(--pk,1))}
+#s-pattern .ptitle{font-size:calc(15px*var(--pk,1))}
 #s-pattern .ptitle{padding:6px 14px;border-radius:999px;background:rgba(255,255,255,.8);color:var(--purple-d)}
 /* match reward */
 .reward{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:0 16px;background:rgba(237,230,251,.92);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);animation:fadein .3s}
@@ -450,6 +457,8 @@ textarea.pw-in{resize:none;min-height:88px}
 .pw-err:empty{display:none}
 .pw-ov h3{margin:0;font-family:var(--display);font-weight:900;font-size:20px;color:var(--ink)}
 .pw-ov p{margin:0;font-size:13.5px;font-weight:700;color:var(--mute)}
+/* Grown-up screens stay a readable column on wide screens; the games take the full width. */
+@media (min-width:600px){#s-gate,#s-rest,#s-ngate,#s-plans,#s-allset{padding-left:max(16px,calc((100% - 560px)/2));padding-right:max(16px,calc((100% - 560px)/2))}.pw-ov{align-items:center;justify-content:center;padding:16px}.pw-ov .pw-card{max-width:520px;border-radius:28px}}
 .pw-steps{display:grid;gap:8px;text-align:left}
 .pw-steps div{display:flex;gap:10px;align-items:center;background:var(--cream);border-radius:14px;padding:8px 10px;font-size:14px;font-weight:800;color:var(--ink)}
 .pw-steps b{flex:none;width:34px;height:34px;border-radius:10px;background:var(--white);display:grid;place-items:center;font-size:18px;box-shadow:var(--shadow)}
@@ -556,6 +565,7 @@ textarea.pw-in{resize:none;min-height:88px}
 #s-home>*{flex-shrink:0}
 #s-home #canvas{flex:none;touch-action:none}
 .hgames{display:flex;flex-direction:column;gap:16px;padding-bottom:8px}
+@media (min-width:700px){#s-home .hgrid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 .htile{border:none;font-family:var(--display);text-align:left;cursor:pointer;transition:transform .15s ease;color:var(--ink);padding:0}
 .htile:active{transform:scale(.97)}
 @media (hover:hover){.htile:hover{transform:translateY(-3px)}}
@@ -1095,12 +1105,14 @@ games.pattern=(function(){
   function level(){ return LEVELS[Math.min(LEVELS.length-1,Math.floor(streak/3))]; }
   function round(){ busy=false; const L=level(); setScene(Math.floor(streak/3)); const letters=[...new Set(L.shape.split(''))]; const pool=[...HERO,'⭐','🐸','🦋'].sort(()=>Math.random()-0.5); const map={}; letters.forEach((l,i)=>map[l]=pool[i]);
     const full=[]; for(let i=0;i<=L.show;i++) full.push(map[L.shape[i%L.shape.length]]); seq=full.slice(0,L.show); answer=full[L.show];
-    const cells=L.show+1; const size=cells>6?44:54; prow.innerHTML=''; seq.forEach(e=>{ const d=document.createElement('div'); d.className='pc'; d.style.width=d.style.height=size+'px'; d.style.fontSize=Math.round(size*0.6)+'px'; d.textContent=e; prow.appendChild(d); }); const slot=document.createElement('div'); slot.className='pc slot'; slot.id='pslot'; slot.style.width=slot.style.height=size+'px'; slot.style.fontSize=Math.round(size*0.6)+'px'; prow.appendChild(slot);
+    const cells=L.show+1; const size=cells>6?44:54; prow.innerHTML=''; seq.forEach(e=>{ const d=document.createElement('div'); d.className='pc'; d.style.width=d.style.height='calc('+size+'px*var(--pk,1))'; d.style.fontSize='calc('+Math.round(size*0.6)+'px*var(--pk,1))'; d.textContent=e; prow.appendChild(d); }); const slot=document.createElement('div'); slot.className='pc slot'; slot.id='pslot'; slot.style.width=slot.style.height='calc('+size+'px*var(--pk,1))'; slot.style.fontSize='calc('+Math.round(size*0.6)+'px*var(--pk,1))'; prow.appendChild(slot);
     let opts=letters.map(l=>map[l]); while(opts.length<L.opts){ const x=pool[opts.length]; if(!opts.includes(x)) opts.push(x); } opts=opts.slice(0,L.opts).sort(()=>Math.random()-0.5);
-    const cw=opts.length>2?96:120; choices.innerHTML=''; opts.forEach(e=>{ const c=document.createElement('button'); c.className='choice'; c.textContent=e; c.dataset.e=e; c.setAttribute('aria-label',nameOf(e)); c.style.width=c.style.height=cw+'px'; c.style.fontSize=Math.round(cw*0.55)+'px'; c.dataset.ok=e===answer?'1':'0'; c.onclick=()=>pick(c); choices.appendChild(c); }); idleArm(()=>choices.querySelector('[data-e="'+answer+'"]'),{slow:true,glowAt:10000,handAt:18000}); const dots=$$('#pdots i'); $('#pdots').classList.remove('full'); dots.forEach((d,i)=>{ d.classList.toggle('on',i<(streak%3)); d.classList.toggle('next',i===(streak%3)); }); }
+    const cw=opts.length>2?96:120; choices.innerHTML=''; opts.forEach(e=>{ const c=document.createElement('button'); c.className='choice'; c.textContent=e; c.dataset.e=e; c.setAttribute('aria-label',nameOf(e)); c.style.width=c.style.height='calc('+cw+'px*var(--pk,1))'; c.style.fontSize='calc('+Math.round(cw*0.55)+'px*var(--pk,1))'; c.dataset.ok=e===answer?'1':'0'; c.onclick=()=>pick(c); choices.appendChild(c); }); idleArm(()=>choices.querySelector('[data-e="'+answer+'"]'),{slow:true,glowAt:10000,handAt:18000}); const dots=$$('#pdots i'); $('#pdots').classList.remove('full'); dots.forEach((d,i)=>{ d.classList.toggle('on',i<(streak%3)); d.classList.toggle('next',i===(streak%3)); }); }
   async function pick(c){ if(busy) return; ctx(); const e=c.dataset.e; if(e===answer){ busy=true; idleClear(); const slot=$('#pslot'); slot.classList.remove('slot'); slot.textContent=e; slot.style.background='#FFF0F7'; slot.animate([{transform:'scale(1)'},{transform:'scale(1.3)'},{transform:'scale(1)'}],{duration:400}); sfx.chime(); say(nameOf(e)); toast('Nice one!'); const r=slot.getBoundingClientRect(), st=$('#s-pattern .stage').getBoundingClientRect(); confetti($('#s-pattern .stage'),r.left-st.left+r.width/2,r.top-st.top+r.height/2,14); streak++; homeProg('pattern',Math.floor(streak/3)-1,(streak%3)/3); const dots=$$('#pdots i'), lit=streak%3||3; dots.forEach((d,i)=>{ d.classList.remove('next'); d.classList.toggle('on',i<lit); }); if(lit===3){ $('#pdots').classList.add('full'); dots.forEach((d,i)=>setTimeout(()=>{ const dr=d.getBoundingClientRect(); confetti($('#s-pattern .stage'),dr.left-st.left+dr.width/2,dr.top-st.top+dr.height/2,10); },250+i*120)); } const leveledUp=streak%3===0&&Math.floor(streak/3)<=LEVELS.length; await wait(1100); if(leveledUp){ sfx.cheer(); const done=Math.floor(streak/3)-1; const stg=$('#s-pattern .stage').getBoundingClientRect(); for(let k=0;k<6;k++) setTimeout(()=>confetti($('#s-pattern .stage'),Math.random()*stg.width,stg.height*0.3,16),k*140); await wait(400); showPReward(done); await wait(3200); preward.classList.add('hidden'); } round(); } else { sfx.hmm(); c.classList.remove('wobble'); c.offsetHeight; c.classList.add('wobble'); idleArm(()=>choices.querySelector('[data-e="'+answer+'"]'),{slow:true,glowAt:8000,handAt:14000}); } }
   $('#psay').onclick=()=>{ ctx(); sfx.boop(); say(seq.map(nameOf).join(', ')+', ...'); };
-  return { enter(){ round(); }, leave(){ idleClear(); }, async demo(tap,stopped){ say('Watch me. '+seq.map(nameOf).join(', ')); await wait(600); if(stopped()) return; await tap(choices.querySelector('[data-e="'+answer+'"]')); await wait(1200); } };
+  function pfit(){ const st=$('#s-pattern .stage'), r=st.getBoundingClientRect(); if(!r.width) return; st.style.setProperty('--pk',Math.max(1,Math.min(2,Math.min(r.width/420,r.height/360))).toFixed(3)); }
+  addEventListener('resize',()=>{ if(current==='pattern') requestAnimationFrame(pfit); });
+  return { enter(){ pfit(); requestAnimationFrame(pfit); round(); }, leave(){ idleClear(); }, async demo(tap,stopped){ say('Watch me. '+seq.map(nameOf).join(', ')); await wait(600); if(stopped()) return; await tap(choices.querySelector('[data-e="'+answer+'"]')); await wait(1200); } };
 })();
 
 /* ---------- BOUNCE ---------- */
@@ -1141,7 +1153,12 @@ games.match=(function(){
   const grid=$('#mgrid'), reward=$('#mreward'); const BASE=['🦄','🐴','🐲','🦖','🦈','⭐','🐸','🦋','🐶','🐱','🐙','🌈']; const LV=[[2,3],[3,4],[4,4],[4,5],[4,6],[5,6]]; const BADGES=['🥉','🥈','🥇','🏆','👑','🌈']; const PER=3; let lv=0, cards=[], open=[], busy=false, matched=0, newFaces=[]; const tier=l=>Math.floor(l/PER); const MAXLV=LV.length*PER-1;
   const EXTRA=LIB.flatMap(([,,items])=>items.map(x=>x[0])).filter(e=>!BASE.includes(e)); let extraOrder=[...EXTRA].sort(()=>Math.random()-0.5);
   function poolFor(l){ return l===0?BASE:[...BASE,...extraOrder.slice(0,l*3)]; }
-  function deal(){ const [cols,rows]=LV[tier(lv)]; const n=cols*rows; const pool=poolFor(lv); const pick=[...pool].sort(()=>Math.random()-0.5).slice(0,n/2); newFaces=pick.filter(e=>!BASE.includes(e)).slice(0,3); const deck=[...pick,...pick].sort(()=>Math.random()-0.5); cards=deck.map(e=>({e,up:false,done:false})); open=[]; busy=false; matched=0; grid.style.gridTemplateColumns='repeat('+cols+',1fr)'; grid.style.gridTemplateRows='repeat('+rows+',1fr)'; grid.style.setProperty('--fs',(cols>=5?26:rows>=6?30:rows>=5?34:rows>=4?(cols>=4?38:46):52)+'px'); reward.classList.add('hidden'); render(); }
+  function deal(){ const [cols,rows]=LV[tier(lv)]; const n=cols*rows; const pool=poolFor(lv); const pick=[...pool].sort(()=>Math.random()-0.5).slice(0,n/2); newFaces=pick.filter(e=>!BASE.includes(e)).slice(0,3); const deck=[...pick,...pick].sort(()=>Math.random()-0.5); cards=deck.map(e=>({e,up:false,done:false})); open=[]; busy=false; matched=0; reward.classList.add('hidden'); mlayout(); render(); }
+  /* The card grid follows the screen: more columns than rows on a wide screen, more rows on a tall one. Emoji size follows the card size. */
+  function mlayout(){ if(!cards.length) return; const [a,b]=LV[tier(lv)], r=grid.getBoundingClientRect(), wide=r.width>r.height*1.15; const cols=wide?Math.max(a,b):Math.min(a,b), rows=wide?Math.min(a,b):Math.max(a,b);
+    grid.style.gridTemplateColumns='repeat('+cols+',minmax(0,1fr))'; grid.style.gridTemplateRows='repeat('+rows+',minmax(0,1fr))';
+    const cw=(r.width||320)/cols, ch=(r.height||420)/rows; grid.style.setProperty('--fs',Math.round(Math.max(24,Math.min(72,Math.min(cw,ch)*.5)))+'px'); }
+  addEventListener('resize',()=>{ if(current==='match') requestAnimationFrame(mlayout); });
   function render(){ grid.innerHTML=''; cards.forEach((c,i)=>{ const t=document.createElement('button'); t.className='mt'+(c.up||c.done?' up':'')+(c.done?' done':''); t.dataset.i=i; t.setAttribute('aria-label',c.up||c.done?nameOf(c.e):'hidden card'); t.innerHTML='<div class="in"><div class="b">🌟</div><div class="f">'+c.e+'</div></div>'; t.onclick=()=>flip(i); grid.appendChild(t); }); armIdle(); }
   function el(i){ return grid.children[i]; }
   function armIdle(){ idleClear(); } /* v1.10: no hints in Match */

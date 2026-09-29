@@ -933,6 +933,30 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await ctx.close();
 }
 
+// 11d. Sideways iPad: every game uses the full screen width
+{
+  const { ctx, page } = await newPage({ viewport: { width: 921, height: 640 }, deviceScaleFactor: 2, isMobile: false });
+  await page.addInitScript(() => { localStorage.setItem('mojia.demos', 'false'); localStorage.setItem('mojia.welcomed', 'true'); });
+  await page.goto(base + '/play/');
+  await page.click('#splash'); await page.waitForTimeout(300);
+  const homeCols = await page.evaluate(() => getComputedStyle(document.querySelector('#hgrid')).gridTemplateColumns.split(' ').length);
+  check('sideways iPad: home fills the width, 4 games in one row', (await page.evaluate(() => Math.round(document.querySelector('#app').getBoundingClientRect().width))) === 921 && homeCols === 4, String(homeCols));
+  const widths = {};
+  for (const g of ['pattern', 'bounce', 'match', 'parade', 'draw']) {
+    await page.evaluate((g) => document.querySelector('#s-home [data-go="' + g + '"]').click(), g); await page.waitForTimeout(500);
+    widths[g] = await page.evaluate((g) => Math.round(document.querySelector('#s-' + g + ' .stage, #s-' + g + ' #dstage').getBoundingClientRect().width), g);
+    if (g === 'match') widths.matchCols = await page.evaluate(() => { const s = getComputedStyle(document.querySelector('#mgrid')); return [s.gridTemplateColumns.split(' ').length, s.gridTemplateRows.split(' ').length]; });
+    if (g === 'pattern') widths.choice = await page.evaluate(() => Math.round(document.querySelector('#pchoices .choice').getBoundingClientRect().width));
+    await page.screenshot({ path: path.join(SHOTS, 'ipad-side-' + g + '.png') });
+    await page.evaluate((g) => document.querySelector('#s-' + g + ' [data-go="home"]').click(), g); await page.waitForTimeout(300);
+  }
+  check('sideways iPad: Pattern, Match, and Parade stages span the screen; Bounce keeps its emoji rail', ['pattern', 'match', 'parade'].every((g) => widths[g] >= 850) && widths.bounce >= 780, JSON.stringify(widths));
+  check('sideways iPad: Match lays the cards out wide (more columns than rows)', widths.matchCols[0] > widths.matchCols[1], JSON.stringify(widths.matchCols));
+  check('sideways iPad: Pattern picture cards grow with the screen', widths.choice > 140, String(widths.choice));
+  check('sideways iPad: games, no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
+  await ctx.close();
+}
+
 // 12. Home: big stamp canvas first, featured card peeks at the bottom edge, games scroll below
 {
   const { ctx, page } = await newPage();
