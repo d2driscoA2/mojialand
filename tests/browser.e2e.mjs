@@ -707,11 +707,11 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   const setSize = async (t) => { const s = await page.locator('#dslider').boundingBox(); await page.mouse.click(s.x + 14 + t * (s.width - 28), s.y + s.height / 2); };
   const prevInk = () => page.evaluate(() => { const c = document.querySelector('#dprev'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0, h = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 0) { n++; h = (h * 31 + d[i - 3] + d[i - 2] * 3 + d[i - 1] * 7) >>> 0; } return { n, h }; });
   const stroke = async (x0, y0, x1, y1, steps = 12) => { await page.mouse.move(box.x + x0, box.y + y0); await page.mouse.down(); for (let i = 1; i <= steps; i++) await page.mouse.move(box.x + x0 + (x1 - x0) * i / steps, box.y + y0 + (y1 - y0) * i / steps); await page.mouse.up(); };
-  check('draw: twelve tools, one size slider with a preview card, seven brand colors', (await page.locator('#dtools .dtool').count()) === 12 && (await page.locator('#dslider[role=slider]').count()) === 1 && (await page.locator('#dprev').count()) === 1 && (await page.locator('#dswatches .dsw').count()) === 7);
+  check('draw: twelve tools, one size slider with a preview card, ten colors', (await page.locator('#dtools .dtool').count()) === 12 && (await page.locator('#dslider[role=slider]').count()) === 1 && (await page.locator('#dprev').count()) === 1 && (await page.locator('#dswatches .dsw').count()) === 10);
   const small = await page.evaluate(() => [...document.querySelectorAll('#s-draw button')].filter((b) => b.offsetParent && (b.getBoundingClientRect().width < 44 || b.getBoundingClientRect().height < 44)).map((b) => b.id || b.className || b.getAttribute('aria-label')));
   check('draw: every visible button is at least 44 px', small.length === 0, small.join(','));
   const pal = await page.evaluate(() => [...document.querySelectorAll('#dswatches .dsw i')].map((b) => getComputedStyle(b).backgroundColor));
-  check('draw: palette is the brand colors', pal.join('|') === 'rgb(113, 56, 209)|rgb(255, 95, 162)|rgb(255, 200, 61)|rgb(77, 188, 236)|rgb(114, 214, 154)|rgb(48, 37, 74)|rgb(255, 255, 255)', pal.join('|'));
+  check('draw: palette is the brand colors plus red, orange, and brown', pal.join('|') === 'rgb(113, 56, 209)|rgb(255, 95, 162)|rgb(244, 86, 92)|rgb(255, 138, 61)|rgb(255, 200, 61)|rgb(114, 214, 154)|rgb(77, 188, 236)|rgb(167, 102, 63)|rgb(48, 37, 74)|rgb(255, 255, 255)', pal.join('|'));
   check('draw: canvas starts empty', (await ink()) === 0);
   await stroke(40, 60, 250, 90);
   const a1 = await ink();
@@ -775,6 +775,8 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await page.click('#dtools [data-tool="rainbow"]'); await stroke(40, 170, 300, 170);
   const rb = await page.evaluate(() => { const c = document.querySelector('#dmain'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; const hues = new Set(); for (let i = 0; i < d.length; i += 4 * 7) if (d[i + 3] > 200) hues.add(Math.round(d[i] / 64) + ',' + Math.round(d[i + 1] / 64) + ',' + Math.round(d[i + 2] / 64)); return hues.size; });
   check('draw: rainbow brush lays down many colors', rb >= 6, String(rb));
+  const onPal = await page.evaluate(() => { const P = [[244, 86, 92], [255, 138, 61], [255, 200, 61], [114, 214, 154], [77, 188, 236], [113, 56, 209], [255, 95, 162]]; const c = document.querySelector('#dmain'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let near = 0, all = 0; for (let i = 0; i < d.length; i += 4 * 5) { if (d[i + 3] < 250) continue; all++; if (P.some((p) => Math.abs(p[0] - d[i]) + Math.abs(p[1] - d[i + 1]) + Math.abs(p[2] - d[i + 2]) < 40)) near++; } return all ? near / all : 0; });
+  check('draw: rainbow brush walks through the palette colors', onPal > 0.25, onPal.toFixed(2));
   const s0 = await ink();
   await page.click('#dtools [data-tool="sprinkles"]'); await stroke(40, 250, 300, 250);
   const sp = await page.evaluate(() => { const c = document.querySelector('#dmain'); const d = c.getContext('2d').getImageData(0, Math.round(236 * 2), c.width, 56).data; const hues = new Set(); for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 220) hues.add(Math.round(d[i] / 64) + ',' + Math.round(d[i + 1] / 64) + ',' + Math.round(d[i + 2] / 64)); return hues.size; });
@@ -799,7 +801,7 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await page.click('#dtools [data-tool="crayon"]'); await page.click('#dswatches .dsw:nth-child(1)'); await stroke(40, 320, 300, 320);
   const holes = await page.evaluate(() => { const c = document.querySelector('#dmain'); const k = c.getContext('2d'); const y = Math.round((320 - 8) * 2); const d = k.getImageData(100, y, 400, 6).data; let empty = 0, full = 0; for (let i = 3; i < d.length; i += 4) { if (d[i] < 20) empty++; else full++; } return { empty, full }; });
   check('draw: crayon edge shows paper grain gaps', holes.empty > 150 && holes.full > 150, JSON.stringify(holes));
-  await page.click('#dtools [data-tool="paint"]'); await stroke(20, 400, 360, 400, 40);
+  await page.click('#dtools [data-tool="paint"]'); await stroke(20, 320, 360, 320, 40);
   await page.screenshot({ path: path.join(SHOTS, 'draw-tools2-390.png') });
   const e0 = await ink();
   check('draw: eraser sits in the top bar with undo and redo, not in the tool grid', (await page.locator('#dtools [data-tool="eraser"]').count()) === 0 && await page.evaluate(() => { const e = document.querySelector('#derase').getBoundingClientRect(), r = document.querySelector('#dredo').getBoundingClientRect(); return Math.abs(e.top - r.top) < 2 && e.left > r.left && e.width >= 44 && e.height >= 44; }) && !!(await page.$('#derase svg')));
@@ -814,11 +816,11 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   check('draw: Undo brings back erased ink', (await ink()) === e0, String(await ink()));
   // wet sponge smears the paint: pulls color into blank paper, keeps a record for undo and redo
   const sig = () => page.evaluate(() => { const c = document.querySelector('#dmain'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let h = 0; for (let i = 0; i < d.length; i += 4) h = (h * 31 + d[i] + d[i + 1] * 3 + d[i + 2] * 7 + d[i + 3] * 11) >>> 0; return h; });
-  const below = () => page.evaluate(() => { const c = document.querySelector('#dmain'), k = c.width / c.getBoundingClientRect().width; const d = c.getContext('2d').getImageData(Math.round(150 * k), Math.round(430 * k), Math.round(100 * k), Math.round(40 * k)).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 20) n++; return n; });
+  const below = () => page.evaluate(() => { const c = document.querySelector('#dmain'), k = c.width / c.getBoundingClientRect().width; const d = c.getContext('2d').getImageData(Math.round(150 * k), Math.round(350 * k), Math.round(100 * k), Math.round(40 * k)).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 20) n++; return n; });
   const sp0 = await sig(), b0 = await below();
   await page.click('#dtools [data-tool="sponge"]');
   check('draw: picking the sponge turns the eraser off', !/\bon\b/.test(await page.getAttribute('#derase', 'class')) && /\bon\b/.test(await page.getAttribute('#dtools [data-tool="sponge"]', 'class')));
-  await stroke(200, 380, 200, 470, 20);
+  await stroke(200, 300, 200, 390, 20);
   const sp1 = await sig(), b1 = await below();
   check('draw: sponge smears paint onto blank paper below the stroke', sp1 !== sp0 && b1 > b0 + 200, b0 + ' -> ' + b1);
   await page.click('#dundo');
@@ -865,6 +867,14 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   check('draw: fits 390 wide, help row on one line', fits);
   const swOk = await page.evaluate(() => { const r = document.querySelector('#dswatches').getBoundingClientRect(); return [...document.querySelectorAll('#dswatches .dsw')].every((b) => { const q = b.getBoundingClientRect(); return q.left >= r.left && q.right <= r.right; }); });
   check('draw: every color shows without scrolling at 390', swOk);
+  const cBefore = await page.evaluate(() => document.querySelector('#dmain').getBoundingClientRect().height);
+  await page.click('#dtab'); await page.waitForTimeout(300);
+  const cAfter = await page.evaluate(() => document.querySelector('#dmain').getBoundingClientRect().height);
+  check('draw: hide tab hides the tools and the canvas grows', await page.isHidden('#dtools') && cAfter > cBefore + 150 && (await page.getAttribute('#dtab', 'aria-label')) === 'Show tools', cBefore + ' -> ' + cAfter);
+  check('draw: hidden tools leave a big purple tab showing the current tool', await page.evaluate(() => { const t = document.querySelector('#dtab'), r = t.getBoundingClientRect(); return r.width >= 64 && r.height >= 56 && getComputedStyle(t).backgroundColor === 'rgb(113, 56, 209)' && document.querySelector('#dtabtool').innerHTML.length > 10; }));
+  await page.screenshot({ path: path.join(SHOTS, 'draw-tools-hidden-390.png') });
+  await page.click('#dtab'); await page.waitForTimeout(300);
+  check('draw: the tab brings the tools back', await page.isVisible('#dtools') && (await page.getAttribute('#dtab', 'aria-label')) === 'Hide tools');
   check('draw: kid screen has no links and no inputs', (await page.locator('#s-draw a, #s-draw input').count()) === 0);
   // Save to Photos behind the number gate
   await page.click('#s-draw [data-go="home"]');
@@ -940,7 +950,9 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await page.goto(base + '/play/');
   await page.click('#splash'); await page.waitForTimeout(300);
   const homeCols = await page.evaluate(() => getComputedStyle(document.querySelector('#hgrid')).gridTemplateColumns.split(' ').length);
-  check('sideways iPad: home fills the width, 4 games in one row', (await page.evaluate(() => Math.round(document.querySelector('#app').getBoundingClientRect().width))) === 921 && homeCols === 4, String(homeCols));
+  const hv = await page.evaluate(() => { const vh = innerHeight, ok = (e) => { const r = e.getBoundingClientRect(); return r.bottom <= vh + 1 && r.top >= 0 && r.width > 0; }; return { games: [...document.querySelectorAll('#hfeat .htile, #hgrid .htile')].map(ok), tray: [...document.querySelectorAll('#tray .tile')].map(ok), app: Math.round(document.querySelector('#app').getBoundingClientRect().width), scroll: document.querySelector('#s-home').scrollHeight - document.querySelector('#s-home').clientHeight }; });
+  check('sideways iPad: home fills the width; all 5 games and every emoji show without scrolling', hv.app === 921 && hv.games.length === 5 && hv.games.every(Boolean) && hv.tray.length >= 12 && hv.tray.every(Boolean) && hv.scroll <= 1, JSON.stringify(hv));
+  await page.screenshot({ path: path.join(SHOTS, 'ipad-side-home.png') });
   const widths = {};
   for (const g of ['pattern', 'bounce', 'match', 'parade', 'draw']) {
     await page.evaluate((g) => document.querySelector('#s-home [data-go="' + g + '"]').click(), g); await page.waitForTimeout(500);
