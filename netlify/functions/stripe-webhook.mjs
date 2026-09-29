@@ -5,6 +5,7 @@ import { claimEvent, releaseEvent, patchPass, safeErr } from './_lib/db.mjs';
 import { grantPass } from './_lib/grant.mjs';
 import { getStripe } from './_lib/stripe.mjs';
 import { buildEmail, sendEmail } from './_lib/email.mjs';
+import { campaignHit } from './_lib/analytics.mjs';
 
 const REQUIRED = [
   'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'SUPABASE_URL', 'SUPABASE_SERVICE_KEY', 'RESTORE_CODE_PEPPER',
@@ -86,6 +87,8 @@ export const handler = async (event) => {
         const result = await grantPass(obj);
         console.log('stripe-webhook: granted for session ' + obj.id + ' (' + evt.id + ')');
         await emailOnce(obj, result);
+        const md = obj.metadata || {};
+        if (md.camp) await campaignHit(md.camp, md.plan === 'life' || md.plan === 'up' ? 'forever' : 'pass48', {}, md.camp_days);
       }
     } else if (evt.type === 'charge.refunded') {
       if (obj.refunded) await setStatusForCharge(obj, 'refunded');

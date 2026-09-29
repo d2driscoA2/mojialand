@@ -101,6 +101,9 @@ textarea{resize:vertical;min-height:96px}
 <script>
 (function(){
 'use strict';
+  // A QR card link (?c=event-label): remember only the event name for 7 days and count the first open once.
+  try{ var cu=new URL(location.href), cq=cu.searchParams.get('c'); if(cq!=null){ cu.searchParams.delete('c'); history.replaceState(null,'',cu.pathname+cu.search+cu.hash); var cl=cq.toLowerCase(), co=null; try{ co=JSON.parse(localStorage.getItem('mojia.camp')||'null'); }catch(e){}
+    if(/^[a-z0-9][a-z0-9-]{1,23}$/.test(cl)&&!(co&&co.l===cl&&Date.now()-co.t<7*864e5)){ try{ localStorage.setItem('mojia.camp',JSON.stringify({l:cl,t:Date.now()})); }catch(e){} var cb=JSON.stringify({e:'camp',c:cl}); if(!(navigator.sendBeacon&&navigator.sendBeacon('/api/ping',new Blob([cb],{type:'application/json'})))) fetch('/api/ping',{method:'POST',headers:{'Content-Type':'application/json'},body:cb,keepalive:true}).catch(function(){}); } } }catch(e){}
 const PASS_PUBLIC_JWK=/*__PASS_PUBLIC_JWK__*/null;
 const $=id=>document.getElementById(id);
 const sid='';
@@ -146,7 +149,7 @@ async function redeem(code){
     if(w) await new Promise(r=>setTimeout(r,w));
     let res, d={};
     try{
-      res=await fetch('/.netlify/functions/redeem-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code,device_id:dev}),credentials:'same-origin',cache:'no-store'});
+      res=await fetch('/.netlify/functions/redeem-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code,device_id:dev,camp:(function(){ try{ var c=JSON.parse(localStorage.getItem('mojia.camp')||'null'); return c&&Date.now()-c.t<7*864e5?c.l:undefined; }catch(e){ return undefined; } })()}),credentials:'same-origin',cache:'no-store'});
       try{ d=await res.json(); }catch(e){ d={}; }
     }catch(e){ continue; }
     const msg=d&&typeof d.error==='string'&&d.error.length<200?d.error:'';

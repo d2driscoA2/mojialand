@@ -9,6 +9,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="/logo/icon-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/logo/icon-180.png">
 <title>Mojialand admin</title>
+<link rel="stylesheet" href="/admin/analytics.css">
 <style>
 @font-face{font-family:'Nunito';font-style:normal;font-weight:700 900;font-display:swap;src:url('/fonts/nunito-latin.woff2') format('woff2')}
 :root{--purple:#7138D1;--deep:#5122A5;--pink:#FF5FA2;--yellow:#FFC83D;--blue:#4DBCEC;--green:#72D69A;--cream:#FFF8E8;--ink:#30254A;--white:#FFFFFF;--soft:#6B6180;--line:#E9E0F5;--red:#B3261E;color-scheme:light}
@@ -115,6 +116,7 @@ textarea{resize:vertical;min-height:80px}
     <button role="tab" data-tab="support" aria-selected="false">Support</button>
     <button role="tab" data-tab="settings" aria-selected="false">Settings</button>
     <button role="tab" data-tab="services" aria-selected="false">Services</button>
+    <button role="tab" data-tab="analytics" aria-selected="false">Analytics</button>
     <button class="textbtn" id="outBtn" type="button" style="margin-left:auto">Sign out</button>
   </div>
 
@@ -185,6 +187,8 @@ textarea{resize:vertical;min-height:80px}
     <p>Every outside service Mojialand runs on. Passwords live in Apple Passwords. Secrets live in Netlify.</p>
     <div class="svc" id="svcList"></div>
   </section>
+
+  <section data-panel="analytics" id="anRoot" hidden></section>
 </section>
 </main>
 <div id="sheet" aria-hidden="true"></div>
@@ -208,6 +212,7 @@ async function call(url,body){
 }
 const api=(action,extra)=>call('/.netlify/functions/admin-api',Object.assign({action:action},extra||{}));
 const login=body=>call('/.netlify/functions/admin-login',body);
+window.MojiAdmin={api:api,esc:esc};
 
 /* ---- sign in */
 let codeId='';
@@ -229,6 +234,7 @@ $('outBtn').addEventListener('click',async()=>{ try{ await login({step:'out'}); 
 $('tabs').addEventListener('click',e=>{ const b=e.target.closest('[data-tab]'); if(!b) return; const t=b.dataset.tab;
   document.querySelectorAll('#tabs [data-tab]').forEach(x=>x.setAttribute('aria-selected',String(x===b)));
   document.querySelectorAll('[data-panel]').forEach(p=>{ p.hidden=p.dataset.panel!==t; });
+  if(window.MojiAnalytics){ if(t==='analytics') window.MojiAnalytics.show(); else window.MojiAnalytics.hide(); }
   if(t==='passes') loadPasses(); else if(t==='support') loadSupport(); else if(t==='settings') loadSettings(); else if(t==='services') renderServices(); });
 
 /* ---- passes */
@@ -326,5 +332,6 @@ function renderServices(){ $('svcList').innerHTML=SERVICES.map(s=>'<div class="i
 login().then(d=>{ if(d&&d.signed_in) showApp(); else showLogin(); }).catch(()=>showLogin());
 })();
 </script>
+<script src="/admin/analytics.js"></script>
 </body>
 </html>

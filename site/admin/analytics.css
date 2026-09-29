@@ -1,0 +1,130 @@
+/* Mojialand admin: Analytics tab. Everything sits under #anRoot with an "an" class prefix
+   so nothing here collides with the other admin tabs. Brand tokens come from the admin page :root. */
+#anRoot{display:grid;gap:16px}
+#anRoot .anCard{background:var(--white);border-radius:24px;box-shadow:0 4px 12px rgba(0,0,0,.08);padding:20px;min-width:0}
+#anRoot h2{margin:0 0 4px}
+#anRoot h3{margin:0 0 10px;font:900 16px/1.2 Nunito,sans-serif;color:var(--deep)}
+#anRoot .anHead{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+#anRoot .anSeg{display:inline-flex;background:#F3ECFC;border-radius:999px;padding:4px;flex-wrap:wrap}
+#anRoot .anSeg button{border:0;background:transparent;color:var(--deep);border-radius:999px;min-height:40px;padding:8px 16px;font:900 14px Nunito,sans-serif;cursor:pointer}
+#anRoot .anSeg button[aria-pressed="true"]{background:var(--white);color:var(--purple);box-shadow:0 2px 6px rgba(81,34,165,.15)}
+#anRoot .anNum{font-variant-numeric:tabular-nums}
+#anRoot .anPrivacy{display:flex;gap:8px;align-items:flex-start;background:#F3ECFC;border-radius:14px;padding:10px 12px;font-size:13px;color:var(--deep)}
+#anRoot .anPrivacy b{font-weight:900}
+#anRoot .anMuted{font-size:12px;color:var(--soft)}
+#anRoot .anEmpty{font-size:13px;color:var(--soft);padding:6px 0}
+#anRoot [hidden]{display:none!important}
+
+/* live hero */
+#anRoot .anPulse{display:inline-block;width:10px;height:10px;border-radius:50%;background:#1E9E5A;animation:anPulse 2s infinite}
+@keyframes anPulse{0%{box-shadow:0 0 0 0 rgba(30,158,90,.45)}70%{box-shadow:0 0 0 10px rgba(30,158,90,0)}100%{box-shadow:0 0 0 0 rgba(30,158,90,0)}}
+#anRoot .anHero{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center}
+#anRoot .anBig{font:900 64px/1 Nunito,sans-serif;color:var(--purple);font-variant-numeric:tabular-nums}
+#anRoot .anBig small{display:block;font:800 13px/1.3 Nunito,sans-serif;color:var(--soft);margin-top:6px}
+#anRoot .anChips{display:flex;gap:8px;flex-wrap:wrap}
+#anRoot .anChip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:6px 12px 6px 6px;font-weight:900;font-size:14px;background:var(--white);border:2px solid var(--line)}
+#anRoot .anDot{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:15px;flex:none}
+#anRoot .anStamp{font-size:12px;color:var(--soft);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+/* map */
+#anRoot .anMap{position:relative;background:linear-gradient(180deg,#F7F1FF,#FFF8E8);border-radius:20px;overflow:hidden;border:2px solid var(--line)}
+#anRoot .anMap svg{display:block;width:100%;height:auto}
+#anRoot .anTools{position:absolute;top:10px;left:10px;right:10px;display:flex;gap:8px;flex-wrap:wrap;pointer-events:none}
+#anRoot .anTools>*{pointer-events:auto}
+#anRoot .anTools .anSeg{background:rgba(255,255,255,.9)}
+#anRoot .anTools .anSeg button{min-height:36px;padding:6px 12px;font-size:13px}
+#anRoot .anState{fill:#fff;stroke:#D9CCEE;stroke-width:.8;vector-effect:non-scaling-stroke}
+#anRoot .anState.hot{fill:#EDE3FB}
+#anRoot .anRoll{pointer-events:none}
+#anRoot .anRoll rect{fill:#fff;stroke:#D9CCEE}
+#anRoot .anRoll text{font:900 11px Nunito,sans-serif;fill:var(--deep)}
+#anRoot .anBub{cursor:pointer}
+#anRoot .anBub .in{transform-box:fill-box;transform-origin:center;animation:anPop .55s cubic-bezier(.3,1.6,.5,1) both}
+#anRoot .anBub.bump .in{animation:anBump .5s ease}
+#anRoot .anBub .bob{transform-box:fill-box;transform-origin:center bottom;animation:anBob 2.4s ease-in-out infinite}
+@keyframes anPop{from{transform:scale(.2);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes anBump{0%{transform:scale(1)}40%{transform:scale(1.25)}100%{transform:scale(1)}}
+@keyframes anBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+#anRoot .anBub circle.ring{fill:#fff}
+#anRoot .anBub text.em{text-anchor:middle;dominant-baseline:central}
+#anRoot .anBub .badge rect{fill:var(--ink)}
+#anRoot .anBub .badge text{fill:#fff;font-weight:900;text-anchor:middle;dominant-baseline:central;font-family:Nunito,sans-serif}
+#anRoot .anLead{stroke:var(--deep);stroke-opacity:.35}
+#anRoot .anPin{fill:var(--deep)}
+#anRoot .anTip{position:absolute;z-index:3;background:var(--ink);color:#fff;border-radius:14px;padding:10px 12px;font-size:13px;pointer-events:none;min-width:150px;box-shadow:0 8px 20px rgba(48,37,74,.25)}
+#anRoot .anTip b{display:block;font-size:14px;margin-bottom:4px}
+#anRoot .anTip .r{display:flex;justify-content:space-between;gap:12px}
+#anRoot .anLegend{display:flex;gap:6px 14px;flex-wrap:wrap;font-size:13px;color:var(--soft);padding:10px 4px 0}
+#anRoot .anLegend span{display:inline-flex;align-items:center;gap:6px}
+#anRoot .anLegend i{width:12px;height:12px;border-radius:50%;display:inline-block}
+#anRoot .anReplay{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-top:12px}
+#anRoot .anReplay input[type=range]{flex:1 1 200px;accent-color:var(--purple);min-height:44px;padding:0;border:0}
+#anRoot .anReplay .hr{font:900 18px Nunito,sans-serif;color:var(--deep);min-width:86px;font-variant-numeric:tabular-nums}
+
+/* boards */
+#anRoot .anGrid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+#anRoot .anGrid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+#anRoot .anBoard{display:grid;gap:8px;align-content:start}
+#anRoot .anRow{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:center;font-size:14px}
+#anRoot .anRow .nm{min-width:0}
+#anRoot .anRow .nm div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#anRoot .anTrack{height:8px;background:#F3ECFC;border-radius:99px;margin-top:4px;overflow:hidden}
+#anRoot .anFill{height:100%;border-radius:99px;transition:width .6s ease}
+#anRoot .anRow .v{font-weight:900;color:var(--deep);font-variant-numeric:tabular-nums;text-align:right}
+#anRoot .anRow .v small{display:block;font-size:11px;color:var(--soft);font-weight:800}
+#anRoot .anFeed{display:grid;gap:6px}
+#anRoot .anFeed .it{display:grid;grid-template-columns:64px 28px minmax(0,1fr) auto;gap:10px;align-items:center;font-size:14px;padding:6px 8px;border-radius:12px}
+#anRoot .anFeed .it.new{animation:anFlash 1.6s ease}
+@keyframes anFlash{from{background:#FFF1C9}to{background:transparent}}
+#anRoot .anFeed .t{font-size:12px;color:var(--soft);font-variant-numeric:tabular-nums}
+#anRoot .anFeed .c{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* history */
+#anRoot .anKpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+#anRoot .anKpi{background:#F3ECFC;border-radius:18px;padding:14px}
+#anRoot .anKpi .l{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--deep);font-weight:900}
+#anRoot .anKpi .n{font:900 28px/1.1 Nunito,sans-serif;color:var(--ink);font-variant-numeric:tabular-nums;margin-top:4px}
+#anRoot .anKpi .s{font-size:12px;color:var(--soft)}
+#anRoot .anChart{width:100%;overflow-x:auto}
+#anRoot .anChart svg{display:block;width:100%;height:auto}
+#anRoot .anAxis{font:800 10px Nunito,sans-serif;fill:var(--soft)}
+#anRoot .anGridL{stroke:var(--line)}
+#anRoot .anSplit{display:flex;height:28px;border-radius:99px;overflow:hidden;margin:8px 0;background:#F3ECFC}
+#anRoot .anSplit div{display:grid;place-items:center;color:#fff;font-size:12px;font-weight:900;min-width:0;overflow:hidden;white-space:nowrap}
+#anRoot table{width:100%;border-collapse:collapse;font-size:14px}
+#anRoot th{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--soft);text-align:left;padding:6px 8px;border-bottom:2px solid var(--line)}
+#anRoot td{padding:8px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+#anRoot td.r,#anRoot th.r{text-align:right}
+#anRoot .anTable{overflow-x:auto}
+
+/* campaigns */
+#anRoot .anCamps{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+#anRoot .anCamp{border:2px solid var(--line);border-radius:18px;padding:12px;display:grid;grid-template-columns:64px minmax(0,1fr);gap:12px;cursor:pointer;background:#fff;text-align:left;color:var(--ink);font:inherit}
+#anRoot .anCamp[aria-pressed="true"]{border-color:var(--purple);box-shadow:0 0 0 3px #E4D6FA}
+#anRoot .anCamp.off{opacity:.6}
+#anRoot .anCamp img{width:64px;height:64px;display:block;image-rendering:pixelated;border-radius:8px}
+#anRoot .anCamp .nm{font-weight:900;color:var(--deep);font-size:15px}
+#anRoot .anCamp code{font:800 12px ui-monospace,Menlo,Consolas,monospace;color:var(--purple);word-break:break-all}
+#anRoot .anTag{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+#anRoot .anFunnel{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+#anRoot .anStep{background:#F3ECFC;border-radius:16px;padding:12px}
+#anRoot .anStep .n{font:900 24px/1.1 Nunito,sans-serif;font-variant-numeric:tabular-nums}
+#anRoot .anStep .l{font-size:12px;color:var(--deep);font-weight:900;text-transform:uppercase;letter-spacing:.05em}
+#anRoot .anStep .s{font-size:12px;color:var(--soft)}
+#anRoot .anLinkbox{display:flex;gap:12px;align-items:center;background:#F3ECFC;border-radius:16px;padding:10px;flex-wrap:wrap}
+#anRoot .anLinkbox img{width:88px;height:88px;image-rendering:pixelated;background:#fff;padding:6px;border-radius:10px}
+#anRoot .anLinkbox code{font:800 14px ui-monospace,Menlo,Consolas,monospace;color:var(--deep);word-break:break-all}
+
+@media (max-width:560px){
+  #anRoot .anCard{padding:16px;border-radius:20px}
+  #anRoot .anHero{grid-template-columns:1fr}
+  #anRoot .anBig{font-size:52px}
+  #anRoot .anTools{position:static;padding:8px 8px 0}
+  #anRoot .anFeed .it{grid-template-columns:56px 26px minmax(0,1fr) auto;gap:8px}
+}
+@media (prefers-reduced-motion:reduce){
+  #anRoot .anBub .in,#anRoot .anBub .bob,#anRoot .anBub.bump .in,#anRoot .anPulse,#anRoot .anFeed .it.new{animation:none!important}
+  #anRoot .anFill{transition:none}
+}
+/* campaign QR card sheet reuses the gift card print layout */
+@media print{ .bc.camp .r{justify-items:center} .bc.camp .r img{width:1.3in;height:1.3in} .bc.camp .r code{font:900 7pt/1.2 ui-monospace,Menlo,Consolas,monospace;color:#5122A5;text-align:center} }

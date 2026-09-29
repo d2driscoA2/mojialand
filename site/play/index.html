@@ -802,7 +802,7 @@ body.in-draw #app{max-width:none}
   <div class="row"><div><div class="l">Sound check</div><div class="s" id="sndInfo">Tap to play a chime</div></div><button class="small" id="sndTest">Test</button></div>
   <div class="row"><div><div class="l">How-to-play cards</div><div class="s" id="demosInfo">Show a how-to card the first time each game opens</div></div><button class="sw" id="swDemos" role="switch" aria-checked="true" aria-label="How-to-play cards"></button></div>
   <div class="row"><div><div class="l">Show cards again</div><div class="s">Replay the how-to cards for every game</div></div><button class="small" id="resetDemos">Reset</button></div>
-  <div class="note"><div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="width:28px;height:28px;border-radius:999px;background:var(--purple);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px">✓</span><b style="color:var(--ink);font-size:13px">No accounts · No ads · No tracking</b></div>Nothing leaves your phone. Just a safe, fun place to play, create and explore.<br><span id="voiceInfo"></span></div>
+  <div class="note"><div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="width:28px;height:28px;border-radius:999px;background:var(--purple);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px">✓</span><b style="color:var(--ink);font-size:13px">No accounts · No ads · No tracking</b></div>Nothing about your child leaves your phone. Just a safe, fun place to play, create and explore.<br><span id="voiceInfo"></span></div>
 </section>
 
 <!-- TIME'S UP (kid-facing, no price) -->
@@ -1007,11 +1007,30 @@ let toastT=null; function toast(text){ const t=$('#toast'); $('#toastText').text
 /* ---------- confetti ---------- */
 function confetti(host,x,y,n){ const cols=['#FF6FAE','#4CC9F0','#FFC83D','#8AE234','#9B5DE5']; for(let i=0;i<(n||18);i++){ const c=document.createElement('div'); c.className='confetti'; c.style.left=x+'px'; c.style.top=y+'px'; c.style.background=rnd(cols); c.style.setProperty('--dx',(Math.random()*220-110)+'px'); c.style.setProperty('--dy',(Math.random()*180+40)+'px'); host.appendChild(c); setTimeout(()=>c.remove(),1100);} }
 
+/* ---------- play counts: game, city (added by the server), nothing about the child ---------- */
+const PS=(function(){
+  const GIDS=['pattern','bounce','match','parade','draw'], LRE=/^[a-z0-9][a-z0-9-]{1,23}$/, WEEK=7*864e5;
+  const mode=()=>{ try{ return (matchMedia('(display-mode: standalone)').matches||navigator.standalone===true)?'app':'web'; }catch(e){ return 'web'; } };
+  const slot=()=>Math.floor(Date.now()/300000);
+  function send(o){ try{ const s=JSON.stringify(o); if(navigator.sendBeacon&&navigator.sendBeacon('/api/ping',new Blob([s],{type:'application/json'}))) return; fetch('/api/ping',{method:'POST',headers:{'Content-Type':'application/json'},body:s,keepalive:true,credentials:'same-origin'}).catch(()=>{}); }catch(e){} }
+  function camp(){ const c=store.get('camp',null); return c&&typeof c.l==='string'&&LRE.test(c.l)&&Date.now()-c.t<WEEK?c:null; }
+  // A QR card link (?c=event-label): remember the event name for 7 days, count the first open once.
+  try{ const u=new URL(location.href), c=u.searchParams.get('c'); if(c!=null){ u.searchParams.delete('c'); history.replaceState(null,'',u.pathname+u.search+u.hash); const l=c.toLowerCase(); const old=camp(); if(LRE.test(l)&&(!old||old.l!==l)){ store.set('camp',{l,t:Date.now()}); send({e:'camp',c:l}); } } }catch(e){}
+  let g=null, t0=0, last=-1, paused=null;
+  function open(id){ g=id; t0=Date.now(); last=slot(); const o={e:'open',g:id,m:mode()}; const c=camp(); if(c&&!c.p){ o.c=c.l; o.cp=1; c.p=1; store.set('camp',c); } send(o); }
+  function close(){ if(!g) return; const m=(Date.now()-t0)/60000; send({e:'close',g,m:mode(),b:m<2?0:m<5?1:m<15?2:3}); g=null; }
+  function screen(name){ paused=null; if(g&&g!==name) close(); if(GIDS.includes(name)&&g!==name&&!document.hidden) open(name); }
+  setInterval(()=>{ if(g&&!document.hidden&&slot()!==last){ last=slot(); send({e:'beat',g,m:mode()}); } },20000);
+  document.addEventListener('visibilitychange',()=>{ if(document.hidden){ if(g){ paused=g; close(); } } else if(paused&&current===paused){ const id=paused; paused=null; open(id); } });
+  window.addEventListener('pagehide',()=>{ if(g) close(); });
+  return {screen, label:()=>{ const c=camp(); return c?c.l:''; }, days:()=>{ const c=camp(); return c?Math.round((Date.now()-c.t)/864e4)/10:0; }};
+})();
+
 /* ---------- navigation ---------- */
 const screens={home:'#s-home',pattern:'#s-pattern',bounce:'#s-bounce',match:'#s-match',parade:'#s-parade',draw:'#s-draw',gate:'#s-gate',rest:'#s-rest',ngate:'#s-ngate',plans:'#s-plans',allset:'#s-allset'};
 let current='home';
 const games={};
-function go(name){ stopDemo(); closeGlass(); if(games[current]&&games[current].leave) games[current].leave(); $$('.screen').forEach(s=>s.classList.add('hidden')); $(screens[name]).classList.remove('hidden'); current=name; document.body.classList.toggle('in-draw',name==='draw'); homeNote(name); if(name==='home') homeRefresh(); onScreen(name); if(games[name]&&games[name].enter) games[name].enter(); if(games[name]&&settings.demos&&!demoDone[name]) setTimeout(()=>showGlass(name),350); }
+function go(name){ stopDemo(); closeGlass(); if(games[current]&&games[current].leave) games[current].leave(); $$('.screen').forEach(s=>s.classList.add('hidden')); $(screens[name]).classList.remove('hidden'); PS.screen(name); current=name; document.body.classList.toggle('in-draw',name==='draw'); homeNote(name); if(name==='home') homeRefresh(); onScreen(name); if(games[name]&&games[name].enter) games[name].enter(); if(games[name]&&settings.demos&&!demoDone[name]) setTimeout(()=>showGlass(name),350); }
 document.addEventListener('click',e=>{ const b=e.target.closest('[data-go]'); if(b){ ctx(); sfx.boop(); go(b.dataset.go);} const d=e.target.closest('[data-demo]'); if(d){ ctx(); sfx.boop(); showGlass(d.dataset.demo);} });
 
 /* ---------- how-to-play glass cards ---------- */
@@ -1904,7 +1923,7 @@ const pay=(function(){
     const rawIn=$('#pwCodeIn').value.trim();
     if(!c&&!/^[A-Za-z0-9_-]{2,40}$/.test(rawIn)){ $('#pwCodeErr').textContent='Pass codes look like MOJI-XXXX-XXXX-XXXX. Discount codes are one word.'; return; }
     b.disabled=true; b.textContent='Checking…'; $('#pwCodeErr').textContent='';
-    try{ const res=await fetch('/.netlify/functions/redeem-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:c||rawIn,device_id:deviceId()}),credentials:'same-origin',cache:'no-store'});
+    try{ const res=await fetch('/.netlify/functions/redeem-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:c||rawIn,device_id:deviceId(),camp:PS.label()||undefined}),credentials:'same-origin',cache:'no-store'});
       let d={}; try{ d=await res.json(); }catch(e){}
       if(res.status===200&&d&&d.discount&&d.discount.code){ promo=d.discount; $('#pwOvCode').classList.add('hidden'); toast(promo.code+': '+(promo.percent_off?promo.percent_off+'% off':'discount')+'. Pick your pass.'); if(current==='plans') buildPlans(); else go('plans'); }
       else if(res.status===200&&d&&typeof d.token==='string'&&await savePass(d)){ $('#pwOvCode').classList.add('hidden'); store.set('allset',{plan:'redeem',email_masked:'',at:Date.now()}); showAllset(); }

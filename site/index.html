@@ -412,7 +412,7 @@ footer .fine.credit a{color:#fff;text-decoration:underline;text-underline-offset
     <div class="plist">
      <div><i></i><strong>No accounts</strong><span>No sign-up, no login, no profile.</span></div>
      <div><i></i><strong>No ads</strong><span>No banners, no pop-ups, no upsells to kids.</span></div>
-     <div><i></i><strong>No tracking</strong><span>No analytics, no cookies, no third-party scripts in the game.</span></div>
+     <div><i></i><strong>No tracking</strong><span>No outside analytics, no cookies, no third-party scripts in the game.</span></div>
     </div>
    </div>
   </div>
@@ -530,14 +530,14 @@ footer .fine.credit a{color:#fff;text-decoration:underline;text-underline-offset
     <div>
      <article class="doc" id="doc-privacy" role="tabpanel" aria-labelledby="tab-privacy" hidden>
       <h3>Privacy notice</h3>
-      <p class="date">Effective <span class="effDate">September 28, 2026</span></p>
+      <p class="date">Effective <span class="effDate">September 29, 2026</span></p>
       <div class="box"><p><strong>The short version:</strong> Mojialand collects nothing from your child. Grown-ups share an email address and payment details only when buying a pass, and Stripe handles the card.</p></div>
       <h4>Who runs Mojialand</h4>
       <p>Mojialand is operated by <span class="chip" data-fill="operator">Operator name to confirm</span>, Michigan, United States. Contact: <span class="chip" data-fill="email">Contact email to confirm</span>.</p>
       <h4>What we collect from children</h4>
-      <p>Nothing. Kid screens have no text fields, no microphone, no camera, and no location. The game sends no requests to any outside company. Mojialand uses no analytics, no advertising, and no tracking cookies.</p>
+      <p>Nothing. Kid screens have no text fields, no microphone, no camera, and no location. The game sends no requests to any outside company. Mojialand uses no outside analytics, no advertising, and no tracking cookies. We count plays, never players: see Play counts below.</p>
       <h4>What stays on the device</h4>
-      <p>The browser on your device saves game settings (sound, voice, how-to cards), the free play timer, a random device value, and your pass token. This data stays in the browser's storage. Clearing your browser data removes the data. When you add Mojialand to your Home Screen, the pass token travels with it.</p>
+      <p>The browser on your device saves game settings (sound, voice, how-to cards), the free play timer, a random device value, and your pass token. If you open Mojialand from one of our QR cards, the browser also keeps the name of that event, such as a library story time, for 7 days. This data stays in the browser's storage. Clearing your browser data removes the data. When you add Mojialand to your Home Screen, the pass token travels with it.</p>
       <h4>What we collect from grown-ups</h4>
       <ul>
        <li>When you buy a pass: your email address and payment details, entered on Stripe's secure form.</li>
@@ -547,11 +547,15 @@ footer .fine.credit a{color:#fff;text-decoration:underline;text-underline-offset
        <li>When you send a message: your email, the topic, your message, and, if you include it, your pass code's last 4 characters.</li>
       </ul>
       <p>We use this data to deliver your pass, restore the pass on your devices, send receipts, answer your questions, and process refunds. We never sell or rent data, and we never use data for advertising.</p>
+      <h4>Play counts</h4>
+      <p>When a game opens or closes, Mojialand tells our own server the game's name, whether it runs from the Home Screen, and how long it ran as a range: under 2, 2 to 5, 5 to 15, or over 15 minutes. Netlify, our hosting company, tells our server the city and state the connection comes from. We add 1 to a total for that hour, city and game, then drop the request.</p>
+      <p>We store no IP address, no device value, no ZIP code and no map coordinates, and no count points to a person or a device. A city with only a few plays shows only as its state. The counts show us which games kids enjoy and where families find Mojialand.</p>
+      <p>If you open Mojialand from one of our QR cards, we count that open, and a later game, gift code or pass on the same device, toward that event. The event name is the same on every card, so it names no one.</p>
       <h4>Who processes data for us</h4>
       <ul>
        <li>Stripe: payments and receipts. Stripe's privacy policy applies to card details.</li>
        <li>Netlify: website hosting and the server code behind passes and the contact form.</li>
-       <li>Supabase: the database that holds pass records and contact messages.</li>
+       <li>Supabase: the database that holds pass records, contact messages and play totals.</li>
        <li>Resend: sends the pass code email and contact form alerts from hello@mojialand.com.</li>
       </ul>
       <h4>How long we keep data</h4>
@@ -560,6 +564,7 @@ footer .fine.credit a{color:#fff;text-decoration:underline;text-underline-offset
        <li>Forever pass records: kept while the pass exists.</li>
        <li>Contact messages: deleted after 90 days.</li>
        <li>Gift and support codes never used: deleted 30 days after they expire.</li>
+       <li>Play totals by hour, city and game: deleted after 400 days. Five-minute counts for the live view: deleted after 2 hours.</li>
        <li>Stripe keeps payment records as Stripe's own legal duties require.</li>
       </ul>
       <h4>Your choices</h4>
@@ -680,6 +685,9 @@ var CONFIG = {
 };
 
 (function(){
+  // A QR card link (?c=event-label): remember only the event name for 7 days and count the first open once.
+  try{ var cu=new URL(location.href), cq=cu.searchParams.get('c'); if(cq!=null){ cu.searchParams.delete('c'); history.replaceState(null,'',cu.pathname+cu.search+cu.hash); var cl=cq.toLowerCase(), co=null; try{ co=JSON.parse(localStorage.getItem('mojia.camp')||'null'); }catch(e){}
+    if(/^[a-z0-9][a-z0-9-]{1,23}$/.test(cl)&&!(co&&co.l===cl&&Date.now()-co.t<7*864e5)){ try{ localStorage.setItem('mojia.camp',JSON.stringify({l:cl,t:Date.now()})); }catch(e){} var cb=JSON.stringify({e:'camp',c:cl}); if(!(navigator.sendBeacon&&navigator.sendBeacon('/api/ping',new Blob([cb],{type:'application/json'})))) fetch('/api/ping',{method:'POST',headers:{'Content-Type':'application/json'},body:cb,keepalive:true}).catch(function(){}); } } }catch(e){}
  var $=function(s,r){return (r||document).querySelector(s)}, $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
 
  /* Fill settings into the page */

@@ -38,7 +38,7 @@ export function setEnv(extra = {}) {
 
 // In-memory PostgREST covering the calls the functions make.
 export function fakeDb() {
-  const db = { passes: [], stripe_events: [], devices: [], support_messages: [], admin_codes: [], admin_sessions: [], handoffs: [], settings: [{ key: 'daily_minutes', value: 3, help: 'x' }, { key: 'daily_reset', value: '04:00', help: 'y' }], rate: new Map(), emails: [], calls: [], rateLimit: Infinity };
+  const db = { passes: [], stripe_events: [], devices: [], support_messages: [], admin_codes: [], admin_sessions: [], handoffs: [], plays_live: [], campaigns: [], analytics: [], campaignEvents: [], rpcData: {}, settings: [{ key: 'daily_minutes', value: 3, help: 'x' }, { key: 'daily_reset', value: '04:00', help: 'y' }], rate: new Map(), emails: [], calls: [], rateLimit: Infinity };
   const parseFilters = (qs) => {
     const f = [];
     for (const part of qs.split('&')) {
@@ -49,6 +49,7 @@ export function fakeDb() {
       if (k === 'order') continue;
       if (v.startsWith('eq.')) f.push((r) => String(r[k]) === decodeURIComponent(v.slice(3)));
       else if (v === 'is.null') f.push((r) => r[k] == null);
+      else if (v.startsWith('gte.')) f.push((r) => String(r[k]) >= decodeURIComponent(v.slice(4)));
     }
     return (r) => f.every((fn) => fn(r));
   };
@@ -72,6 +73,13 @@ export function fakeDb() {
       db.rate.set(body.p_key, n);
       return reply(200, n <= Math.min(body.p_limit, db.rateLimit));
     }
+    if (table === 'rpc/analytics_add') { db.analytics.push(body); return reply(204); }
+    if (table === 'rpc/campaign_add') {
+      const ok = db.campaigns.some((c) => c.label === body.p_label && c.active !== false);
+      if (ok) db.campaignEvents.push(body);
+      return reply(200, ok);
+    }
+    if (table === 'rpc/analytics_history' || table === 'rpc/campaign_stats') { db.rpcCalls = (db.rpcCalls || []).concat([[table, body]]); return reply(200, db.rpcData[table.slice(4)] || {}); }
     if (table === 'settings' && method === 'GET' && /select=value/.test(qs)) return reply(200, [{ value: 7 }]);
     const rows = db[table];
     if (!rows) throw new Error('unknown table ' + table);

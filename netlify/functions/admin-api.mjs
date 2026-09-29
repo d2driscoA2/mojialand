@@ -5,6 +5,7 @@ import { rest, patchPass, safeErr } from './_lib/db.mjs';
 import { isSignedIn } from './_lib/admin.mjs';
 import { randomCode, codeHash, codeLast4 } from './_lib/codes.mjs';
 import { getStripe } from './_lib/stripe.mjs';
+import { liveView, historyView, campaignsView, createCampaign, setCampaignActive } from './_lib/analytics-admin.mjs';
 
 const REQUIRED = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY', 'RESTORE_CODE_PEPPER', 'STRIPE_SECRET_KEY'];
 const HOUR = 3600e3;
@@ -131,6 +132,13 @@ const actions = {
     return { ok: true };
   },
 
+  // ---- analytics (counts only, small places folded into their state)
+  async 'analytics.live'() { return liveView(); },
+  async 'analytics.history'({ range }) { return historyView(range); },
+  async 'campaigns.list'() { return campaignsView(); },
+  async 'campaigns.create'(input) { await createCampaign(input); return campaignsView(); },
+  async 'campaigns.active'(input) { await setCampaignActive(input); return campaignsView(); },
+
   // ---- settings
   async 'settings.get'() {
     const { data } = await rest('GET', 'settings?select=key,value,help,updated_at&order=key');
@@ -166,7 +174,7 @@ export const handler = async (event) => {
   if (!fn) return fail(400, 'Unknown action.');
   try {
     const out = await fn(input);
-    console.log('admin-api: ' + input.action);
+    if (!/^analytics\./.test(input.action)) console.log('admin-api: ' + input.action);
     return json(200, out);
   } catch (e) {
     console.error('admin-api: ' + input.action + ' failed (' + safeErr(e) + ')');

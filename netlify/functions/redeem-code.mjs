@@ -7,6 +7,7 @@ import { rateHit, getPassBy, patchPass, addDevice, safeErr, DEVICE_RE } from './
 import { normalizeCode, codeHash } from './_lib/codes.mjs';
 import { makeTokenPayload, signToken } from './_lib/token.mjs';
 import { getStripe } from './_lib/stripe.mjs';
+import { campaignHit, LABEL_RE } from './_lib/analytics.mjs';
 
 const REQUIRED = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY', 'RESTORE_CODE_PEPPER', 'PASS_SIGNING_PRIVATE_KEY', 'STRIPE_SECRET_KEY'];
 const PROMO_RE = /^[A-Za-z0-9_-]{2,40}$/;
@@ -61,6 +62,8 @@ export const handler = async (event) => {
         ends_at: pass.kind === 'forever' ? null : new Date(now + 48 * HOUR).toISOString(),
       });
       pass = rows[0] || (await getPassBy('id', pass.id));
+      // First use of a gift code from a QR campaign counts toward that event.
+      if (rows[0] && pass.source === 'gift' && typeof input.camp === 'string' && LABEL_RE.test(input.camp)) await campaignHit(input.camp, 'gift');
     }
     const ended = pass.kind !== 'forever' && pass.ends_at && new Date(pass.ends_at).getTime() <= Date.now();
     if (pass.status === 'ended' || ended) return fail(410, 'This 48-hour pass has ended. A grown-up can get a new pass in Mojialand.');

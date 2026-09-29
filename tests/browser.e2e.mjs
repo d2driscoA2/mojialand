@@ -11,6 +11,35 @@ import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { signToken, makeTokenPayload } from '../netlify/functions/_lib/token.mjs';
+import { liveView, historyView, campaignsView, lastDays } from '../netlify/functions/_lib/analytics-admin.mjs';
+
+// Admin analytics sample data, shaped by the real server code from fake database rows.
+async function analyticsSamples() {
+  process.env.SUPABASE_URL = 'https://db.example.test'; process.env.SUPABASE_SERVICE_KEY = 'k';
+  const SLOT = 300e3, asOf = Math.floor(Date.now() / SLOT) * SLOT - SLOT, G = ['pattern', 'bounce', 'match', 'parade', 'draw'];
+  const PL = [['MI', 'Troy', 9], ['MI', 'Royal Oak', 7], ['MI', 'Ann Arbor', 8], ['MI', 'Detroit', 6], ['MI', 'Novi', 4], ['MI', 'Grand Rapids', 4], ['OH', 'Columbus', 3], ['OH', 'Toledo', 2], ['IN', 'Indianapolis', 3], ['IL', 'Chicago', 3], ['TX', 'Austin', 1], ['CA', 'Los Angeles', 1], ['NY', 'New York', 2], ['KS', 'Salina', 0.3]];
+  const live = [], days = [], hours = [];
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (const [st, ci, w] of PL) for (const g of G) {
+    for (let k = 0; k < 6; k++) { const n = Math.round(w * rnd() * 0.9); if (n) live.push({ slot_start: new Date(asOf - k * SLOT).toISOString(), country: 'US', state: st, city: ci, game: g, n }); }
+    for (const d of lastDays(30, Date.now())) { const o = Math.round(w * 1.3 * rnd()); if (o) days.push({ d, co: 'US', st, ci, g, m: rnd() < 0.58 ? 'app' : 'web', o, b0: Math.round(o * 0.2), b1: Math.round(o * 0.3), b2: Math.round(o * 0.35), b3: Math.round(o * 0.15) }); }
+    for (let h = 6; h < 22; h++) hours.push({ h, co: 'US', st, ci, g, o: Math.round(w * 3 * rnd() * (h > 15 && h < 20 ? 2 : 1)) });
+  }
+  const today = lastDays(1, Date.now())[0];
+  const camp = { campaigns: [{ label: 'mi-troy-lib-sep', name: 'Troy library story time', note: '150 cards', active: true, created_at: new Date(Date.now() - 5 * 864e5).toISOString() }, { label: 'ig-reel-1', name: 'Instagram Reel 1', note: '', active: true, created_at: new Date(Date.now() - 2 * 864e5).toISOString() }],
+    days: [{ l: 'mi-troy-lib-sep', d: today, e: 'open', n: 41, ds: 0 }, { l: 'mi-troy-lib-sep', d: today, e: 'play', n: 33, ds: 0 }, { l: 'mi-troy-lib-sep', d: today, e: 'gift', n: 12, ds: 0 }, { l: 'mi-troy-lib-sep', d: today, e: 'pass48', n: 3, ds: 4.5 }, { l: 'ig-reel-1', d: today, e: 'open', n: 18, ds: 0 }],
+    places: [{ l: 'mi-troy-lib-sep', co: 'US', st: 'MI', ci: 'Troy', n: 22 }, { l: 'mi-troy-lib-sep', co: 'US', st: 'MI', ci: 'Royal Oak', n: 9 }, { l: 'mi-troy-lib-sep', co: 'US', st: 'MI', ci: 'Novi', n: 3 }, { l: 'ig-reel-1', co: 'US', st: 'TX', ci: 'Austin', n: 6 }] };
+  const saved = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    const u = String(url);
+    const body = u.includes('plays_live') ? live : u.includes('analytics_history') ? { days, hours } : camp;
+    return new Response(JSON.stringify(body), { status: 200 });
+  };
+  const out = { live: await liveView(), history: await historyView(7), history1: await historyView(1), campaigns: await campaignsView() };
+  globalThis.fetch = saved;
+  return out;
+}
+
 
 const { chromium } = createRequire(import.meta.url)('playwright'); // global install; NODE_PATH=$(npm root -g)
 
@@ -45,7 +74,7 @@ function parseHeaders(site) {
   return blocks;
 }
 const matches = (pat, p) => pat.endsWith('*') ? p.startsWith(pat.slice(0, -1)) : p === pat;
-const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.png': 'image/png', '.svg': 'image/svg+xml', '.webp': 'image/webp', '.woff2': 'font/woff2', '.json': 'application/json', '.webmanifest': 'application/manifest+json' };
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml', '.webp': 'image/webp', '.woff2': 'font/woff2', '.json': 'application/json', '.webmanifest': 'application/manifest+json' };
 
 function serve(site) {
   const blocks = parseHeaders(site);
@@ -605,8 +634,15 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
     signedIn = false; r.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' });
   });
   const pass = { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', code_last4: 'AB12', prefix: 'MOJI', kind: '48h', source: 'stripe', email: 'parent@example.com', stripe_session_id: 'cs_test_x1', amount_cents: 150, created_at: new Date().toISOString(), ends_at: new Date(Date.now() + 3600e3).toISOString(), device_limit: 5, status: 'active', note: null, devices: 2 };
+  const AN = await analyticsSamples();
   await page.route('**/.netlify/functions/admin-api', (r) => {
     const b = r.request().postDataJSON(); calls.push(b.action);
+    if (signedIn && /^(analytics|campaigns)\./.test(b.action)) {
+      if (b.action === 'campaigns.create' && !/^[a-z0-9][a-z0-9-]{1,23}$/.test(b.label || '')) return r.fulfill({ status: 400, contentType: 'application/json', body: '{"error":"Use 2 to 24 lowercase letters, numbers or dashes for the label."}' });
+      const made = b.action === 'campaigns.create' ? { campaigns: [{ ...AN.campaigns.campaigns[0], label: b.label, name: b.name, open: 0, play: 0, gift: 0, pass48: 0, forever: 0, cities: [], rolls: {}, daily: [{ d: AN.campaigns.campaigns[0].daily.at(-1).d, n: 0 }], avgDays: null }, ...AN.campaigns.campaigns] } : null;
+      const o = { 'analytics.live': AN.live, 'analytics.history': b.range === 1 ? AN.history1 : AN.history, 'campaigns.list': AN.campaigns, 'campaigns.create': made, 'campaigns.active': AN.campaigns }[b.action];
+      return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(o) });
+    }
     if (!signedIn) return r.fulfill({ status: 401, contentType: 'application/json', body: '{"error":"Please sign in."}' });
     const out = { 'passes.list': { passes: [pass] }, 'passes.note': { pass: { ...pass, note: b.note } }, 'passes.add48': { pass: { ...pass, ends_at: new Date(Date.now() + 49 * 3600e3).toISOString() } },
       'codes.create': { code: 'GIFT-ABCD-EFGH-JKMN', pass: {} }, 'passes.refund': { pass: { ...pass, status: 'refunded' } }, 'codes.batch': { codes: Array.from({ length: b.count }, (_, i) => ({ code: 'GIFT-B' + String(i).padStart(3, '0') + '-EFGH-JKMN', id: 'id' + i })) }, 'support.list': { messages: [{ id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', email: 'mom@example.com', topic: 'pass', message: 'Code not working\n\nCode ending AB12: pass ...', created_at: new Date().toISOString(), status: 'open' }] },
@@ -662,6 +698,52 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await page.click('[data-tab="services"]');
   check('admin: services tab lists Stripe, Supabase, Resend with links', (await page.locator('#svcList a[href^="https://"]').count()) >= 8 && /Stripe/.test(await page.textContent('#svcList')));
   await page.screenshot({ path: path.join(SHOTS, 'admin-services.png') });
+  // Analytics tab
+  await page.click('[data-tab="analytics"]');
+  await page.waitForSelector('#anLiveMap svg .anBub');
+  check('analytics: live counter and map bubbles', Number((await page.textContent('#anTotal')).replace(/,/g, '')) === AN.live.total && (await page.locator('#anLiveMap .anBub').count()) === AN.live.cities.length && AN.live.cities.length > 0, AN.live.total + ' / ' + AN.live.cities.length);
+  check('analytics: small places show as +N on the state, never by name', !JSON.stringify(AN).includes('Salina') && (await page.locator('#anLiveMap .anRoll').count()) >= 1);
+  check('analytics: live boards filled', (await page.locator('#anBusy .anRow').count()) >= 1 && (await page.locator('#anGames .anRow').count()) === 5 && (await page.locator('#anFeed .it').count()) >= 1);
+  await page.focus('#anLiveMap .anBub');
+  check('analytics: bubble tip shows counts by game', await page.isVisible('#anLiveMap .anTip') && /,\s*MI|,\s*[A-Z]{2}/.test(await page.textContent('#anLiveMap .anTip')));
+  await page.waitForTimeout(1500);
+  await page.screenshot({ path: path.join(SHOTS, 'admin-analytics-live.png'), fullPage: true });
+  await page.click('#anViews [data-v="history"]');
+  await page.waitForSelector('#anHistMap svg .anBub');
+  check('analytics: history tiles, charts and tables', /Plays/.test(await page.textContent('#anKpis')) && (await page.locator('#anOverTime rect').count()) > 5 && (await page.locator('#anHours rect').count()) === 24 && (await page.locator('#anTPlays tbody tr').count()) >= 1);
+  await page.fill('#anHour', '9');
+  await page.dispatchEvent('#anHour', 'input');
+  check('analytics: hour slider replays the day', /By /.test(await page.textContent('#anHourLbl')));
+  await page.click('#anRanges [data-r="1"]');
+  await page.waitForFunction(() => /by hour today/.test(document.querySelector('#anOtTitle').textContent));
+  check('analytics: Today shows plays by hour', calls.filter((c) => c === 'analytics.history').length === 2);
+  await page.click('#anRanges [data-r="7"]');
+  await page.waitForFunction(() => /per day/.test(document.querySelector('#anOtTitle').textContent));
+  await page.screenshot({ path: path.join(SHOTS, 'admin-analytics-history.png'), fullPage: true });
+  await page.click('#anViews [data-v="campaigns"]');
+  await page.waitForSelector('#anCamps .anCamp');
+  check('analytics: campaign cards with QR codes', (await page.locator('#anCamps .anCamp img[src^="data:image/"]').count()) === 2);
+  check('analytics: campaign board funnel', /41/.test(await page.textContent('#anBoardC')) && /1\.5/.test(await page.textContent('#anBoardC')) && (await page.locator('#anCampMap .anBub').count()) === 2);
+  await page.fill('#anName', 'Pumpkin Fest Oct!');
+  check('analytics: label fills from the name', (await page.inputValue('#anLabel')) === 'pumpkin-fest-oct' && /\?c=pumpkin-fest-oct$/.test(await page.textContent('#anLinkPrev')));
+  await page.click('#anMakeBtn');
+  await page.waitForFunction(() => /Pumpkin Fest Oct!/.test(document.querySelector('#anBoardC').textContent));
+  check('analytics: new campaign opens its board', /No opens yet/.test(await page.textContent('#anBoardC')));
+  await page.fill('#anName', 'x'); await page.fill('#anLabel', '');
+  await page.click('#anMakeBtn');
+  await page.waitForFunction(() => document.querySelector('#anMakeErr').textContent.length > 0);
+  check('analytics: bad label shows the server message', /lowercase/.test(await page.textContent('#anMakeErr')));
+  await page.click('#anPrintC').catch(() => {});
+  const csheet = await page.evaluate(() => ({ cards: document.querySelectorAll('#sheet .bc.camp').length, qr: [...document.querySelectorAll('#sheet .bc.camp .r img')].every((i) => i.src.startsWith('data:image/')) }));
+  check('analytics: campaign print sheet has 10 QR cards', csheet.cards === 10 && csheet.qr, JSON.stringify(csheet));
+  await page.screenshot({ path: path.join(SHOTS, 'admin-analytics-campaigns.png'), fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.click('#anViews [data-v="live"]');
+  await page.waitForTimeout(400);
+  check('analytics: no sideways scroll at phone width', await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+  await page.screenshot({ path: path.join(SHOTS, 'admin-analytics-phone.png'), fullPage: true });
+  await page.setViewportSize({ width: 1024, height: 900 });
+  await page.click('[data-tab="services"]');
   await page.click('#outBtn');
   await page.waitForSelector('#vLogin:not([hidden])');
   check('admin: sign out returns to the sign-in screen', await page.isHidden('#vApp'));
@@ -683,6 +765,52 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   check('Grown-ups order: pass rows, Home Screen, settings, promise last', ix('pwGuList') < ix('pwHS') && ix('pwHS') < ix('banner') && ix('note') === order.length - 1, order.join(','));
   check('play: zero third-party requests', page.reqs.every((u) => u.startsWith(base) || u.startsWith('data:')));
   check('play: no CSP violations', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
+  await ctx.close();
+}
+
+// 10b. play counts: QR label saved and counted once, game open and close pings carry no personal data
+{
+  const { ctx, page } = await newPage();
+  const pings = [];
+  await page.route('**/api/ping', (r) => { pings.push(JSON.parse(r.request().postData() || 'null')); r.fulfill({ status: 204 }); });
+  await page.addInitScript(() => { localStorage.setItem('mojia.demos', 'false'); localStorage.setItem('mojia.welcomed', 'true'); });
+  await page.goto(base + '/play/?c=mi-troy-lib-sep');
+  await page.waitForTimeout(300);
+  const camp = await page.evaluate(() => JSON.parse(localStorage.getItem('mojia.camp') || 'null'));
+  check('counts: QR label saved on the device with a time only', camp && camp.l === 'mi-troy-lib-sep' && Object.keys(camp).join() === 'l,t', JSON.stringify(camp));
+  check('counts: label leaves the address bar', !/c=/.test(page.url()));
+  check('counts: first QR open counted once', pings.filter((p) => p && p.e === 'camp').length === 1);
+  await page.click('#splash');
+  await page.click('[data-go="draw"]');
+  await page.waitForSelector('#s-draw:not(.hidden)');
+  await page.waitForTimeout(200);
+  const open = pings.find((p) => p && p.e === 'open');
+  check('counts: game open sends game, mode and the campaign once', open && open.g === 'draw' && open.m === 'web' && open.c === 'mi-troy-lib-sep' && open.cp === 1 && Object.keys(open).length === 5, JSON.stringify(open));
+  await page.click('#s-draw [data-go="home"]');
+  await page.waitForTimeout(200);
+  const close = pings.find((p) => p && p.e === 'close');
+  check('counts: leaving a game sends a play-length range, not a time', close && close.g === 'draw' && close.b === 0 && !('t' in close), JSON.stringify(close));
+  await page.click('#s-home [data-go="match"]');
+  await page.waitForTimeout(200);
+  check('counts: later games do not credit the campaign again', pings.filter((p) => p && p.e === 'open').length === 2 && !pings.filter((p) => p && p.e === 'open')[1].c);
+  check('counts: pings carry no device or pass data', !JSON.stringify(pings).match(/device|token|MOJI-|restore/i));
+  await page.goto(base + '/play/?c=mi-troy-lib-sep');
+  await page.waitForTimeout(200);
+  check('counts: scanning the same card again counts nothing', pings.filter((p) => p && p.e === 'camp').length === 1);
+  check('counts: no CSP violations', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
+  await ctx.close();
+}
+{
+  const { ctx, page } = await newPage();
+  const pings = [];
+  await page.route('**/api/ping', (r) => { pings.push(JSON.parse(r.request().postData() || 'null')); r.fulfill({ status: 204 }); });
+  await page.goto(base + '/?c=oh-pumpkin-sep');
+  await page.waitForTimeout(300);
+  check('counts: website QR link saves the label and counts the open', pings.length === 1 && pings[0].e === 'camp' && pings[0].c === 'oh-pumpkin-sep' && !/c=/.test(page.url()) && JSON.parse(await page.evaluate(() => localStorage.getItem('mojia.camp'))).l === 'oh-pumpkin-sep');
+  await page.goto(base + '/?c=BAD LABEL<script>');
+  await page.waitForTimeout(200);
+  check('counts: a bad label counts nothing', pings.length === 1);
+  check('counts: website no CSP violations', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
   await ctx.close();
 }
 

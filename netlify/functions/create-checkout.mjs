@@ -5,6 +5,7 @@ import { json, fail, readJson, clientIp, header, originFromHost } from './_lib/h
 import { rateHit, getPassBy, getSetting } from './_lib/db.mjs';
 import { codeHash } from './_lib/codes.mjs';
 import { getStripe, PLANS } from './_lib/stripe.mjs';
+import { LABEL_RE } from './_lib/analytics.mjs';
 
 const REQUIRED = [
   'STRIPE_SECRET_KEY', 'STRIPE_PUBLISHABLE_KEY',
@@ -30,6 +31,13 @@ export const handler = async (event) => {
 
   try {
     const metadata = { plan, env: envName() };
+    // Campaign credit: the event label from a QR card, and days since that open. No person is named.
+    const camp = input.camp;
+    if (camp && typeof camp === 'object' && typeof camp.l === 'string' && LABEL_RE.test(camp.l)) {
+      const d = Number(camp.d);
+      metadata.camp = camp.l;
+      metadata.camp_days = String(Number.isFinite(d) && d >= 0 && d <= 7 ? Math.round(d * 10) / 10 : 0);
+    }
 
     if (plan === 'add' || plan === 'up') {
       const hash = typeof input.code === 'string' ? codeHash(process.env.RESTORE_CODE_PEPPER, input.code) : null;

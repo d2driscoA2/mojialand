@@ -17,6 +17,9 @@ import { handler as adminApi } from '../netlify/functions/admin-api.mjs';
 import { handler as redeemFn } from '../netlify/functions/redeem-code.mjs';
 import { handler as settingsFn } from '../netlify/functions/settings.mjs';
 import { handler as handoff } from '../netlify/functions/handoff.mjs';
+import ping from '../netlify/functions/ping.mjs';
+import { placeFromGeo, readPing } from '../netlify/functions/_lib/analytics.mjs';
+import { localMidnight, lastDays } from '../netlify/functions/_lib/analytics-admin.mjs';
 
 let db, stripe;
 beforeEach(() => {
@@ -492,4 +495,148 @@ test('handoff: Safari offers, the Home Screen app on the same phone claims once;
   assert.equal(d.token, tok); assert.equal(d.code, code); assert.equal(d.kind, '48h');
   assert.equal(db.devices.length, 1);
   assert.equal((await handoff(ev({ action: 'claim', device_id: 'c'.repeat(32) }, app))).statusCode, 404, 'claimed once');
+});
+
+// ---------------------------------------------------------------- analytics
+const GEO = { city: 'Troy', country: { code: 'US', name: 'United States' }, subdivision: { code: 'MI', name: 'Michigan' }, postalCode: '48084', latitude: 42.6, longitude: -83.1, timezone: 'America/Detroit' };
+const pingReq = (body, method = 'POST') => new Request('https://mojialand.displayedux.com/api/ping', { method, body: method === 'POST' ? (typeof body === 'string' ? body : JSON.stringify(body)) : undefined });
+const ctx = (geo = GEO) => ({ geo, ip: '203.0.113.9' });
+
+test('analytics: geo keeps only country, state and city', () => {
+  assert.deepEqual(placeFromGeo(GEO), { country: 'US', state: 'MI', city: 'Troy' });
+  assert.deepEqual(placeFromGeo(null), { country: '', state: '', city: '' });
+  assert.equal(placeFromGeo({ city: '<b>Ann Arbor</b>' }).city, 'bAnn Arborb');
+  assert.equal(readPing({ e: 'open', g: 'chess' }), null);
+  assert.equal(readPing({ e: 'close', g: 'draw', b: 7 }), null);
+  assert.equal(readPing({ e: 'camp', c: 'BAD LABEL' }), null);
+  assert.deepEqual(readPing({ e: 'open', g: 'draw', m: 'app', c: 'mi-troy-lib', cp: 1, name: 'Ava' }), { e: 'open', g: 'draw', m: 'app', c: 'mi-troy-lib' });
+});
+
+test('ping: counts opens, still-playing marks and closes; stores no IP, ZIP or coordinates', async () => {
+  assert.equal((await ping(pingReq(null, 'GET'), ctx())).status, 405);
+  assert.equal((await ping(pingReq('{"e":"open","g":"nope"}'), ctx())).status, 400);
+  assert.equal((await ping(pingReq('x'.repeat(600)), ctx())).status, 400);
+  assert.equal((await ping(pingReq({ e: 'open', g: 'draw', m: 'app' }), ctx())).status, 204);
+  assert.equal((await ping(pingReq({ e: 'beat', g: 'draw', m: 'app' }), ctx())).status, 204);
+  assert.equal((await ping(pingReq({ e: 'close', g: 'draw', m: 'web', b: 2 }), ctx())).status, 204);
+  assert.equal(db.analytics.length, 3);
+  assert.deepEqual(db.analytics[0], { p_country: 'US', p_state: 'MI', p_city: 'Troy', p_game: 'draw', p_mode: 'app', p_open: 1, p_live: 0, p_bucket: -1 });
+  assert.equal(db.analytics[1].p_live, 1); assert.equal(db.analytics[1].p_open, 0);
+  assert.equal(db.analytics[2].p_bucket, 2);
+  const all = JSON.stringify(db.analytics) + JSON.stringify(db.calls);
+  for (const bad of ['48084', '203.0.113.9', '42.6', '-83.1']) assert.ok(!all.includes(bad), 'never sends ' + bad);
+});
+
+test('ping: campaign opens count only for real labels; first play counts once per open ping flag; rate limit', async () => {
+  db.campaigns.push({ label: 'mi-troy-lib-sep', name: 'Troy library', active: true });
+  await ping(pingReq({ e: 'camp', c: 'mi-troy-lib-sep' }), ctx());
+  await ping(pingReq({ e: 'camp', c: 'made-up-label' }), ctx());
+  await ping(pingReq({ e: 'open', g: 'match', m: 'web', c: 'mi-troy-lib-sep', cp: 1 }), ctx());
+  await ping(pingReq({ e: 'open', g: 'match', m: 'web', c: 'mi-troy-lib-sep' }), ctx());
+  assert.deepEqual(db.campaignEvents.map((e) => e.p_event), ['open', 'play']);
+  assert.equal(db.campaignEvents[0].p_city, 'Troy');
+  db.rateLimit = 0;
+  assert.equal((await ping(pingReq({ e: 'open', g: 'draw' }), ctx())).status, 429);
+});
+
+test('campaign credit: checkout carries the label; webhook counts the pass; gift code first use counts', async () => {
+  db.campaigns.push({ label: 'oh-pumpkin-sep', name: 'Pumpkin fest', active: true });
+  let r = await createCheckout(ev({ plan: 'pass', camp: { l: 'oh-pumpkin-sep', d: 1.26 } }));
+  assert.equal(r.statusCode, 200);
+  assert.equal(stripe.calls.create[0].metadata.camp, 'oh-pumpkin-sep');
+  assert.equal(stripe.calls.create[0].metadata.camp_days, '1.3');
+  r = await createCheckout(ev({ plan: 'pass', camp: { l: 'Bad Label!', d: 1 } }));
+  assert.equal(stripe.calls.create[1].metadata.camp, undefined);
+  const s = paidSession('cs_test_camp1', 'life', { camp: 'oh-pumpkin-sep', camp_days: '1.3' });
+  const body = JSON.stringify({ id: 'evt_camp1', object: 'event', type: 'checkout.session.completed', data: { object: s } });
+  const sig = stripe.webhooks.generateTestHeaderString({ payload: body, secret: process.env.STRIPE_WEBHOOK_SECRET });
+  assert.equal((await webhook(ev(body, { 'stripe-signature': sig }))).statusCode, 200);
+  assert.equal((await webhook(ev(body, { 'stripe-signature': sig }))).statusCode, 200);
+  assert.deepEqual(db.campaignEvents.map((e) => [e.p_event, e.p_days]), [['forever', 1.3]], 'counted once');
+  // gift code from the admin, first use carries the label
+  const cookie = await adminSignIn();
+  const made = JSON.parse((await adminApi(ev({ action: 'codes.create', kind: '48h', source: 'gift' }, { cookie }))).body);
+  r = await redeem(ev({ code: made.code, device_id: 'a'.repeat(32), camp: 'oh-pumpkin-sep' }));
+  assert.equal(r.statusCode, 200);
+  r = await redeem(ev({ code: made.code, device_id: 'b'.repeat(32), camp: 'oh-pumpkin-sep' }));
+  assert.deepEqual(db.campaignEvents.map((e) => e.p_event), ['forever', 'gift'], 'gift counted on first use only');
+});
+
+test('admin analytics: live folds small cities into the state and runs 5 minutes behind', async () => {
+  const cookie = await adminSignIn();
+  const SLOT = 300e3;
+  const asOf = Math.floor(Date.now() / SLOT) * SLOT - SLOT;
+  const at = (t) => new Date(t).toISOString();
+  db.plays_live.push(
+    { slot_start: at(asOf), country: 'US', state: 'MI', city: 'Troy', game: 'draw', n: 3 },
+    { slot_start: at(asOf), country: 'US', state: 'MI', city: 'Troy', game: 'match', n: 1 },
+    { slot_start: at(asOf), country: 'US', state: 'MI', city: 'Novi', game: 'draw', n: 2 },
+    { slot_start: at(asOf), country: 'CA', state: 'ON', city: 'Windsor', game: 'bounce', n: 1 },
+    { slot_start: at(asOf + SLOT), country: 'US', state: 'MI', city: 'Troy', game: 'draw', n: 9 },
+    { slot_start: at(asOf - SLOT), country: 'US', state: 'OH', city: 'Toledo', game: 'pattern', n: 5 },
+  );
+  const r = await adminApi(ev({ action: 'analytics.live' }, { cookie }));
+  assert.equal(r.statusCode, 200);
+  const d = JSON.parse(r.body);
+  assert.equal(d.asOf, at(asOf));
+  assert.equal(d.total, 7, 'the slot still filling is left out');
+  assert.deepEqual(d.cities.map((c) => [c.city, c.total]), [['Troy', 4]]);
+  assert.deepEqual(d.rolls, { MI: 2 });
+  assert.equal(d.other, 1);
+  assert.ok(!r.body.includes('Novi') && !r.body.includes('Windsor'), 'small places never reach the page');
+  assert.deepEqual(d.feed.map((f) => [f.city, f.game, f.n]), [['Troy', 'draw', 4], ['Toledo', 'pattern', 5]]);
+  assert.equal((await adminApi(ev({ action: 'analytics.live' }))).statusCode, 401);
+});
+
+test('admin analytics: history applies the 5-a-day rule and adds minutes from ranges', async () => {
+  const cookie = await adminSignIn();
+  const [d1, d2] = lastDays(2, Date.now());
+  db.rpcData.analytics_history = {
+    days: [
+      { d: d1, co: 'US', st: 'MI', ci: 'Troy', g: 'draw', m: 'app', o: 6, b0: 0, b1: 0, b2: 6, b3: 0 },
+      { d: d2, co: 'US', st: 'MI', ci: 'Troy', g: 'draw', m: 'web', o: 2, b0: 2, b1: 0, b2: 0, b3: 0 },
+      { d: d1, co: 'US', st: 'MI', ci: 'Novi', g: 'match', m: 'web', o: 4, b0: 0, b1: 4, b2: 0, b3: 0 },
+      { d: '1999-01-01', co: 'US', st: 'MI', ci: 'Troy', g: 'draw', m: 'app', o: 99, b0: 0, b1: 0, b2: 0, b3: 0 },
+    ],
+    hours: [{ h: 9, co: 'US', st: 'MI', ci: 'Troy', g: 'draw', o: 8 }, { h: 16, co: 'US', st: 'MI', ci: 'Novi', g: 'match', o: 4 }],
+  };
+  const r = await adminApi(ev({ action: 'analytics.history', range: 7 }, { cookie }));
+  const d = JSON.parse(r.body);
+  assert.equal(d.plays, 12);
+  assert.deepEqual(d.cities.map((c) => [c.city, c.total]), [['Troy', 6]]);
+  assert.deepEqual(d.rolls, { MI: 6 }, 'Troy on its 2-play day and Novi fold into Michigan');
+  assert.equal(d.minutes, 6 * 10 + 2 * 1 + 4 * 3.5);
+  assert.equal(d.appShare, 50);
+  assert.equal(d.hours[9], 8);
+  assert.deepEqual(Object.keys(d.cityHours), ['MI|Troy']);
+  assert.deepEqual(Object.keys(d.stateHours), ['MI']);
+  assert.ok(!r.body.includes('Novi'));
+  assert.equal(db.rpcCalls[0][1].p_tz, 'America/Detroit');
+  assert.equal(db.rpcCalls[0][1].p_from, new Date(localMidnight(Date.now(), 6)).toISOString());
+});
+
+test('admin campaigns: make, validate, list with small places folded', async () => {
+  const cookie = await adminSignIn();
+  const call = async (b) => { const r = await adminApi(ev(b, { cookie })); return [r.statusCode, JSON.parse(r.body)]; };
+  let [s, d] = await call({ action: 'campaigns.create', name: '', label: 'ok-label' });
+  assert.equal(s, 400);
+  [s, d] = await call({ action: 'campaigns.create', name: 'Troy', label: 'Has Spaces' });
+  assert.equal(s, 400);
+  [s] = await call({ action: 'campaigns.create', name: 'Troy library', label: 'mi-troy-lib-sep', note: '150 cards' });
+  assert.equal(s, 200);
+  assert.equal(db.campaigns[0].label, 'mi-troy-lib-sep');
+  [s, d] = await call({ action: 'campaigns.create', name: 'Again', label: 'mi-troy-lib-sep' });
+  assert.equal(s, 400); assert.match(d.error, /taken/);
+  const today = lastDays(1, Date.now())[0];
+  db.rpcData.campaign_stats = {
+    campaigns: [{ label: 'mi-troy-lib-sep', name: 'Troy library', note: '150 cards', active: true, created_at: new Date().toISOString() }],
+    days: [{ l: 'mi-troy-lib-sep', d: today, e: 'open', n: 9, ds: 0 }, { l: 'mi-troy-lib-sep', d: today, e: 'pass48', n: 2, ds: 3 }],
+    places: [{ l: 'mi-troy-lib-sep', co: 'US', st: 'MI', ci: 'Troy', n: 6 }, { l: 'mi-troy-lib-sep', co: 'US', st: 'MI', ci: 'Novi', n: 3 }],
+  };
+  [s, d] = await call({ action: 'campaigns.list' });
+  const c = d.campaigns[0];
+  assert.equal(c.open, 9); assert.equal(c.pass48, 2); assert.equal(c.avgDays, 1.5);
+  assert.deepEqual(c.cities, [{ city: 'Troy', state: 'MI', n: 6 }]);
+  assert.deepEqual(c.rolls, { MI: 3 });
+  assert.deepEqual(c.daily, [{ d: today, n: 9 }]);
 });

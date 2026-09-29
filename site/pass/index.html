@@ -84,6 +84,7 @@ async function start(){
   var body={plan:plan};
   if(plan==='add'||plan==='up'){ var code=readCode(); if(!code) return showError("That pass can't be changed. Pick a new pass."); body.code=code; }
   if(promo) body.promo=promo;
+  try{ var cp=JSON.parse(localStorage.getItem('mojia.camp')||'null'); if(cp&&typeof cp.l==='string'&&/^[a-z0-9][a-z0-9-]{1,23}$/.test(cp.l)&&Date.now()-cp.t<7*864e5) body.camp={l:cp.l,d:Math.round((Date.now()-cp.t)/864e4)/10}; }catch(e){}
   var res, data={};
   try{
     res=await fetch('/.netlify/functions/create-checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),credentials:'same-origin',cache:'no-store'});
