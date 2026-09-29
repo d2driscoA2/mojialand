@@ -614,7 +614,14 @@ textarea.pw-in{resize:none;min-height:88px}
 .dtools{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
 .dtool{height:52px;border-radius:16px;border:2px solid var(--line);background:var(--white);font-size:28px;line-height:1;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);cursor:pointer;padding:0;position:relative;transition:transform .12s}
 .dtool.on{border:3px solid var(--purple);background:var(--purple-l);transform:scale(1.06);z-index:1}
-.dsizes{display:flex;gap:12px;justify-content:center}
+.dsizes{display:flex;gap:10px;align-items:center}
+.dprev{flex:0 0 84px;height:52px;border-radius:14px;background:var(--white);box-shadow:0 0 0 2px var(--line),var(--shadow);overflow:hidden}
+.dprev canvas{display:block;width:84px;height:52px}
+.dslider{position:relative;flex:1;min-width:0;height:52px;touch-action:none;cursor:pointer;outline:none}
+.dslider:focus-visible{outline:3px solid var(--purple-d);outline-offset:2px;border-radius:16px}
+.dwedge{position:absolute;left:14px;top:17.5px;width:calc(100% - 28px);height:17px}
+.dwedge path{stroke:none;opacity:.55}
+.dknob{position:absolute;top:12px;width:28px;height:28px;box-sizing:border-box;margin-left:-14px;border-radius:999px;background:#fff;border:3px solid var(--purple);box-shadow:0 2px 5px rgba(48,37,74,.22);pointer-events:none}
 .dsize{width:52px;height:44px;border-radius:22px;border:2px solid var(--line);background:var(--white);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);cursor:pointer;padding:0}
 .dsize.on{border:3px solid var(--purple);background:var(--purple-l)}
 .dsize i{display:block;border-radius:999px;background:var(--ink)}
@@ -629,6 +636,23 @@ textarea.pw-in{resize:none;min-height:88px}
 .trailico i:nth-child(1){left:0;top:17px}.trailico i:nth-child(2){left:12px;top:6px}.trailico i:nth-child(3){left:24px;top:15px}
 @media (min-width:700px){ #s-draw .dswatches{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));justify-items:center;gap:8px 0} #s-draw .trailico{transform:scale(1.15)} }
 body.in-draw #app{max-width:none}
+@media (min-width:460px) and (max-width:699px){
+  #s-draw{display:grid;grid-template-columns:164px minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;column-gap:12px;row-gap:12px}
+  #s-draw>.bar,#s-draw>.helprow{grid-column:1/-1}
+  #s-draw .dctl{grid-column:1;grid-row:2;align-self:start;max-height:100%;overflow-y:auto;background:var(--white);border:2px solid var(--line);border-radius:var(--r);padding:8px;gap:10px;box-shadow:var(--shadow)}
+  #s-draw #dstage{grid-column:2;grid-row:2}
+  #s-draw .dtools{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+  #s-draw .dtool{height:46px;font-size:26px;border-radius:14px}
+  #s-draw .dtool.on{transform:none}
+  #s-draw .dsizes{flex-direction:column;align-items:stretch;gap:4px}
+  #s-draw .dprev{flex:0 0 auto;width:84px;align-self:center}
+  #s-draw .dslider{flex:0 0 44px;height:44px}
+  #s-draw .dslider .dwedge{top:13.5px}
+  #s-draw .dslider .dknob{top:8px}
+  #s-draw .dswatches{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));justify-items:center;gap:2px 0}
+  #s-draw #dtray{display:flex;flex-wrap:wrap;overflow:visible;gap:6px;justify-content:center}
+  #s-draw #dtray.hidden{display:none}
+}
 @media (min-width:700px){
   #s-draw{display:grid;grid-template-columns:minmax(260px,300px) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;column-gap:18px;row-gap:14px;padding-left:max(16px,calc((100% - 1240px)/2));padding-right:max(16px,calc((100% - 1240px)/2))}
   #s-draw>.bar,#s-draw>.helprow{grid-column:1/-1}
@@ -637,8 +661,6 @@ body.in-draw #app{max-width:none}
   #s-draw .dtools{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
   #s-draw .dtool{height:60px;font-size:32px}
   #s-draw .dswatches{flex-wrap:wrap;justify-content:flex-start;gap:6px 8px}
-  #s-draw .dsizes{justify-content:space-between}
-  #s-draw .dsize{flex:1;height:52px}
   #s-draw #dtray{display:flex;flex-wrap:wrap;overflow:visible;gap:8px}
   #s-draw #dtray.hidden{display:none}
 }
@@ -694,7 +716,7 @@ body.in-draw #app{max-width:none}
 <!-- DRAW -->
 <section class="screen hidden" id="s-draw" data-bg="grape">
   <div class="bar"><button class="pill gear" data-go="home" aria-label="Back to home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7138D1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg></button><div class="dur2"><button class="dur off" id="dundo" aria-label="Undo"><span aria-hidden="true">↩️</span></button><button class="dur off" id="dredo" aria-label="Redo"><span aria-hidden="true">↪️</span></button><button class="dur derase" id="derase" aria-label="Eraser" aria-pressed="false"><svg viewBox="0 0 32 32" width="30" height="30" aria-hidden="true"><g transform="rotate(-35 16 16)"><rect x="4" y="10" width="24" height="12" rx="3" fill="#FF5FA2" stroke="#7138D1" stroke-width="2.2"/><rect x="17" y="10" width="11" height="12" rx="3" fill="#FFFFFF" stroke="#7138D1" stroke-width="2.2"/><path d="M8 13.5h6" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity=".7"/></g></svg></button></div><div class="pw-slot"><span class="pw-chip" data-chip role="timer"><svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="14" fill="none" stroke="#F3ECFC" stroke-width="6"/><circle class="arc" cx="18" cy="18" r="14" fill="none" stroke="#FFC83D" stroke-width="6" stroke-linecap="round" stroke-dasharray="88" stroke-dashoffset="0" transform="rotate(-90 18 18)"/></svg><span class="t">15:00</span></span></div></div>
-  <div class="dctl"><div class="dtools" id="dtools" role="toolbar" aria-label="Drawing tools"></div><div class="dsizes" id="dsizes" role="radiogroup" aria-label="Sizes"></div><div class="dswatches" id="dswatches" role="radiogroup" aria-label="Colors"></div><div class="tray hidden" id="dtray"></div></div>
+  <div class="dctl"><div class="dtools" id="dtools" role="toolbar" aria-label="Drawing tools"></div><div class="dsizes" id="dsizes"><div class="dprev" aria-hidden="true"><canvas id="dprev"></canvas></div><div class="dslider" id="dslider" role="slider" tabindex="0" aria-label="Size" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50"><svg class="dwedge" viewBox="0 0 200 40" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="dwrain" x1="0" x2="1"><stop offset="0" stop-color="#FF5FA2"/><stop offset=".25" stop-color="#FFC83D"/><stop offset=".5" stop-color="#72D69A"/><stop offset=".75" stop-color="#4DBCEC"/><stop offset="1" stop-color="#7138D1"/></linearGradient></defs><path id="dwpath" d="M2 20 L198 2 L198 38 Z"/></svg><span class="dknob" id="dknob"></span></div></div><div class="dswatches" id="dswatches" role="radiogroup" aria-label="Colors"></div><div class="tray hidden" id="dtray"></div></div>
   <div class="stage" id="dstage">
     <div class="dlayers" id="dlayers"><canvas id="dmain"></canvas><canvas id="dlive"></canvas><canvas id="dline"></canvas></div>
     <div class="dpanel dbookp hidden" id="dfriend" role="dialog" aria-label="Coloring book"><button class="dx" data-dclose aria-label="Close"><span aria-hidden="true">✖️</span></button><div class="dbookhead" aria-hidden="true"><span>📖</span><span>🖍️</span></div><div class="dpages" id="dpages"></div></div>
@@ -1253,7 +1275,7 @@ games.draw=(function(){
   FRIENDS.forEach(f=>{ f.silP=f.sil.map(d=>new Path2D(d)); f.detP=f.det.map(d=>new Path2D(d)); f.dotP=f.dots.map(d=>new Path2D(d)); });
   const friendById=id=>FRIENDS.find(f=>f.id===id)||null;
 
-  let tool='crayon', color=COLORS[0][0], emo='⭐', sizeI=1, W=0, H=0, dpr=1, ops=[], redo=[], cur=null, pid=null, last=null, travel=0, cheered=false, samples=null, confirmT=null, trailN=0, liveRaf=0;
+  let tool='crayon', color=COLORS[0][0], emo='⭐', sizeT=.5, W=0, H=0, dpr=1, ops=[], redo=[], cur=null, pid=null, last=null, travel=0, cheered=false, samples=null, confirmT=null, trailN=0, liveRaf=0;
 
   function rng(seed){ return function(){ seed=seed+0x6D2B79F5|0; let t=Math.imul(seed^seed>>>15,1|seed); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
   function rgb(hex){ const n=parseInt(hex.slice(1),16); return [n>>16,n>>8&255,n&255]; }
@@ -1270,7 +1292,7 @@ games.draw=(function(){
 
   /* ---- canvas size ---- */
   function size(){ const r=cMain.getBoundingClientRect(); if(!r.width||!r.height) return; const nd=Math.min(2,window.devicePixelRatio||1); if(r.width===W&&r.height===H&&nd===dpr) return;
-    W=r.width; H=r.height; dpr=nd; [cMain,cLive,cLine,scr].forEach(c=>{ c.width=Math.round(W*dpr); c.height=Math.round(H*dpr); }); [mx,lx,ox,sx].forEach(x=>x.setTransform(dpr,0,0,dpr,0,0)); grainPat=sx.createPattern(grain,'repeat'); samples=null; redraw(); }
+    W=r.width; H=r.height; dpr=nd; [cMain,cLive,cLine,scr].forEach(c=>{ c.width=Math.round(W*dpr); c.height=Math.round(H*dpr); }); [mx,lx,ox,sx].forEach(x=>x.setTransform(dpr,0,0,dpr,0,0)); grainPat=sx.createPattern(grain,'repeat'); samples=null; redraw(); try{ paintSize(); }catch(e){} }
   window.addEventListener('resize',()=>{ if(current==='draw') requestAnimationFrame(size); });
 
   /* ---- stroke renderers: each draws one whole stroke into the scratch canvas, then lands on the target ---- */
@@ -1359,7 +1381,7 @@ games.draw=(function(){
 
   /* ---- drawing input ---- */
   function pt(ev){ const r=cMain.getBoundingClientRect(); return [ev.clientX-r.left,ev.clientY-r.top]; }
-  function w(){ return SIZES[tool][sizeI]; }
+  function w(){ const s=SIZES[tool], t=sizeT; return t<.5?s[0]+(s[1]-s[0])*t*2:s[1]+(s[2]-s[1])*(t-.5)*2; }
   function renderLive(){ liveRaf=0; if(!cur||cur.t!=='s'||cur.tool==='eraser'||cur.tool==='sponge') return; lx.clearRect(0,0,W,H); renderStroke(lx,cur,true); }
   function liveSoon(){ if(!liveRaf) liveRaf=requestAnimationFrame(renderLive); }
   function addTrail(p){ const s=w(), it=[p[0],p[1],emo,s*(.8+Math.random()*.4),(Math.random()-.5)*.6]; cur.items.push(it); drawEmo(lx,it); if(settings.sound) tone(520+(trailN++%6)*60,0,.07,'sine',.1); }
@@ -1396,16 +1418,35 @@ games.draw=(function(){
     b.onclick=()=>{ ctx(); sfx.boop(); setTool(id); say(label); }; toolsEl.appendChild(b); });
   $('#derase').onclick=()=>{ ctx(); sfx.boop(); if(tool==='eraser'){ setTool('crayon'); say('Crayon'); } else { closePanels(); setTool('eraser'); say('Eraser'); } };
   function paintEmoTools(){ $('#dtools [data-tool=trail]').innerHTML='<span class="trailico" aria-hidden="true"><i>'+emo+'</i><i>'+emo+'</i><i>'+emo+'</i></span>'; $('#dtools [data-tool=stamp]').innerHTML='<span aria-hidden="true">'+emo+'</span><span class="mini" aria-hidden="true">👆</span>'; }
-  const SIZEB=[0,1,2].map(i=>{ const b=document.createElement('button'); b.className='dsize'; b.setAttribute('role','radio'); b.setAttribute('aria-label',SIZE_NAMES[i]); b.innerHTML='<i></i>';
-    b.onclick=()=>{ ctx(); sizeI=i; paintSize(); tone([330,440,560][i],0,.1,'sine',.15); say(SIZE_NAMES[i]); }; sizesEl.appendChild(b); return b; });
-  function paintSize(){ const bg=tool==='rainbow'?'conic-gradient(#FF5FA2,#FFC83D,#72D69A,#4DBCEC,#7138D1,#FF5FA2)':tool==='waffle'?'#EDBE72':tool==='sponge'?'#4DBCEC':tool==='eraser'?'#FFFFFF':(tool==='trail'||tool==='stamp')?'#30254A':color;
-    SIZEB.forEach((b,i)=>{ const d=DOT[i], el=b.querySelector('i'); el.style.width=el.style.height=d+'px'; el.style.background=bg; el.style.boxShadow=(tool==='eraser'||color==='#FFFFFF'||tool==='waffle')?'0 0 0 2px #D5C6F2':'none'; b.classList.toggle('on',i===sizeI); b.setAttribute('aria-checked',String(i===sizeI)); }); }
+  /* Size slider: drag the knob along the wedge. The little paper card on the left draws a sample with the real brush, color, and size. */
+  const slEl=$('#dslider'), knob=$('#dknob'), wpath=$('#dwpath'), pv=$('#dprev'), pvx=pv.getContext('2d'); let slPid=null, slLast=-1;
+  function slSet(ev){ const r=slEl.getBoundingClientRect(); sizeT=Math.max(0,Math.min(1,(ev.clientX-r.left-14)/(r.width-28))); paintSize(); const step=Math.round(sizeT*6); if(step!==slLast){ slLast=step; tone(300+step*45,0,.05,'sine',.08); } }
+  slEl.addEventListener('pointerdown',ev=>{ ctx(); ev.preventDefault(); slPid=ev.pointerId; try{ slEl.setPointerCapture(slPid); }catch(e){} slSet(ev); });
+  slEl.addEventListener('pointermove',ev=>{ if(ev.pointerId===slPid) slSet(ev); });
+  const slUp=ev=>{ if(ev.pointerId===slPid) slPid=null; }; slEl.addEventListener('pointerup',slUp); slEl.addEventListener('pointercancel',slUp);
+  slEl.addEventListener('keydown',ev=>{ const d=ev.key==='ArrowRight'||ev.key==='ArrowUp'?.1:ev.key==='ArrowLeft'||ev.key==='ArrowDown'?-.1:0; if(!d) return; ev.preventDefault(); sizeT=Math.max(0,Math.min(1,sizeT+d)); paintSize(); });
+  function previewDraw(){ const PW=84, PH=52, pd=dpr||1; if(pv.width!==Math.round(PW*pd)){ pv.width=Math.round(PW*pd); pv.height=Math.round(PH*pd); }
+    pvx.setTransform(1,0,0,1,0,0); pvx.clearRect(0,0,pv.width,pv.height); pvx.setTransform(pd,0,0,pd,0,0);
+    const ww=w(), amp=Math.max(2,Math.min(9,(PH-ww)/2-3)), pts=[], m=Math.max(12,ww/2+5); for(let i=0;i<=24;i++){ const x=m+i*(PW-2*m)/24; pts.push(x,PH/2+Math.sin(i/24*Math.PI*2)*amp); }
+    if(tool==='stamp'){ drawEmo(pvx,[PW/2,PH/2,emo,Math.min(ww,44),0]); return; }
+    if(tool==='trail'){ const z=Math.min(ww,30), n=Math.max(2,Math.floor((PW-16)/(z*.9))); for(let i=0;i<n;i++) drawEmo(pvx,[8+z/2+i*(PW-16-z)/Math.max(1,n-1),PH/2+(i%2?-4:4),emo,z,(i%3-1)*.2]); return; }
+    if(tool==='eraser'||tool==='sponge'){ const cs=['#FF5FA2','#FFC83D','#4DBCEC']; cs.forEach((c,i)=>{ pvx.fillStyle=c; pvx.fillRect(0,i*PH/3,PW,PH/3); });
+      if(tool==='eraser'){ pvx.save(); pvx.globalCompositeOperation='destination-out'; pvx.lineCap='round'; pvx.lineJoin='round'; pvx.lineWidth=ww; pvx.strokeStyle='#000'; path(pvx,pts2(pts)); pvx.stroke(); pvx.restore(); }
+      else { const q=pts2(pts); for(let i=1;i<q.length;i++) smearSeg(pvx,q[i-1],q[i],ww); } return; }
+    if(!W||!RENDER[tool]) return; const o={t:'s',tool,color,w:ww,pts,seed:12345};
+    sx.save(); sx.setTransform(1,0,0,1,0,0); sx.clearRect(0,0,scr.width,scr.height); sx.restore(); sx.save(); RENDER[tool](sx,o); sx.restore();
+    pvx.save(); pvx.setTransform(1,0,0,1,0,0); pvx.globalAlpha=tool==='marker'?.82:tool==='crayon'?.95:1; pvx.drawImage(scr,0,0,pv.width,pv.height,0,0,pv.width,pv.height); pvx.restore();
+    sx.save(); sx.setTransform(1,0,0,1,0,0); sx.clearRect(0,0,scr.width,scr.height); sx.restore(); }
+  function paintSize(){ const fill=tool==='rainbow'?'url(#dwrain)':tool==='waffle'?'#EDBE72':tool==='sponge'?'#4DBCEC':tool==='eraser'?'#FFFFFF':(tool==='trail'||tool==='stamp')?'#D5C6F2':color;
+    wpath.setAttribute('fill',fill); knob.style.left=(14+sizeT*(slEl.clientWidth-28))+'px'; slEl.setAttribute('aria-valuenow',String(Math.round(sizeT*100)));
+    try{ previewDraw(); }catch(e){} }
+  window.addEventListener('resize',()=>requestAnimationFrame(paintSize));
   function setTool(id){ tool=id; $$('#dtools .dtool').forEach(b=>b.classList.toggle('on',b.dataset.tool===id)); const eb=$('#derase'); eb.classList.toggle('on',id==='eraser'); eb.setAttribute('aria-pressed',String(id==='eraser')); const em=(id==='trail'||id==='stamp'); swEl.classList.toggle('hidden',em); trayEl.classList.toggle('hidden',!em); paintSize();
  }
   COLORS.forEach(([hex,name],i)=>{ const b=document.createElement('button'); b.className='dsw'+(i?'':' on'); b.innerHTML='<i style="background:'+hex+'"></i>'; b.setAttribute('role','radio'); b.setAttribute('aria-checked',String(!i)); b.setAttribute('aria-label',name);
     b.onclick=()=>{ ctx(); sfx.boop(); color=hex; $$('#dswatches .dsw').forEach(x=>{ x.classList.toggle('on',x===b); x.setAttribute('aria-checked',String(x===b)); }); if(!INK.has(tool)) setTool('crayon'); paintSize(); say(name); }; swEl.appendChild(b); });
   function emoTile(e){ const t=document.createElement('button'); t.className='tile'+(e===emo?' on':''); t.textContent=e; t.setAttribute('aria-label',nameOf(e)); t.onclick=()=>{ ctx(); sfx.boop(); pickEmo(e); say(nameOf(e)); }; return t; }
-  function pickEmo(e){ emo=e; if(![...trayEl.querySelectorAll('.tile')].some(x=>x.textContent===e)) trayEl.insertBefore(emoTile(e),moreT); $$('#dtray .tile').forEach(x=>x.classList.toggle('on',x.textContent===e)); paintEmoTools(); }
+  function pickEmo(e){ emo=e; setTimeout(paintSize,0); if(![...trayEl.querySelectorAll('.tile')].some(x=>x.textContent===e)) trayEl.insertBefore(emoTile(e),moreT); $$('#dtray .tile').forEach(x=>x.classList.toggle('on',x.textContent===e)); paintEmoTools(); }
   ['⭐','❤️','🐟','🌈','🦄','🌸','🦋','🐶','🌻','🚀','🍕'].forEach(e=>trayEl.appendChild(emoTile(e)));
   const moreT=document.createElement('button'); moreT.className='tile'; moreT.textContent='➕'; moreT.setAttribute('aria-label','More emoji'); moreT.style.background='var(--sand)'; trayEl.appendChild(moreT);
   moreT.onclick=()=>{ ctx(); sfx.boop(); drawer.open(e=>{ pickEmo(e); say(nameOf(e)); trayEl.scrollLeft=trayEl.scrollWidth; drawer.close(); }); };

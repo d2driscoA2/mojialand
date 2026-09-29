@@ -697,8 +697,10 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   const ink = () => page.evaluate(() => { const c = document.querySelector('#dmain'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 0) n++; return n; });
   const line = () => page.evaluate(() => { const c = document.querySelector('#dline'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 0) n++; return n; });
   const box = await page.locator('#dmain').boundingBox();
+  const setSize = async (t) => { const s = await page.locator('#dslider').boundingBox(); await page.mouse.click(s.x + 14 + t * (s.width - 28), s.y + s.height / 2); };
+  const prevInk = () => page.evaluate(() => { const c = document.querySelector('#dprev'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0, h = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 0) { n++; h = (h * 31 + d[i - 3] + d[i - 2] * 3 + d[i - 1] * 7) >>> 0; } return { n, h }; });
   const stroke = async (x0, y0, x1, y1, steps = 12) => { await page.mouse.move(box.x + x0, box.y + y0); await page.mouse.down(); for (let i = 1; i <= steps; i++) await page.mouse.move(box.x + x0 + (x1 - x0) * i / steps, box.y + y0 + (y1 - y0) * i / steps); await page.mouse.up(); };
-  check('draw: twelve tools, three sizes, seven brand colors', (await page.locator('#dtools .dtool').count()) === 12 && (await page.locator('#dsizes .dsize').count()) === 3 && (await page.locator('#dswatches .dsw').count()) === 7);
+  check('draw: twelve tools, one size slider with a preview card, seven brand colors', (await page.locator('#dtools .dtool').count()) === 12 && (await page.locator('#dslider[role=slider]').count()) === 1 && (await page.locator('#dprev').count()) === 1 && (await page.locator('#dswatches .dsw').count()) === 7);
   const small = await page.evaluate(() => [...document.querySelectorAll('#s-draw button')].filter((b) => b.offsetParent && (b.getBoundingClientRect().width < 44 || b.getBoundingClientRect().height < 44)).map((b) => b.id || b.className || b.getAttribute('aria-label')));
   check('draw: every visible button is at least 44 px', small.length === 0, small.join(','));
   const pal = await page.evaluate(() => [...document.querySelectorAll('#dswatches .dsw i')].map((b) => getComputedStyle(b).backgroundColor));
@@ -753,12 +755,16 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await stroke(40, 60, 300, 60);
   const pen1 = await ink();
   check('draw: pen draws a thin line', pen1 > 200 && pen1 < 6000, String(pen1));
-  await page.click('#dsizes .dsize:nth-child(3)'); // big
-  check('draw: tapping the big dot picks big', (await page.getAttribute('#dsizes .dsize:nth-child(3)', 'aria-checked')) === 'true' && (await page.getAttribute('#dsizes .dsize:nth-child(2)', 'aria-checked')) === 'false');
+  const pv0 = await prevInk();
+  await setSize(1); // big
+  const pv1 = await prevInk();
+  check('draw: dragging the slider to the end picks the biggest size', (await page.getAttribute('#dslider', 'aria-valuenow')) === '100');
+  check('draw: preview card draws a sample, thicker when the size goes up', pv0.n > 50 && pv1.n > pv0.n, pv0.n + ' -> ' + pv1.n);
   await stroke(40, 110, 300, 110);
   const pen2 = await ink();
   check('draw: big pen draws wider than medium', pen2 - pen1 > pen1 * 1.2, pen1 + ' then +' + (pen2 - pen1));
-  await page.click('#dsizes .dsize:nth-child(1)'); // small
+  await setSize(0); // small
+  check('draw: slider left end picks the smallest size', (await page.getAttribute('#dslider', 'aria-valuenow')) === '0');
   await page.click('#dtools [data-tool="rainbow"]'); await stroke(40, 170, 300, 170);
   const rb = await page.evaluate(() => { const c = document.querySelector('#dmain'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; const hues = new Set(); for (let i = 0; i < d.length; i += 4 * 7) if (d[i + 3] > 200) hues.add(Math.round(d[i] / 64) + ',' + Math.round(d[i + 1] / 64) + ',' + Math.round(d[i + 2] / 64)); return hues.size; });
   check('draw: rainbow brush lays down many colors', rb >= 6, String(rb));
@@ -768,7 +774,10 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   check('draw: sprinkles brush tosses many colored bits', (await ink()) > s0 && sp >= 5, String(sp));
   await page.screenshot({ path: path.join(SHOTS, 'draw-sprinkles-390.png') });
   const g0 = await ink();
-  await page.click('#dsizes .dsize:nth-child(2)'); await page.click('#dtools [data-tool="glitter"]'); await stroke(40, 240, 300, 240);
+  await setSize(.5); const pr = await prevInk(); await page.click('#dtools [data-tool="glitter"]'); const pg = await prevInk();
+  check('draw: preview card changes when the tool changes', pg.n > 20 && pg.h !== pr.h);
+  await page.focus('#dslider'); await page.keyboard.press('ArrowRight');
+  check('draw: arrow keys move the slider', (await page.getAttribute('#dslider', 'aria-valuenow')) === '60'); await stroke(40, 240, 300, 240);
   check('draw: glitter adds sparkles', (await ink()) > g0, String((await ink()) - g0));
   // ice cream: waffle cone then a scoop on top
   const w0 = await ink();
@@ -889,6 +898,25 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await ctx.close();
 }
 
+
+// 11c. Emoji Draw on upright iPad: tools in a side panel so the drawing area is as big as possible
+{
+  const { ctx, page } = await newPage({ viewport: { width: 480, height: 691 }, deviceScaleFactor: 2, isMobile: false });
+  await page.addInitScript(() => { localStorage.setItem('mojia.demos', 'false'); localStorage.setItem('mojia.welcomed', 'true'); });
+  await page.goto(base + '/play/');
+  await page.click('#splash');
+  await page.click('[data-go="draw"]');
+  await page.waitForSelector('#s-draw:not(.hidden)'); await page.waitForTimeout(400);
+  await page.click('#dpages .dpage.blank');
+  const g = await page.evaluate(() => { const c = document.querySelector('#dmain').getBoundingClientRect(), p = document.querySelector('#s-draw .dctl'), pr = p.getBoundingClientRect(); return { area: Math.round(c.width * c.height), side: pr.right <= c.left, fits: p.scrollHeight <= p.clientHeight + 1, sw: [...document.querySelectorAll('#dswatches .dsw')].every((b) => { const r = b.getBoundingClientRect(); return r.bottom <= pr.bottom && r.width >= 44; }) }; });
+  check('draw iPad upright: tools sit in a side panel, drawing area over 140,000 square points', g.side && g.area > 140000, JSON.stringify(g));
+  check('draw iPad upright: every tool, the slider, and all 7 colors fit without scrolling', g.fits && g.sw, JSON.stringify(g));
+  const small = await page.evaluate(() => [...document.querySelectorAll('#s-draw button,#dslider')].filter((b) => b.offsetParent && (b.getBoundingClientRect().width < 44 || b.getBoundingClientRect().height < 44)).map((b) => b.id || b.className));
+  check('draw iPad upright: every control is at least 44 px', small.length === 0, small.join(','));
+  await page.screenshot({ path: path.join(SHOTS, 'draw-ipad-upright.png') });
+  check('draw iPad upright: no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
+  await ctx.close();
+}
 
 // 12. Home: big stamp canvas first, featured card peeks at the bottom edge, games scroll below
 {
