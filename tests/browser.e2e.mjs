@@ -424,6 +424,14 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await ctx.close();
 }
 {
+  const { ctx, page } = await newPage({ viewport: { width: 1180, height: 820 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
+  await page.goto(base + '/');
+  await page.click('[data-play]');
+  await page.waitForURL('**/play/**');
+  check('website on a sideways iPad: Play opens /play/ full screen (no phone-sized frame)', new URL(page.url()).pathname === '/play/' && (await page.locator('#player').count()) === 0);
+  await ctx.close();
+}
+{
   const { ctx, page } = await newPage({ viewport: { width: 1280, height: 900 }, isMobile: false, hasTouch: false, deviceScaleFactor: 1 });
   await page.goto(base + '/');
   await page.click('[data-play]');

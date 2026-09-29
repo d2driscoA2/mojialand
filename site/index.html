@@ -743,8 +743,8 @@ var CONFIG = {
   p.style.setProperty("--r",(i*29%180)+"deg");p.style.setProperty("--dur",(3.5+(i%8)*.38)+"s");p.style.setProperty("--delay",(-(i%15)*.31)+"s");
   space.appendChild(p);
  }
- /* Phones: the game opens full screen, with nothing drawn over its corners. */
- var phone=function(){ try{ return matchMedia("(max-width:600px)").matches; }catch(e){ return false; } };
+ /* Phones and tablets (touch screens): the game opens full screen, with nothing drawn over its corners, so iPad players get the whole screen to draw on. */
+ var phone=function(){ try{ return matchMedia("(max-width:600px), (pointer:coarse)").matches; }catch(e){ return false; } };
  function openPlayer(){
   if(phone()&&CONFIG.embedGame){ location.href=CONFIG.gameUrl; return; }
   lastFocus=document.activeElement;
