@@ -689,7 +689,7 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await page.click('[data-go="draw"]');
   await page.waitForSelector('#s-draw:not(.hidden)');
   await page.waitForTimeout(300);
-  check('draw: empty canvas opens the page picker first', await page.isVisible('#dfriend') && (await page.getAttribute('#dpages .dpage:first-child', 'aria-label')) === 'Blank page' && (await page.locator('#dpages .dpage').count()) === 13);
+  check('draw: empty canvas opens the page picker first', await page.isVisible('#dfriend') && (await page.getAttribute('#dpages .dpage:first-child', 'aria-label')) === 'Blank page' && (await page.locator('#dpages .dpage').count()) === 37);
   check('draw: book button shows a unicorn page, no words', (await page.locator('#dbook .dbthumb svg path').count()) > 3 && ((await page.textContent('#dbook')).replace(/[\s🖍️️]/gu, '')) === '');
   await page.screenshot({ path: path.join(SHOTS, 'draw-picker-390.png') });
   await page.click('#dpages .dpage.blank');
@@ -823,8 +823,13 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await page.click('#dtools [data-tool="crayon"]');
   // color a friend
   await page.click('#dbook');
-  check('draw: coloring book shows 12 pages and a blank page', (await page.locator('#dpages .dpage').count()) === 13 && (await page.locator('#dpages .dpage svg').count()) === 12);
+  check('draw: coloring book shows 36 pages and a blank page', (await page.locator('#dpages .dpage').count()) === 37 && (await page.locator('#dpages .dpage svg').count()) === 36);
   await page.screenshot({ path: path.join(SHOTS, 'draw-friends-390.png') });
+  const pgNames = await page.evaluate(() => [...document.querySelectorAll('#dpages .dpage')].map((b) => b.getAttribute('aria-label')));
+  check('draw: book starts with the blank page and the unicorn, and has the new treat, sparkle, and animal pages', pgNames[0] === 'Blank page' && pgNames[1] === 'unicorn' && ['ice cream cone', 'cupcake', 'crown', 'rainbow', 'donut', 'kitty', 'sundae', 'castle', 'magic wand', 'diamond', 'dinosaur', 'mermaid tail'].every((n) => pgNames.includes(n)) && new Set(pgNames).size === 37, pgNames.join(','));
+  await page.click('#dpages .dpage[aria-label="ice cream cone"]');
+  check('draw: ice cream cone outline appears', (await line()) > 1000);
+  await page.click('#dbook');
   await page.click('#dpages .dpage[aria-label="smiley"]');
   check('draw: smiley outline appears, crayon selected', (await line()) > 1000 && /on/.test(await page.getAttribute('#dtools [data-tool="crayon"]', 'class')));
   await page.click('#dtools [data-tool="paint"]');
