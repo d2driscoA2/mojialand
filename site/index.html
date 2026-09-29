@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Mojialand</title>
-<meta name="description" content="Four emoji games for kids 3 and up. Matching, patterns, and memory. No accounts. No ads. No tracking.">
+<meta name="description" content="Five emoji games for kids 3 and up. Drawing, matching, patterns, and memory. No accounts. No ads. No tracking.">
 <link rel="canonical" href="https://mojialand.com/">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://mojialand.com/">
 <meta property="og:title" content="Mojialand">
-<meta property="og:description" content="Four emoji games for kids 3 and up. No accounts. No ads. No tracking.">
+<meta property="og:description" content="Five emoji games for kids 3 and up. No accounts. No ads. No tracking.">
 <meta property="og:image" content="https://mojialand.com/logo/app-icon-1024.png">
 <style>@font-face{font-family:"Nunito";src:url("/fonts/nunito-latin.woff2") format("woff2");font-weight:700 900;font-display:swap}</style>
 <link rel="icon" href="/logo/favicon.svg" type="image/svg+xml">
@@ -114,37 +114,60 @@ section{padding-block:72px}
 /* Games */
 .games-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:end;gap:16px;margin-bottom:32px}
 .games-head h2{font-size:clamp(34px,4.4vw,52px)}
-.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
-.tile{border-radius:var(--r);padding:22px 20px 24px;color:#fff;position:relative;overflow:hidden;box-shadow:var(--shadow);min-height:250px;display:flex;flex-direction:column}
-.tile .pic{display:flex;gap:4px;align-items:center;justify-content:center;height:84px;background:rgba(255,255,255,.28);border-radius:18px;padding:0 10px;margin-bottom:18px}
-.tile .pic .e{font-size:32px;flex:none}
-.tile .pic .q{width:34px;height:34px;border-radius:10px;border:3px dashed rgba(255,255,255,.95);display:grid;place-items:center;font-size:20px;font-weight:900;margin-left:4px;flex:none}
-.ico-bounce{position:relative}
-.ico-bounce .hop{display:block;animation:hop 1.1s infinite cubic-bezier(.3,0,.7,1)}
-.ico-bounce .hop .e{font-size:38px}
-.ico-bounce .gnd{width:58px;height:5px;border-radius:3px;background:rgba(255,255,255,.75);align-self:flex-end;margin:0 4px 16px -50px}
-@keyframes hop{0%,100%{transform:translateY(-14px)}50%{transform:translateY(6px) scale(1.1,.9)}}
-.ico-match .card{width:44px;height:58px;border-radius:10px;background:#fff;display:grid;place-items:center;box-shadow:0 3px 6px rgba(48,37,74,.18)}
-.ico-match .card .e{font-size:26px}
-.ico-match .card.back{background:var(--purple);border:3px solid #A585E6;transform:rotate(-8deg);margin-right:-6px}
-.ico-match .card.face{transform:rotate(4deg)}
-.ico-match .card.face.r{transform:rotate(10deg)}
-.ico-parade .march{display:flex;gap:2px;animation:tmarch 1.6s infinite ease-in-out}
-.ico-parade .march .e{animation:pbob .45s infinite alternate ease-in-out}
-.ico-parade .march .b1{font-size:36px}
-.ico-parade .march .b2{animation-delay:.15s}.ico-parade .march .b3{animation-delay:.3s}
-.ico-parade .lolly{font-size:26px;margin-left:6px}
-@keyframes tmarch{0%,100%{transform:translateX(-4px)}50%{transform:translateX(4px)}}
-@keyframes pbob{from{transform:translateY(0)}to{transform:translateY(-6px) scale(1.05,.95)}}
-.tile p.tag{margin-top:2px;font-size:14px;font-weight:900;opacity:.9}
-.tile h3{color:inherit;font-size:28px}
-.tile p{margin-top:8px;font-size:16px;opacity:.95}
-.tile .skill{margin-top:auto;padding-top:16px;font-size:12px;letter-spacing:.16em;text-transform:uppercase;opacity:.9}
-.t-pattern{background:var(--pink)}.t-bounce{background:var(--blue)}
-.t-match{background:var(--yellow);color:var(--ink)}.t-parade{background:var(--green);color:var(--ink)}
-.t-match .pic .q,.t-parade .pic .q{border-color:rgba(48,37,74,.6)}
-@media (max-width:900px){.tiles{grid-template-columns:repeat(2,1fr)}}
-@media (max-width:520px){.tiles{grid-template-columns:1fr}.tile{min-height:0}}
+/* Game tiles match the app home (Mojialand-Home-Tiles-Handoff.md): featured card, then colored tiles with a white scene window and a purple play button. */
+.gtile{appearance:none;border:0;font:inherit;text-align:left;cursor:pointer;color:var(--ink);transition:transform .15s ease;display:flex}
+.gtile:active{transform:scale(.97)}
+@media (hover:hover){.gtile:hover{transform:translateY(-3px)}}
+.gtile:focus-visible{outline:4px solid var(--blue);outline-offset:4px}
+.gtile .gname{display:block;font-weight:900;line-height:1.05;letter-spacing:-.01em}
+.gtile .tag,.gtile .gdesc,.gtile .skill{display:block}
+.gfeat{width:100%;background:var(--purple);color:#fff;border-radius:28px;padding:14px;gap:22px;align-items:stretch;box-shadow:0 10px 22px rgba(48,37,74,.18);margin-bottom:18px}
+.gfeat .win{width:clamp(180px,34%,360px);min-height:190px;flex:none;border-radius:20px;background:rgba(255,255,255,.94);overflow:hidden;display:flex;align-items:center;justify-content:center}
+.gfeat .win>div{transform:scale(1.5)}
+.gfeat .col{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px;padding:8px 6px 4px 0}
+.gchip{align-self:flex-start;padding:5px 12px;border-radius:12px;font-size:13px;font-weight:900;background:var(--yellow);color:var(--ink)}
+.gfeat .gname{font-size:clamp(32px,4vw,44px)}
+.gfeat .tag{font-size:17px;font-weight:900}
+.gfeat .gdesc{font-size:16px;max-width:52ch;opacity:.95}
+.gfeat .foot{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:8px}
+.gfeat .skill{font-size:12px;letter-spacing:.16em;text-transform:uppercase;font-weight:900;opacity:.9}
+.gplay{display:flex;align-items:center;justify-content:center;border-radius:999px;background:var(--purple);flex:none;width:44px;height:44px;animation:gring 2.2s ease-out infinite}
+.gplay.big{width:56px;height:56px;background:#fff;animation-name:gringw}
+@keyframes gring{0%{box-shadow:0 0 0 0 rgba(113,56,209,.5);transform:scale(1)}15%{transform:scale(1.08)}30%{transform:scale(1)}70%{box-shadow:0 0 0 14px rgba(113,56,209,0)}100%{box-shadow:0 0 0 0 rgba(113,56,209,0)}}
+@keyframes gringw{0%{box-shadow:0 0 0 0 rgba(255,255,255,.55);transform:scale(1)}15%{transform:scale(1.08)}30%{transform:scale(1)}70%{box-shadow:0 0 0 14px rgba(255,255,255,0)}100%{box-shadow:0 0 0 0 rgba(255,255,255,0)}}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.gcell{flex-direction:column;gap:10px;padding:10px 10px 18px;border-radius:26px;box-shadow:0 8px 18px rgba(48,37,74,.14)}
+.gcell .win{height:130px;flex:none;border-radius:18px;background:rgba(255,255,255,.92);overflow:hidden;display:flex;align-items:center;justify-content:center}
+.gcell .hrow{display:flex;align-items:center;gap:8px;padding:0 4px}
+.gcell .gname{flex:1;min-width:0;font-size:24px}
+.gcell .tag{padding:0 4px;font-size:14px;font-weight:900}
+.gcell .gdesc{padding:0 4px;font-size:15px}
+.gcell .skill{margin-top:auto;padding:6px 4px 0;font-size:12px;letter-spacing:.16em;text-transform:uppercase;font-weight:900;opacity:.85}
+.t-pattern{background:var(--pink)}.t-bounce{background:var(--blue)}.t-match{background:var(--yellow)}.t-parade{background:var(--green)}
+/* Scenes: the same loops as the app tiles. */
+.hs-pi{display:inline-block;animation:hspi 3.2s ease-in-out infinite}
+.hs-pi2{animation-delay:.25s}.hs-pi3{animation-delay:.5s}
+@keyframes hspi{0%,24%,100%{transform:translateY(0)}12%{transform:translateY(-7px)}}
+.hs-pq{width:34px;height:34px;box-sizing:border-box;border-radius:17px;border:3px dashed var(--purple);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:var(--purple);animation:hspq 1.6s ease-in-out infinite}
+@keyframes hspq{0%,100%{transform:scale(1);opacity:.55}50%{transform:scale(1.15);opacity:1}}
+.hs-ball{animation:hsbounce 1.1s cubic-bezier(.3,0,.7,1) infinite}
+@keyframes hsbounce{0%,100%{transform:translateY(0) scale(1.15,.85)}12%{transform:translateY(-6px) scale(1,1)}50%{transform:translateY(-40px) scale(1,1)}88%{transform:translateY(-6px) scale(1,1)}}
+.hs-bsh{animation:hsbsh 1.1s cubic-bezier(.3,0,.7,1) infinite}
+@keyframes hsbsh{0%,100%{transform:scaleX(1);opacity:1}50%{transform:scaleX(.5);opacity:.4}}
+.hs-card{position:relative;width:44px;height:58px;border-radius:10px;background:var(--purple);box-shadow:0 3px 0 var(--deep)}
+.hs-card.flip{animation:hsflip 3.4s ease-in-out infinite}
+@keyframes hsflip{0%,30%{transform:scaleX(1)}38%{transform:scaleX(0)}46%,82%{transform:scaleX(1)}90%{transform:scaleX(0)}98%,100%{transform:scaleX(1)}}
+.hs-face{position:absolute;inset:0;box-sizing:border-box;border-radius:10px;background:#fff;border:3px solid var(--yellow);display:flex;align-items:center;justify-content:center;font-size:26px;animation:hsface 3.4s step-end infinite}
+@keyframes hsface{0%{opacity:0}38%{opacity:1}90%{opacity:0}}
+.hs-march{display:flex;width:max-content;font-size:30px;line-height:1;animation:hsmarch 8s linear infinite}
+.hs-march span{padding:0 5px}
+@keyframes hsmarch{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.hs-dr{stroke-dasharray:200;stroke-dashoffset:200;animation:hsdraw 3s ease-in-out infinite}
+@keyframes hsdraw{0%{stroke-dashoffset:200}60%,85%{stroke-dashoffset:0}100%{stroke-dashoffset:-200}}
+@media (prefers-reduced-motion:reduce){.hs-face{opacity:1}.hs-dr{stroke-dashoffset:0}}
+@media (max-width:900px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:440px){.gcell .win>*{transform:scale(.82)}.gcell .gname{font-size:21px}}
+@media (max-width:620px){.gfeat{flex-direction:column;gap:14px}.gfeat .win{width:100%;min-height:170px}.gfeat .col{padding:0 4px 4px}}
 
 /* Promise band */
 .promise{background:var(--deep);color:#fff;border-radius:36px;padding:44px clamp(22px,4vw,56px);display:grid;grid-template-columns:1.1fr 1.4fr;gap:36px;align-items:center}
@@ -319,7 +342,7 @@ footer .fine.credit a{color:#fff;text-decoration:underline;text-underline-offset
    <div>
     <p class="eyebrow">Emoji games for kids 3 and up</p>
     <h1 style="margin-top:14px">Big Play. <em>Bigger Smiles.</em></h1>
-    <p class="lede">Four games for matching, patterns, and memory. Your child plays with pictures, not words. No accounts. No ads. No tracking.</p>
+    <p class="lede">Five games for drawing, matching, patterns, and memory. Your child plays with pictures, not words. No accounts. No ads. No tracking.</p>
     <div class="ctas">
      <button class="btn btn-primary btn-play" type="button" data-play><span class="pdot" aria-hidden="true"></span>Try a game free</button>
      <a class="btn btn-secondary" href="#passes">See passes</a>
@@ -327,7 +350,7 @@ footer .fine.credit a{color:#fff;text-decoration:underline;text-underline-offset
     <div class="tagrow" aria-label="Play, create, explore, together">PLAY <b class="pk">•</b> CREATE <b class="yl">•</b> EXPLORE <b class="bl">•</b> TOGETHER</div>
    </div>
    <div class="stage">
-    <div class="float-f" aria-hidden="true"><span class="em ff" style="left:0%;top:10%;font-size:15cqw;--r:-10deg">🦄</span><span class="em ff" style="right:0%;top:4%;font-size:14cqw;animation-delay:-1.5s;--r:8deg"><i class="mir">🦈</i></span><span class="em ff" style="left:3%;bottom:14%;font-size:12cqw;animation-delay:-2.2s">🐶</span><span class="em ff" style="right:3%;bottom:22%;font-size:12cqw;animation-delay:-.8s;--r:10deg">🍕</span></div><button class="phone" type="button" data-play aria-label="Try a game in Mojialand"><img src="img/app-home.webp" width="780" height="1688" alt="The Mojialand home screen: emoji stamped on a canvas, an emoji tray, and the Pattern, Bounce, Match, and Parade game tiles"></button>
+    <div class="float-f" aria-hidden="true"><span class="em ff" style="left:0%;top:10%;font-size:15cqw;--r:-10deg">🦄</span><span class="em ff" style="right:0%;top:4%;font-size:14cqw;animation-delay:-1.5s;--r:8deg"><i class="mir">🦈</i></span><span class="em ff" style="left:3%;bottom:14%;font-size:12cqw;animation-delay:-2.2s">🐶</span><span class="em ff" style="right:3%;bottom:22%;font-size:12cqw;animation-delay:-.8s;--r:10deg">🍕</span></div><button class="phone" type="button" data-play aria-label="Try a game in Mojialand"><img src="img/app-home.webp?v=2" width="780" height="1688" alt="The Mojialand home screen: emoji stamped on a canvas, an emoji tray, the new Draw game, and the Pattern and Bounce game tiles"></button>
    </div>
   </div>
  </section>
@@ -337,39 +360,50 @@ footer .fine.credit a{color:#fff;text-decoration:underline;text-underline-offset
    <div class="games-head">
     <div>
      <p class="eyebrow">Choose a game</p>
-     <h2 style="margin-top:10px">Four games. One happy place.</h2>
+     <h2 style="margin-top:10px">Five games. One happy place.</h2>
     </div>
     <p class="lede" style="max-width:42ch">Every game teaches itself with a picture card the first time. No reading needed.</p>
    </div>
+
+   <button class="gtile gfeat" type="button" data-play>
+    <span class="win" aria-hidden="true"><div><div style="display:flex;align-items:center;gap:2px"><svg width="96" height="60" viewBox="0 0 96 60" aria-hidden="true"><path class="hs-dr" d="M6 46 C 22 6, 40 6, 48 30 S 74 56, 90 14" fill="none" stroke="#FF5FA2" stroke-width="7" stroke-linecap="round"/></svg><span class="em" style="font-size:28px">🖍️</span></div></div></span>
+    <span class="col">
+     <span class="gchip">New!</span>
+     <span class="gname">Draw</span>
+     <span class="tag">Draw with your friends</span>
+     <span class="gdesc">Crayons, markers, paint, glitter, and an emoji brush that leaves a trail of friends. Color a page from the coloring book, then hang the art on the fridge.</span>
+     <span class="foot"><span class="skill">Create and imagine</span><span class="gplay big" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 20 20" aria-hidden="true"><path d="M6 3.5v13l11-6.5z" fill="#7138D1"/></svg></span></span>
+    </span>
+   </button>
    <div class="tiles">
-    <article class="tile t-pattern">
-     <div class="pic ico-pattern" aria-hidden="true"><span class="e  em">🦄</span><span class="e  em">🐴</span><span class="e  em">🦄</span><span class="e  em">🐴</span><span class="q">?</span></div>
-     <h3>Pattern</h3>
-     <p class="tag">What comes next?</p>
-     <p>Finish the row. Six levels move from easy pairs to longer patterns, each in a new scene.</p>
+    <button class="gtile gcell t-pattern" type="button" data-play>
+     <span class="win" aria-hidden="true"><div style="display:flex;align-items:center;gap:3px;font-size:26px;line-height:1"><span class="em hs-pi">🦄</span><span class="em hs-pi hs-pi2">🐴</span><span class="em hs-pi hs-pi3">🦄</span><span class="hs-pq">?</span></div></span>
+     <span class="hrow"><span class="gname">Pattern</span><span class="gplay" style="animation-delay:0.5s" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 20 20" aria-hidden="true"><path d="M6 3.5v13l11-6.5z" fill="#FFFFFF"/></svg></span></span>
+     <span class="tag">What comes next?</span>
+     <span class="gdesc">Finish the row. Six levels move from easy pairs to longer patterns, each in a new scene. Win a medal at every level.</span>
      <span class="skill">Patterns</span>
-    </article>
-    <article class="tile t-bounce">
-     <div class="pic ico-bounce" aria-hidden="true"><span class="hop"><span class="e  em">🦄</span></span><span class="gnd"></span><span class="e  em">🐸</span></div>
-     <h3>Bounce</h3>
-     <p class="tag">Drop and bounce!</p>
-     <p>Tap to drop friends into a bouncy box and watch them spring. Pick from 164 emoji.</p>
+    </button>
+    <button class="gtile gcell t-bounce" type="button" data-play>
+     <span class="win" aria-hidden="true"><div style="position:relative;width:120px;height:100px"><div class="hs-bsh" style="position:absolute;left:42px;bottom:12px;width:36px;height:8px;border-radius:50%;background:rgba(48,37,74,.18)"></div><div class="em hs-ball" style="position:absolute;left:43px;bottom:16px;font-size:34px">🎾</div></div></span>
+     <span class="hrow"><span class="gname">Bounce</span><span class="gplay" style="animation-delay:1.0s" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 20 20" aria-hidden="true"><path d="M6 3.5v13l11-6.5z" fill="#FFFFFF"/></svg></span></span>
+     <span class="tag">Drop and bounce!</span>
+     <span class="gdesc">Tap to drop friends into a bouncy box and watch them spring. Pick from 164 emoji.</span>
      <span class="skill">Cause and effect</span>
-    </article>
-    <article class="tile t-match">
-     <div class="pic ico-match" aria-hidden="true"><span class="card back"><span class="e  em">🌟</span></span><span class="card face"><span class="e  em">🦄</span></span><span class="card face r"><span class="e  em">🦄</span></span></div>
-     <h3>Match</h3>
-     <p class="tag">Find the pairs</p>
-     <p>Flip two cards and find the pairs. Stars, medals, and bigger boards across 18 levels.</p>
+    </button>
+    <button class="gtile gcell t-match" type="button" data-play>
+     <span class="win" aria-hidden="true"><div style="display:flex;gap:10px"><div class="hs-card flip"><div class="hs-face em">😊</div></div><div class="hs-card"></div><div class="hs-card flip"><div class="hs-face em">😊</div></div></div></span>
+     <span class="hrow"><span class="gname">Match</span><span class="gplay" style="animation-delay:1.5s" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 20 20" aria-hidden="true"><path d="M6 3.5v13l11-6.5z" fill="#FFFFFF"/></svg></span></span>
+     <span class="tag">Find the pairs</span>
+     <span class="gdesc">Flip two cards and find the pairs. Stars, medals, and bigger boards across 18 levels.</span>
      <span class="skill">Memory</span>
-    </article>
-    <article class="tile t-parade">
-     <div class="pic ico-parade" aria-hidden="true"><span class="march"><span class="e b1 em">🐲</span><span class="e b2 em">🐴</span><span class="e b3 em">🦄</span></span><span class="e lolly em">🍭</span></div>
-     <h3>Parade</h3>
-     <p class="tag">Follow the leader</p>
-     <p>Tap to drop a lollipop and the parade chases it through seven worlds. Add friends to grow the line.</p>
+    </button>
+    <button class="gtile gcell t-parade" type="button" data-play>
+     <span class="win" aria-hidden="true"><div style="width:100%;overflow:hidden"><div class="hs-march em"><span>🦄</span><span>🐶</span><span>🦖</span><span>🦈</span><span>🍕</span><span>🦄</span><span>🐶</span><span>🦖</span><span>🦈</span><span>🍕</span></div></div></span>
+     <span class="hrow"><span class="gname">Parade</span><span class="gplay" style="animation-delay:2.0s" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 20 20" aria-hidden="true"><path d="M6 3.5v13l11-6.5z" fill="#FFFFFF"/></svg></span></span>
+     <span class="tag">Follow the leader</span>
+     <span class="gdesc">Tap to drop a lollipop and the parade chases it through seven worlds. Add friends to grow the line.</span>
      <span class="skill">Create and explore</span>
-    </article>
+    </button>
    </div>
   </div>
  </section>
