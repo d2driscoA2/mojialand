@@ -256,8 +256,14 @@ body.drawer-open .addbtn{display:none}
 .gstep .pic .cardm{width:22px;height:30px;border-radius:6px;background:var(--purple);color:#fff;font-size:14px;display:inline-flex;align-items:center;justify-content:center;margin:0 1px}
 .gstep .pic .cardm.f{background:#fff;border:2px solid var(--line);font-size:16px}
 .gstep .t{flex:1;min-width:0;font-weight:800;font-size:13.5px;line-height:1.25;color:var(--ink)}
-.gbtns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.gbtns .big{height:72px}
+/* How-to card: Play is the one big pulsing button; Watch how is a small outline pill so kids never read it as go forward. Glow pulse only (box-shadow), no transform animation. */
+.gbtns{display:flex;flex-direction:column;align-items:center;gap:10px}
+.gbtns .gplay{width:100%;height:84px;font-size:20px;background:var(--green);color:var(--ink);animation:gglow 1.6s ease-in-out infinite}
+.gbtns .gplay .e{font-size:34px}
+@keyframes gglow{0%,100%{box-shadow:0 4px 12px rgba(0,0,0,.08),0 0 0 0 rgba(114,214,154,.75)}50%{box-shadow:0 4px 12px rgba(0,0,0,.08),0 0 0 14px rgba(114,214,154,0)}}
+.gwatch{height:48px;padding:0 18px;border:2px solid var(--purple);border-radius:999px;background:var(--white);color:var(--purple);font-family:var(--display);font-weight:900;font-size:15px;display:flex;align-items:center;gap:6px;cursor:pointer}
+.gwatch .e{font-size:22px;line-height:1}
+@media (prefers-reduced-motion: reduce){.gbtns .gplay{animation:none}}
 .goff{height:48px;border:2px solid var(--line);border-radius:999px;background:#fff;display:flex;align-items:center;justify-content:center;gap:8px;font:inherit;font-weight:800;font-size:13px;color:var(--mute);cursor:pointer}
 .goff .e{font-size:18px;line-height:1}
 /* demo */
@@ -1062,7 +1068,7 @@ function showGlass(name){ const h=HOWTO[name]; if(!h) return; stopDemo(); glassF
   gcard.innerHTML='<div class="ghead"><span class="e">'+h.icon+'</span>How to play '+h.title+'</div>'+
     '<div class="ggoal"><span class="e">🎯</span>'+h.goal+'</div>'+
     h.steps.map((st,i)=>'<div class="gstep"><span class="n">'+(i+1)+'</span>'+st.pic+'<div class="t">'+st.t+'</div></div>').join('')+
-    '<div class="gbtns"><button class="big sand" id="gWatch"><span class="e">▶️</span>Watch</button><button class="big lime" id="gGo"><span class="e">👍</span>Got it</button></div>'+
+    '<div class="gbtns"><button class="big gplay" id="gGo"><span class="e">▶️</span>Play</button><button class="gwatch" id="gWatch"><span class="e">👀</span>Watch how</button></div>'+
     '<button class="goff" id="gOff"><span class="e">🚫</span>No more how-to cards</button>';
   glass.classList.remove('hidden'); gcard.scrollTop=0; say(h.say);
   $('#gGo').onclick=()=>{ ctx(); sfx.chime(); markDone(name); closeGlass(); };

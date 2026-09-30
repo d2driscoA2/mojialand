@@ -1190,6 +1190,21 @@ for (const [w, h, name] of [[375, 667, 'se'], [820, 1180, 'ipad']]) {
   await ctx.close();
 }
 
+// Release 1.1 #10: how-to card. Play is the big glowing button, Watch how is a small pill without a play arrow.
+{
+  const { ctx, page } = await newPage({ viewport: { width: 390, height: 844 } });
+  await page.addInitScript(() => { localStorage.setItem('mojia.welcomed', 'true'); localStorage.removeItem('mojia.demos'); localStorage.removeItem('mojia.demoDone'); });
+  await page.goto(base + '/play/'); await page.click('#splash'); await page.waitForTimeout(300);
+  await page.evaluate(() => document.querySelector('#s-home [data-go="pattern"]').click()); await page.waitForTimeout(900);
+  const h = await page.evaluate(() => { const go = document.querySelector('#gGo'), w = document.querySelector('#gWatch'); if (!go || !w) return null; const a = go.getBoundingClientRect(), b = w.getBoundingClientRect(), cs = getComputedStyle(go); return { goH: a.height, goW: a.width, wH: b.height, wW: b.width, anim: cs.animationName, goText: go.textContent, wText: w.textContent }; });
+  check('how-to card: Play is the big glowing button', !!h && h.goH >= 80 && h.goW > h.wW && h.goH > h.wH && h.wH >= 44 && h.anim === 'gglow' && /Play/.test(h.goText), JSON.stringify(h));
+  check('how-to card: Watch how has no play arrow', !!h && !/▶/.test(h.wText) && /Watch how/.test(h.wText), JSON.stringify(h));
+  await page.screenshot({ path: path.join(SHOTS, 'howto-card-390.png') });
+  await page.click('#gGo'); await page.waitForTimeout(300);
+  check('how-to card: Play closes the card', await page.evaluate(() => document.querySelector('#glass').classList.contains('hidden')));
+  await ctx.close();
+}
+
 await browser.close();
 A.srv.close(); B.srv.close();
 const failed = results.filter((r) => !r.ok);
