@@ -693,12 +693,29 @@ textarea.pw-in{resize:none;min-height:88px}
 .dsw i{display:block;width:34px;height:34px;border-radius:999px;border:3px solid #fff;box-shadow:0 0 0 2px var(--line),var(--shadow);transition:transform .12s}
 .dsw.on i{box-shadow:0 0 0 3px var(--purple),var(--shadow);transform:scale(1.15)}
 .dswatches.off .dsw i{filter:grayscale(1);opacity:.35;transform:none;box-shadow:0 0 0 2px var(--line)}
+/* Release 1.1 #25: 12 swatches in rows of 6; the last is the kid's own color */
+.dswatches{grid-template-columns:repeat(6,minmax(0,1fr))}
+.dswc{position:relative}
+.dswc i{background:conic-gradient(#FF5FA2,#FFC83D,#72D69A,#4DBCEC,#7138D1,#FF5FA2);display:flex;align-items:center;justify-content:center}
+.dswc:not(.set) i::after{content:'+';width:18px;height:18px;border-radius:999px;background:#fff;color:var(--purple);font-weight:900;font-size:15px;line-height:18px;text-align:center}
+.dswc.set i{border:4px solid transparent;background-clip:padding-box;box-shadow:0 0 0 3px #FFC83D,0 0 0 5px #4DBCEC,var(--shadow)}
+.dswc.set.on i{box-shadow:0 0 0 3px #FFC83D,0 0 0 6px var(--purple),var(--shadow)}
+.dswc input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:0;padding:0}
+/* Phones: tools in one sideways row with the next tool peeking, so the canvas gets more room */
+@media (max-width:459px){
+  #s-draw{gap:8px}
+  #s-draw .dctl{gap:6px}
+  #s-draw .dtools{display:flex;overflow-x:auto;scrollbar-width:none;gap:6px;padding:4px 2px 6px;margin:-4px -2px 0;overscroll-behavior-x:contain}
+  #s-draw .dtools::-webkit-scrollbar{display:none}
+  #s-draw .dtool{flex:0 0 50px;width:50px;height:50px;font-size:27px}
+  #s-draw .dswatches{gap:0}
+}
 #dtray{padding:2px;min-height:48px}
 #dtray .tile{width:44px;height:44px;font-size:26px}
 .trailico{position:relative;width:40px;height:34px;display:block}
 .trailico i{position:absolute;font-style:normal;font-size:15px;line-height:1}
 .trailico i:nth-child(1){left:0;top:17px}.trailico i:nth-child(2){left:12px;top:6px}.trailico i:nth-child(3){left:24px;top:15px}
-@media (min-width:700px){ #s-draw .dswatches{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));justify-items:center;gap:8px 0} #s-draw .trailico{transform:scale(1.15)} }
+@media (min-width:700px){ #s-draw .dswatches{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));justify-items:center;gap:8px 0} #s-draw .trailico{transform:scale(1.15)} }
 body.in-draw #app{max-width:none}
 @media (min-width:460px) and (max-width:699px){
   #s-draw{display:grid;grid-template-columns:164px minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;column-gap:12px;row-gap:12px}
@@ -1321,7 +1338,7 @@ games.draw=(function(){
   const mx=cMain.getContext('2d'), lx=cLive.getContext('2d'), ox=cLine.getContext('2d');
   const scr=document.createElement('canvas'), sx=scr.getContext('2d');
   /* Brand palette plus red, orange, and brown (Danny, September 28). New colors sit at the same bright, warm lightness as the brand pink and yellow. */
-  const COLORS=[['#7138D1','purple'],['#FF5FA2','pink'],['#F4565C','red'],['#FF8A3D','orange'],['#FFC83D','yellow'],['#72D69A','green'],['#4DBCEC','blue'],['#A7663F','brown'],['#30254A','black'],['#FFFFFF','white']];
+  const COLORS=[['#7138D1','purple'],['#FF5FA2','pink'],['#F4565C','red'],['#FF8A3D','orange'],['#FFC83D','yellow'],['#72D69A','green'],['#4DBCEC','blue'],['#A7663F','brown'],['#FFCBA4','peach'],['#30254A','black'],['#FFFFFF','white']];
   const RAINBOW=['#F4565C','#FF8A3D','#FFC83D','#72D69A','#4DBCEC','#7138D1','#FF5FA2'];
   const TOOLS=[['crayon','🖍️','Crayon'],['marker','🖊️','Marker'],['pen','✒️','Pen'],['paint','🖌️','Paint brush'],['sponge','🧽','Sponge'],['trail','','Emoji brush'],['rainbow','🌈','Rainbow brush'],['glitter','✨','Glitter'],['sprinkles','🧁','Sprinkles'],['scoop','🍦','Ice cream'],['waffle','🧇','Waffle cone'],['stamp','','Emoji stamp']];
   const SIZES={crayon:[8,16,40],marker:[6,12,34],pen:[2,4,12],paint:[16,30,68],rainbow:[8,16,28],glitter:[10,20,34],sprinkles:[20,30,44],scoop:[20,34,52],waffle:[18,30,46],eraser:[14,28,52],sponge:[20,34,56],trail:[22,34,50],stamp:[40,64,96]};
@@ -1627,6 +1644,14 @@ games.draw=(function(){
  }
   COLORS.forEach(([hex,name],i)=>{ const b=document.createElement('button'); b.className='dsw'+(i?'':' on'); b.innerHTML='<i style="background:'+hex+'"></i>'; b.setAttribute('role','radio'); b.setAttribute('aria-checked',String(!i)); b.setAttribute('aria-label',name);
     b.onclick=()=>{ ctx(); sfx.boop(); color=hex; $$('#dswatches .dsw').forEach(x=>{ x.classList.toggle('on',x===b); x.setAttribute('aria-checked',String(x===b)); }); if(!INK.has(tool)) setTool('crayon'); paintSize(); say(name); }; swEl.appendChild(b); });
+  /* Custom color (Release 1.1 #25): a rainbow ring swatch over the phone's own color picker. The pick stays on this device. */
+  (function(){ const b=document.createElement('button'); b.className='dsw dswc'; b.id='dcustom'; b.setAttribute('role','radio'); b.setAttribute('aria-checked','false'); b.setAttribute('aria-label','your own color');
+    let mine=store.get('drawCustom',null); b.innerHTML='<i></i><input type="color" id="dcustomIn" aria-label="Pick your own color" value="'+(mine||'#7138D1')+'">'; const dot=b.querySelector('i'), inp=b.querySelector('input');
+    function paintDot(){ dot.style.background=mine||''; b.classList.toggle('set',!!mine); }
+    function use(){ if(!mine) return; color=mine; $$('#dswatches .dsw').forEach(x=>{ x.classList.toggle('on',x===b); x.setAttribute('aria-checked',String(x===b)); }); if(!INK.has(tool)) setTool('crayon'); paintSize(); }
+    inp.addEventListener('click',()=>{ ctx(); sfx.boop(); use(); });
+    inp.addEventListener('input',()=>{ mine=inp.value; store.set('drawCustom',mine); paintDot(); use(); });
+    paintDot(); swEl.appendChild(b); })();
   function emoTile(e){ const t=document.createElement('button'); t.className='tile'+(e===emo?' on':''); t.textContent=e; t.setAttribute('aria-label',nameOf(e)); t.onclick=()=>{ ctx(); sfx.boop(); pickEmo(e); say(nameOf(e)); }; return t; }
   function pickEmo(e){ emo=e; setTimeout(paintSize,0); if(![...trayEl.querySelectorAll('.tile')].some(x=>x.textContent===e)) trayEl.insertBefore(emoTile(e),moreT); $$('#dtray .tile').forEach(x=>x.classList.toggle('on',x.textContent===e)); paintEmoTools(); }
   ['⭐','❤️','🐟','🌈','🦄','🌸','🦋','🐶','🌻','🚀','🍕'].forEach(e=>trayEl.appendChild(emoTile(e)));
