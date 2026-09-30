@@ -1025,19 +1025,31 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await page.click('#dbook');
   check('draw: finished page gets a gold star in the book', (await page.locator('#dpages .dpage[aria-label="smiley"] .gold').count()) === 1);
   await page.click('#dfriend [data-dclose]');
-  // fridge scene
+  // fridge scene (Release 1.1 #20, #25, #31)
+  const idb = () => new Promise((res) => { const r = indexedDB.open('mojia', 1); r.onupgradeneeded = () => r.result.createObjectStore('drawings', { keyPath: 'id' }); r.onsuccess = () => { const q = r.result.transaction('drawings').objectStore('drawings').getAll(); q.onsuccess = () => { res(q.result); r.result.close(); }; }; });
+  const cv0 = await page.evaluate(() => { const r = document.querySelector('#dmain').getBoundingClientRect(); return r.width + 'x' + r.height; });
   await page.click('#dfridgeBtn');
   check('draw: fridge scene with 9 empty spots, first spot glows', await page.isVisible('#dfridge .fridge') && (await page.locator('#dfslots .fslot.empty').count()) === 9 && (await page.locator('#dfslots .fslot.glow').count()) === 1);
+  check('draw: fridge opens full screen on a phone', await page.evaluate(() => { const r = document.querySelector('#dfridge').getBoundingClientRect(); return r.width >= 389 && r.height >= innerHeight - 1 && r.top <= 0; }));
+  check('draw: fridge shows its friend and a trash can', (await page.locator('#dfkids .fkid.on .fk').count()) === 1 && (await page.textContent('#dfown')) === '🦄' && await page.isVisible('#dftrash'));
   await page.screenshot({ path: path.join(SHOTS, 'draw-fridge-empty-390.png') });
   await page.click('#dfslots .fslot.glow'); await page.waitForTimeout(800);
-  const fr = await page.evaluate(() => JSON.parse(localStorage.getItem('mojia.fridge') || '[]'));
-  check('draw: tapping a spot hangs the drawing there (this device only)', fr.length === 1 && fr[0].slot === 0 && /^data:image\/jpeg;base64,/.test(fr[0].src) && fr[0].src.length < 600000, String(fr[0] && fr[0].src.length));
+  const fr = await page.evaluate(idb);
+  check('draw: tapping a spot hangs the drawing there (IndexedDB, this device only)', fr.length === 1 && fr[0].slot === 0 && fr[0].f === 'f1' && /^data:image\/jpeg;base64,/.test(fr[0].src) && fr[0].src.length < 600000 && (await page.evaluate(() => localStorage.getItem('mojia.fridge'))) === null, String(fr[0] && fr[0].src.length));
+  check('draw: a coloring page drawing saves the page and the coloring layer (#31)', fr[0].page === 'smiley' && /^data:image\/png;base64,/.test(fr[0].layer || '') && fr[0].rel && fr[0].rel.w > 1);
   check('draw: fresh page after hanging the drawing', (await ink()) === 0 && (await line()) === 0 && (await page.locator('#dfslots .fslot.full').count()) === 1);
   await page.screenshot({ path: path.join(SHOTS, 'draw-fridge-390.png') });
   await page.click('#dfslots .fslot.empty'); await page.waitForTimeout(200);
-  check('draw: empty page does not go on the fridge', (await page.evaluate(() => JSON.parse(localStorage.getItem('mojia.fridge')).length)) === 1);
+  check('draw: empty page does not go on the fridge', (await page.evaluate(idb)).length === 1);
   await page.click('#dfslots .fslot.full'); await page.waitForTimeout(300);
-  check('draw: tapping a fridge drawing opens it', await page.isHidden('#dfridge') && (await ink()) > 50000);
+  check('draw: tapping a fridge drawing shows it big with draw more and trash', await page.isVisible('#dfview') && await page.isVisible('#dfvdraw') && await page.isVisible('#dfvtrash'));
+  await page.screenshot({ path: path.join(SHOTS, 'draw-fridge-view-390.png') });
+  await page.click('#dfvdraw'); await page.waitForTimeout(400);
+  check('draw: draw more opens a copy: coloring back, page lines live again (#31)', await page.isHidden('#dfridge') && (await ink()) > 50000 && (await line()) > 1000);
+  const cv1 = await page.evaluate(() => { const r = document.querySelector('#dmain').getBoundingClientRect(); return r.width + 'x' + r.height; });
+  check('draw: the canvas never resizes for the fridge', cv0 === cv1, cv0 + ' vs ' + cv1);
+  await page.click('#dundo'); await page.waitForTimeout(100); await page.click('#dundo'); await page.waitForTimeout(100);
+  await page.click('#dbook'); await page.click('#dpages .dpage.blank'); await page.waitForTimeout(100);
   const fits = await page.evaluate(() => document.documentElement.scrollWidth <= 390 && document.querySelector('#s-draw .helprow').getBoundingClientRect().height < 60);
   check('draw: fits 390 wide, help row on one line', fits);
   const swOk = await page.evaluate(() => { const r = document.querySelector('#dswatches').getBoundingClientRect(); return [...document.querySelectorAll('#dswatches .dsw')].every((b) => { const q = b.getBoundingClientRect(); return q.left >= r.left && q.right <= r.right; }); });
@@ -1050,7 +1062,7 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await page.screenshot({ path: path.join(SHOTS, 'draw-tools-hidden-390.png') });
   await page.click('#dtab'); await page.waitForTimeout(300);
   check('draw: the tab brings the tools back', await page.isVisible('#dtools') && (await page.getAttribute('#dtab', 'aria-label')) === 'Hide tools');
-  check('draw: kid screen has no links; the only input is the color picker', (await page.locator('#s-draw a').count()) === 0 && (await page.locator('#s-draw input:not([type=color])').count()) === 0);
+  check('draw: kid screen has no links; the only inputs are the color picker and the fridge name box', (await page.locator('#s-draw a').count()) === 0 && (await page.locator('#s-draw input:not([type=color]):not(#dfname)').count()) === 0);
   // Save to Photos behind the number gate
   await page.click('#s-draw [data-go="home"]');
   await page.click('#lockBtn');
@@ -1061,36 +1073,90 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await page.click('.pw-gurow[data-a="photos"]'); await page.waitForTimeout(400);
   check('draw: Grown-ups Save to Photos lists fridge drawings', await page.isVisible('#pwOvPhotos') && (await page.locator('#pwPhGrid img').count()) === 1);
   await page.screenshot({ path: path.join(SHOTS, 'draw-photos-390.png') });
-  check('draw: Save to Photos has no delete button', (await page.locator('#pwPhGrid .rm').count()) === 0 && (await page.evaluate(() => JSON.parse(localStorage.getItem('mojia.fridge')).length)) === 1);
+  check('draw: Save to Photos has no delete button', (await page.locator('#pwPhGrid .rm').count()) === 0 && (await page.evaluate(idb)).length === 1);
   check('draw: zero third-party requests', page.reqs.every((u) => u.startsWith(base) || u.startsWith('data:')));
   check('draw: no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
   await ctx.close();
 }
 
 
-// 11b. Emoji Draw: full fridge door sends the oldest drawing to the basket
+// 11b. Emoji Draw fridges (Release 1.1 #20): old drawings move over, nothing drops out on its own, trash can with a check, a fridge per kid
 {
   const { ctx, page } = await newPage();
+  const idb = () => new Promise((res) => { const r = indexedDB.open('mojia', 1); r.onupgradeneeded = () => r.result.createObjectStore('drawings', { keyPath: 'id' }); r.onsuccess = () => { const q = r.result.transaction('drawings').objectStore('drawings').getAll(); q.onsuccess = () => { res(q.result); r.result.close(); }; }; });
   await page.addInitScript(() => { if (sessionStorage.getItem('seeded')) return; sessionStorage.setItem('seeded', '1'); localStorage.setItem('mojia.demos', 'false'); localStorage.setItem('mojia.welcomed', 'true');
     const c = document.createElement('canvas'); c.width = 30; c.height = 40; const src = c.toDataURL('image/png');
     localStorage.setItem('mojia.fridge', JSON.stringify(Array.from({ length: 9 }, (_, i) => ({ id: 'd' + i, src, t: 1000 + i, slot: i })))); });
   await page.goto(base + '/play/');
   await page.click('#splash');
   await page.click('[data-go="draw"]');
-  await page.waitForSelector('#s-draw:not(.hidden)'); await page.waitForTimeout(300);
+  await page.waitForSelector('#s-draw:not(.hidden)'); await page.waitForTimeout(500);
+  let all = await page.evaluate(idb);
+  check('fridges: the old fridge moves into the first fridge, spots kept', all.length === 9 && all.every((x) => x.f === 'f1') && all.map((x) => x.slot).sort().join('') === '012345678' && (await page.evaluate(() => localStorage.getItem('mojia.fridge'))) === null);
   const box = await page.locator('#dmain').boundingBox();
-  await page.mouse.move(box.x + 40, box.y + 60); await page.mouse.down(); await page.mouse.move(box.x + 200, box.y + 90, { steps: 10 }); await page.mouse.up();
+  const scribble = async () => { await page.mouse.move(box.x + 40, box.y + 60); await page.mouse.down(); await page.mouse.move(box.x + 200, box.y + 90, { steps: 10 }); await page.mouse.up(); };
+  await scribble();
   await page.click('#dfridgeBtn'); await page.waitForTimeout(300);
-  const st = await page.evaluate(() => JSON.parse(localStorage.getItem('mojia.fridge')).map((x) => x.id + ':' + x.slot).join(','));
-  check('draw: full door moves the oldest drawing to the basket', /d0:-1/.test(st) && (await page.locator('#dfslots .fslot.empty.glow').count()) === 1 && (await page.textContent('#dbasket b')) === '1', st);
+  check('fridges: a full door moves nothing; the basket glows', (await page.locator('#dfslots .fslot.full').count()) === 9 && (await page.locator('#dfslots .fslot.empty').count()) === 0 && await page.isVisible('#dbasket.glow') && (await page.evaluate(idb)).every((x) => x.slot >= 0));
   await page.screenshot({ path: path.join(SHOTS, 'draw-fridge-full-390.png') });
-  await page.click('#dfslots .fslot.glow'); await page.waitForTimeout(600);
-  check('draw: new drawing takes the open spot', (await page.locator('#dfslots .fslot.full').count()) === 9);
-  await page.click('#dbasket');
-  check('draw: basket shows the older drawing', await page.isVisible('#dfbasketview') && (await page.locator('#dfgrid img').count()) === 1);
+  await page.click('#dbasket'); await page.waitForTimeout(600);
+  all = await page.evaluate(idb);
+  check('fridges: tapping the glowing basket puts the drawing in the basket', all.length === 10 && all.filter((x) => x.slot < 0).length === 1 && await page.isVisible('#dfbasketview') && (await page.locator('#dfgrid img').count()) === 1);
   await page.click('#dfback');
-  check('draw: back from the basket shows the fridge', await page.isVisible('#dfridge .fridge'));
-  check('draw: fridge and basket: no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
+  check('fridges: back from the basket shows the fridge', await page.isVisible('#dfridge .fridge') && (await page.textContent('#dbasket b')) === '1');
+  // trash: keep, then throw away
+  await page.click('#dfslots .fslot.full >> nth=0'); await page.click('#dfvtrash'); await page.waitForTimeout(200);
+  check('fridges: trash shows the red and green check', await page.isVisible('#dftconfirm') && await page.isVisible('#dftyes') && await page.isVisible('#dftno'));
+  await page.screenshot({ path: path.join(SHOTS, 'draw-fridge-trash-390.png') });
+  await page.click('#dftno'); await page.waitForTimeout(200);
+  check('fridges: green keeps the drawing', await page.isHidden('#dftconfirm') && (await page.evaluate(idb)).length === 10);
+  await page.click('#dfslots .fslot.full >> nth=0'); await page.click('#dfvtrash'); await page.waitForTimeout(150); await page.click('#dftyes'); await page.waitForTimeout(700);
+  check('fridges: red trash throws it away', (await page.evaluate(idb)).length === 9 && (await page.locator('#dfslots .fslot.full').count()) === 8);
+  // drag to the trash, then wait: the check keeps it after 5 seconds
+  const s1 = await page.locator('#dfslots .fslot.full >> nth=0').boundingBox(), tb = await page.locator('#dftrash').boundingBox();
+  await page.mouse.move(s1.x + s1.width / 2, s1.y + s1.height / 2); await page.mouse.down(); await page.mouse.move(s1.x + 40, s1.y + 60, { steps: 4 }); await page.mouse.move(tb.x + tb.width / 2, tb.y + tb.height / 2, { steps: 8 });
+  check('fridges: dragging lifts the drawing and the trash can lights up', (await page.locator('.fghost').count()) === 1 && await page.isVisible('#dftrash.hot'));
+  await page.mouse.up(); await page.waitForTimeout(200);
+  check('fridges: dropping on the trash can asks first', await page.isVisible('#dftconfirm') && (await page.locator('.fghost').count()) === 0);
+  await page.waitForTimeout(5300);
+  check('fridges: 5 seconds keeps the drawing', await page.isHidden('#dftconfirm') && (await page.evaluate(idb)).length === 9);
+  // a fridge per kid
+  await page.click('#dfadd'); await page.waitForTimeout(200);
+  check('fridges: + adds a fridge and opens its friend, color, and name', await page.isVisible('#dfedit') && (await page.locator('#dfkids .fkid:not(.add):not(.edit)').count()) === 2 && (await page.locator('#dfefriends button').count()) === 10);
+  await page.fill('#dfname', "Ava's fridge"); await page.click('#dfefriends button[aria-label="dino"]'); await page.click('#dfecolors button >> nth=2');
+  await page.screenshot({ path: path.join(SHOTS, 'draw-fridge-edit-390.png') });
+  await page.click('#dfedone'); await page.waitForTimeout(200);
+  const meta = await page.evaluate(() => JSON.parse(localStorage.getItem('mojia.fridges')));
+  check('fridges: name, friend, and color stay on this device', meta.list.length === 2 && meta.list[1].name === "Ava's fridge" && meta.list[1].e === '🦖' && meta.cur === meta.list[1].id && (await page.textContent('#dfkids .fkid.on b')) === "Ava's fridge");
+  check('fridges: a new fridge starts empty', (await page.locator('#dfslots .fslot.empty').count()) === 9 && (await page.textContent('#dfown')) === '🦖');
+  await page.screenshot({ path: path.join(SHOTS, 'draw-fridges-390.png') });
+  await page.click('#dfclose'); await scribble(); await page.click('#dfridgeBtn'); await page.waitForTimeout(200);
+  await page.click('#dfslots .fslot.glow'); await page.waitForTimeout(700);
+  all = await page.evaluate(idb);
+  check('fridges: the drawing hangs on the fridge in use', all.length === 10 && all.filter((x) => x.f === meta.cur).length === 1);
+  await page.click('#dfkids .fkid:not(.add):not(.edit) >> nth=0'); await page.waitForTimeout(200);
+  check('fridges: switching shows the other kid\'s fridge', (await page.locator('#dfslots .fslot.full').count()) === 8 && (await page.textContent('#dfown')) === '🦄');
+  // opening a drawing makes a copy; hanging it adds one, the original stays
+  await page.click('#dfslots .fslot.full >> nth=0'); await page.click('#dfvdraw'); await page.waitForTimeout(300);
+  await scribble(); await page.click('#dfridgeBtn'); await page.waitForTimeout(200); await page.click('#dfslots .fslot.glow'); await page.waitForTimeout(700);
+  check('fridges: drawing on an opened drawing hangs a copy, the original stays', (await page.evaluate(idb)).length === 11 && (await page.locator('#dfslots .fslot.full').count()) === 9);
+  // last fridge used opens first after a reload; an empty fridge can go
+  await page.click('#dfkids .fkid:not(.add):not(.edit) >> nth=1'); await page.click('#dfclose');
+  await page.reload(); await page.click('#splash'); await page.click('[data-go="draw"]'); await page.waitForSelector('#s-draw:not(.hidden)'); await page.waitForTimeout(400);
+  await page.click('#dfridgeBtn'); await page.waitForTimeout(300);
+  check('fridges: the last fridge used opens first', (await page.textContent('#dfown')) === '🦖' && (await page.locator('#dfslots .fslot.full').count()) === 1);
+  await page.click('#dfslots .fslot.full >> nth=0'); await page.click('#dfvtrash'); await page.click('#dftyes'); await page.waitForTimeout(700);
+  await page.click('#dfeditBtn'); await page.waitForTimeout(200);
+  check('fridges: an empty fridge shows remove', await page.isVisible('#dferm'));
+  await page.click('#dferm'); await page.waitForTimeout(200);
+  check('fridges: removing an empty fridge leaves the first fridge whole', (await page.locator('#dfkids .fkid:not(.add):not(.edit)').count()) === 1 && (await page.locator('#dfslots .fslot.full').count()) === 9);
+  await page.click('#dfeditBtn'); await page.waitForTimeout(200);
+  check('fridges: a fridge with drawings cannot be removed', await page.isHidden('#dferm'));
+  await page.click('#dfedone');
+  for (let i = 0; i < 5; i++) { await page.click('#dfadd'); await page.click('#dfedone'); }
+  check('fridges: 6 fridges at most', (await page.locator('#dfkids .fkid:not(.add):not(.edit)').count()) === 6 && (await page.locator('#dfadd').count()) === 0);
+  await page.screenshot({ path: path.join(SHOTS, 'draw-fridges-six-390.png') });
+  check('fridges: no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
   await ctx.close();
 }
 

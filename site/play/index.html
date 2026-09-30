@@ -551,9 +551,50 @@ textarea.pw-in{resize:none;min-height:88px}
 .dpage.on{box-shadow:0 0 0 4px var(--purple),var(--shadow)}
 .dpage .gold{position:absolute;right:-8px;top:-10px;font-size:24px;line-height:1}
 .dpage.blank .bl{display:block;width:100%;height:100%;border-radius:4px;background:repeating-linear-gradient(#fff 0 14px,#EDE6FB 14px 16px)}
-.dfridge{justify-content:flex-start;padding:10px 12px 12px;gap:8px}
+/* Fridge (Release 1.1 #20, #25): its own full screen over Draw, one fridge per kid, a trash can. The drawing underneath never resizes. */
+.fpanel{position:absolute;inset:0;z-index:40;background:#EDE6FB;display:flex;flex-direction:column;align-items:center;gap:8px;padding:max(10px,env(safe-area-inset-top,0px)) 12px max(12px,env(safe-area-inset-bottom,0px));animation:fadein .25s;touch-action:pan-y}
+.fptop{flex:0 0 auto;width:100%;display:flex;align-items:center;gap:8px}
+.fptop .dx{position:static;flex:0 0 48px}
+.fkids{flex:1;min-width:0;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:4px 2px}
+.fkids::-webkit-scrollbar{display:none}
+.fkid{flex:0 0 auto;display:flex;align-items:center;gap:6px;height:48px;padding:0 12px 0 4px;border-radius:999px;border:2px solid var(--line);background:#fff;color:var(--ink);font-family:var(--display);font-weight:900;font-size:15px;cursor:pointer;box-shadow:var(--shadow);max-width:190px}
+.fkid b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fkid.on{border-color:var(--purple);box-shadow:0 0 0 3px rgba(113,56,209,.25),var(--shadow)}
+.fkid.solo{padding:0 4px}
+.fkid.add,.fkid.edit{width:48px;padding:0;justify-content:center;font-size:22px;color:var(--purple)}
+.fkid.add{border-style:dashed;font-size:28px}
+.fk{flex:0 0 38px;width:38px;height:38px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:24px;line-height:1;background:var(--pink)}
+.fk.big{width:84px;height:84px;flex:0 0 84px;font-size:52px}
+.fown{position:absolute;right:10px;top:10px;width:44px;height:44px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:28px;line-height:1;box-shadow:0 3px 6px rgba(48,37,74,.25)}
+.frow{flex:0 0 auto;display:flex;gap:14px;align-items:center;justify-content:center}
+.ftrash{flex:0 0 auto;width:64px;height:52px;border-radius:16px;border:2px solid var(--line);background:#fff;font-size:30px;line-height:1;box-shadow:var(--shadow);cursor:pointer;padding:0;transition:transform .15s}
+.ftrash.hot{transform:scale(1.25);border-color:var(--red);background:var(--red-l)}
+.fbasket.glow{border-color:var(--purple);animation:fglow 1.2s infinite ease-in-out}
+.fsheet{position:absolute;inset:0;z-index:5;background:rgba(237,230,251,.97);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px;animation:fadein .2s}
+.fvpic{width:min(78%,340px);max-height:62%;display:flex;justify-content:center}
+.fvpic img{max-width:100%;max-height:100%;object-fit:contain;display:block;border-radius:12px;border:6px solid #fff;box-shadow:var(--shadow);background:#fff;transform:rotate(-2deg)}
+.dcbtns .big.fvdraw{background:var(--yellow);color:var(--ink)}
+.fecard{display:flex;flex-direction:column;align-items:center;gap:12px;width:min(100%,340px)}
+#dfname{width:100%;height:52px;border-radius:16px;border:2px solid var(--line);background:#fff;padding:0 14px;font:900 20px var(--display);color:var(--ink);text-align:center;box-sizing:border-box;user-select:text;-webkit-user-select:text}
+#dfname:focus{outline:3px solid var(--purple);outline-offset:1px}
+.fepick{display:grid;grid-template-columns:repeat(5,52px);gap:8px;justify-content:center}
+.fepick button{width:52px;height:52px;border-radius:16px;border:2px solid var(--line);background:#fff;font-size:30px;line-height:1;padding:0;cursor:pointer}
+.fepick button.on{border-color:var(--purple);box-shadow:0 0 0 3px rgba(113,56,209,.3)}
+.fecolors{grid-template-columns:repeat(6,44px)}
+.fecolors button{width:44px;height:44px;border-radius:999px;border:3px solid #fff;box-shadow:0 0 0 2px var(--line)}
+.fecolors button.on{box-shadow:0 0 0 4px var(--purple)}
+.febtns{display:flex;gap:14px;align-items:center}
+.febtns .big.fedone{width:120px;height:72px;font-size:36px;background:var(--green);color:var(--ink)}
+.ferm{width:56px;height:56px;border-radius:16px;border:2px solid var(--line);background:#fff;font-size:26px;padding:0;cursor:pointer}
+.fslot.full{touch-action:none}
+.fslot.lift{opacity:.25}
+.fghost{position:absolute;z-index:8;width:76px;pointer-events:none;border-radius:8px;border:4px solid #fff;box-shadow:0 10px 24px rgba(48,37,74,.35);transform:translate(-50%,-50%) rotate(-6deg);background:#fff}
+.fghost img{width:100%;display:block;border-radius:4px}
+#dftconfirm .dcsnap img{animation:ftoss .5s cubic-bezier(.45,0,.2,1) both}
+@keyframes ftoss{from{transform:scale(1.25) translate(-10%,-10%)}to{transform:scale(1)}}
+@media (prefers-reduced-motion: reduce){#dftconfirm .dcsnap img{animation:none}}
 .fbox{display:flex;flex-direction:column;align-items:center;gap:8px;width:100%;flex:1;min-height:0}
-.fridge{width:min(100%,330px);flex:1;min-height:0;display:flex;flex-direction:column;gap:4px;background:#fff;border:3px solid #D5C6F2;border-radius:28px;padding:6px;box-shadow:0 10px 22px rgba(48,37,74,.18)}
+.fridge{width:min(100%,430px);flex:1;min-height:0;display:flex;flex-direction:column;gap:4px;background:#fff;border:3px solid #D5C6F2;border-radius:28px;padding:6px;box-shadow:0 10px 22px rgba(48,37,74,.18)}
 .fz{position:relative;flex:0 0 70px;border-radius:22px 22px 8px 8px;background:#fff;border:2px solid var(--line)}
 .fd{position:relative;flex:1;min-height:0;border-radius:8px 8px 22px 22px;background:#fff;border:2px solid var(--line);padding:12px 10px 10px 26px}
 .fh{position:absolute;left:8px;width:8px;border-radius:4px;background:var(--purple-l);border:2px solid #D5C6F2}
@@ -810,13 +851,17 @@ body.in-draw #app{max-width:none}
   <div class="stage" id="dstage"><button class="dhtab" id="dtab" aria-label="Hide tools" aria-expanded="true"><span class="dtabtool" id="dtabtool" aria-hidden="true"></span><svg class="dtabarrow" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg></button>
     <div class="dlayers" id="dlayers"><canvas id="dmain"></canvas><canvas id="dlive"></canvas><canvas id="dline"></canvas></div>
     <div class="dpanel dbookp hidden" id="dfriend" role="dialog" aria-label="Coloring book"><button class="dx" data-dclose aria-label="Close"><span aria-hidden="true">✖️</span></button><div class="dbookhead" aria-hidden="true"><span>📖</span><span>🖍️</span></div><div class="dpages" id="dpages"></div></div>
-    <div class="dpanel dfridge hidden" id="dfridge" role="dialog" aria-label="The fridge"><button class="dx" id="dfclose" data-dclose aria-label="Close"><span aria-hidden="true">✖️</span></button>
-      <div class="fbox" id="dfridgebox"><div class="fridge"><div class="fz"><span class="fh fh1"></span><span class="fl" style="left:28px;top:20px;color:#FF5FA2;transform:rotate(-8deg)">M</span><span class="fl" style="left:54px;top:26px;color:#FFC83D;transform:rotate(6deg)">O</span><span class="fl" style="left:78px;top:18px;color:#4DBCEC;transform:rotate(-4deg)">J</span><span class="fl" style="left:96px;top:25px;color:#72D69A;transform:rotate(10deg)">I</span><span class="fnote" aria-hidden="true"><i></i><i></i><i></i></span><span class="fstk" style="left:186px;transform:rotate(-12deg)" aria-hidden="true">🌟</span><span class="fstk" style="left:222px;top:22px;font-size:24px;transform:rotate(10deg)" aria-hidden="true">🍎</span></div><div class="fd"><span class="fh fh2"></span><div class="fgrid" id="dfslots"></div></div></div><button class="fbasket hidden" id="dbasket" aria-label="Older drawings"><span aria-hidden="true">🧺</span><b>0</b></button></div>
-      <div class="fbv hidden" id="dfbasketview"><button class="dur" id="dfback" aria-label="Back to the fridge"><span aria-hidden="true">↩️</span></button><div class="dfgrid" id="dfgrid"></div></div>
-    </div>
     <div class="dpanel hidden" id="dconfirm" role="dialog" aria-label="Clear your drawing?"><div class="dcsnap"><img id="dcimg" alt=""><span class="dctrash" aria-hidden="true">🗑️</span></div><div class="dcbtns"><button class="big danger" id="dcyes" aria-label="Yes, clear my drawing"><span aria-hidden="true">🗑️</span></button><button class="big no" id="dcno" aria-label="Keep my drawing"><span aria-hidden="true">↩️</span></button></div></div>
   </div>
   <div class="helprow"><button class="helpbtn" data-demo="draw"><span aria-hidden="true">❓</span>How to play</button><button class="helpbtn act dicon" id="dbook" aria-label="Coloring book"><span class="dbthumb" id="dbthumb" aria-hidden="true"></span><span class="mini" aria-hidden="true">🖍️</span></button><button class="helpbtn act dicon" id="dfridgeBtn" aria-label="Fridge"><svg viewBox="0 0 24 24" fill="none" stroke="#7138D1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="1.5" width="14" height="21" rx="3"/><path d="M5 8.5h14M8 4.2v2M8 11v4"/><rect x="11" y="12" width="5.5" height="6.5" rx="1" fill="#FF5FA2" stroke="none"/><circle cx="13.75" cy="11.6" r="1.3" fill="#FFC83D" stroke="none"/></svg></button><button class="helpbtn act danger dicon" id="dclear" aria-label="Clear"><span aria-hidden="true">🗑️</span></button></div>
+  <div class="fpanel hidden" id="dfridge" role="dialog" aria-label="The fridge">
+    <div class="fptop"><div class="fkids" id="dfkids" role="tablist" aria-label="Fridges"></div><button class="dx" id="dfclose" data-dclose aria-label="Close"><span aria-hidden="true">✖️</span></button></div>
+    <div class="fbox" id="dfridgebox"><div class="fridge"><div class="fz"><span class="fh fh1"></span><span class="fl" style="left:28px;top:20px;color:#FF5FA2;transform:rotate(-8deg)">M</span><span class="fl" style="left:54px;top:26px;color:#FFC83D;transform:rotate(6deg)">O</span><span class="fl" style="left:78px;top:18px;color:#4DBCEC;transform:rotate(-4deg)">J</span><span class="fl" style="left:96px;top:25px;color:#72D69A;transform:rotate(10deg)">I</span><span class="fnote" aria-hidden="true"><i></i><i></i><i></i></span><span class="fown" id="dfown" aria-hidden="true"></span><span class="fstk" style="left:186px;transform:rotate(-12deg)" aria-hidden="true">🌟</span><span class="fstk" style="left:222px;top:22px;font-size:24px;transform:rotate(10deg)" aria-hidden="true">🍎</span></div><div class="fd"><span class="fh fh2"></span><div class="fgrid" id="dfslots"></div></div></div><div class="frow"><button class="fbasket hidden" id="dbasket" aria-label="Basket of more drawings"><span aria-hidden="true">🧺</span><b>0</b></button><button class="ftrash" id="dftrash" aria-label="Trash can"><span aria-hidden="true">🗑️</span></button></div></div>
+    <div class="fbv hidden" id="dfbasketview"><button class="dur" id="dfback" aria-label="Back to the fridge"><span aria-hidden="true">↩️</span></button><div class="dfgrid" id="dfgrid"></div></div>
+    <div class="fsheet hidden" id="dfview" role="dialog" aria-label="Your drawing"><div class="fvpic"><img id="dfvimg" alt=""></div><div class="dcbtns"><button class="big fvdraw" id="dfvdraw" aria-label="Draw more on a copy"><span aria-hidden="true">✏️</span></button><button class="big danger" id="dfvtrash" aria-label="Throw it away"><span aria-hidden="true">🗑️</span></button></div></div>
+    <div class="fsheet hidden" id="dftconfirm" role="dialog" aria-label="Throw this drawing away?"><div class="dcsnap"><img id="dftimg" alt=""><span class="dctrash" aria-hidden="true">🗑️</span></div><div class="dcbtns"><button class="big danger" id="dftyes" aria-label="Yes, throw it away"><span aria-hidden="true">🗑️</span></button><button class="big no" id="dftno" aria-label="Keep it"><span aria-hidden="true">↩️</span></button></div></div>
+    <div class="fsheet hidden" id="dfedit" role="dialog" aria-label="Your fridge"><div class="fecard"><span class="fk big" id="dfeprev" aria-hidden="true"></span><input type="text" id="dfname" maxlength="18" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done" placeholder="Name" aria-label="Fridge name"><div class="fepick" id="dfefriends" role="radiogroup" aria-label="Pick a friend"></div><div class="fepick fecolors" id="dfecolors" role="radiogroup" aria-label="Pick a color"></div><div class="febtns"><button class="big fedone" id="dfedone" aria-label="Done"><span aria-hidden="true">✅</span></button><button class="ferm hidden" id="dferm" aria-label="Remove this empty fridge"><span aria-hidden="true">🗑️</span></button></div></div></div>
+  </div>
 </section>
 
 <!-- EMOJI PICKER (shared) -->
@@ -1563,7 +1608,7 @@ games.draw=(function(){
   function strokeBox(o){ const q=o.pts; let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9; for(let i=0;i<q.length;i+=2){ if(q[i]<x0)x0=q[i]; if(q[i]>x1)x1=q[i]; if(q[i+1]<y0)y0=q[i+1]; if(q[i+1]>y1)y1=q[i+1]; } const pad=o.w*2.5+24;
     const bx=Math.max(0,Math.floor((x0-pad)*dpr)), by=Math.max(0,Math.floor((y0-pad)*dpr)); return [bx,by,Math.min(scr.width,Math.ceil((x1+pad)*dpr))-bx,Math.min(scr.height,Math.ceil((y1+pad)*dpr))-by]; }
   function drawEmo(x,it){ x.save(); x.globalAlpha=1; x.translate(it[0],it[1]); x.rotate(it[4]); x.font=it[3]+'px '+EMO; x.textAlign='center'; x.textBaseline='middle'; x.fillText(it[2],0,0); x.restore(); }
-  function renderOp(x,o){ if(o.t==='s') renderStroke(x,o,false); else if(o.t==='e') o.items.forEach(it=>drawEmo(x,it)); else if(o.t==='i') x.drawImage(o.img,0,0,o.w||W,o.h||H); }
+  function renderOp(x,o){ if(o.t==='s') renderStroke(x,o,false); else if(o.t==='e') o.items.forEach(it=>drawEmo(x,it)); else if(o.t==='i'){ if(o.rel){ const fr=frame(); x.drawImage(o.img,fr.x+o.rel.x*fr.s,fr.y+o.rel.y*fr.s,o.rel.w*fr.s,o.rel.h*fr.s); } else x.drawImage(o.img,o.x||0,o.y||0,o.w||W,o.h||H); } }
 
   function startIndex(){ for(let i=ops.length-1;i>=0;i--){ if(ops[i].t==='c'||ops[i].t==='i') return i; } return 0; }
   function friendNow(){ let f=null; for(const o of ops){ if(o.t==='c'||o.t==='i') f=null; else if(o.t==='f') f=o.id; } return friendById(f); }
@@ -1672,7 +1717,7 @@ games.draw=(function(){
 
   /* ---- panels ---- */
   const panels=['#dfriend','#dfridge','#dconfirm'];
-  function closePanels(){ panels.forEach(s=>$(s).classList.add('hidden')); clearTimeout(confirmT); }
+  function closePanels(){ panels.forEach(s=>$(s).classList.add('hidden')); clearTimeout(confirmT); hideSheets(); }
   $$('#s-draw [data-dclose]').forEach(b=>b.onclick=()=>{ ctx(); sfx.boop(); closePanels(); });
 
   /* ---- coloring book: pages of outlines; a gold star marks pages a kid finished on this device ---- */
@@ -1702,48 +1747,141 @@ games.draw=(function(){
   $('#dcyes').onclick=()=>{ ctx(); clearTimeout(confirmT); closePanels(); sfx.poof(); push({t:'c'}); cheered=false;
     layers.animate([{transform:'scale(1) rotate(0)',opacity:1},{transform:'scale(.15) rotate(18deg)',opacity:0}],{duration:420,easing:'cubic-bezier(.45,0,.2,1)'}).onfinish=()=>{ redraw(); layers.animate([{opacity:0},{opacity:1}],{duration:200}); }; };
 
-  /* ---- fridge: a drawn refrigerator with 9 spots on the door and a basket for older drawings. Kept on this device only, no account. ---- */
-  const FKEY='mojia.fridge', SLOTS=9, BASKET=12, MAGNETS=['#FF5FA2','#FFC83D','#4DBCEC','#72D69A','#7138D1'];
-  function loadF(){ let v=[]; try{ v=JSON.parse(localStorage.getItem(FKEY)||'[]'); }catch(e){} v=Array.isArray(v)?v.filter(x=>x&&typeof x.src==='string'&&x.src.startsWith('data:image/')):[];
-    if(v.length&&!v.some(x=>'slot' in x)){ v.sort((a,b)=>(a.t||0)-(b.t||0)); const n=v.length; v.forEach((x,i)=>{ x.slot=i>=n-SLOTS?i-(n-Math.min(n,SLOTS)):-1; }); }
-    const seen={}; v.slice().sort((a,b)=>(b.t||0)-(a.t||0)).forEach(x=>{ if(typeof x.slot!=='number'||x.slot<0||x.slot>=SLOTS||seen[x.slot]) x.slot=-1; else seen[x.slot]=1; }); return v; }
-  function saveF(list){ for(;;){ try{ localStorage.setItem(FKEY,JSON.stringify(list)); return true; }catch(e){ const old=list.filter(x=>x.slot<0).sort((a,b)=>(a.t||0)-(b.t||0))[0]||list.slice().sort((a,b)=>(a.t||0)-(b.t||0))[0]; if(!old||list.length<=1) return false; list.splice(list.indexOf(old),1); } } }
+  /* ---- fridges (Release 1.1 #20, #25, #31). Up to 6 fridges, one per kid, each with 9 door spots and a basket.
+     Drawings live in IndexedDB on this device only, no account. Fridge names stay on this device, never sent anywhere.
+     No drawing ever leaves on its own: only the trash can, after the red trash and green keep check.
+     Opening a fridge drawing draws on a copy; the one on the fridge never changes.
+     A drawing on a coloring page also saves the page and the coloring as its own layer, so it reopens with live page lines. ---- */
+  const OLDKEY='mojia.fridge', SLOTS=9, MAXF=6, MAGNETS=['#FF5FA2','#FFC83D','#4DBCEC','#72D69A','#7138D1'];
+  const FFRIENDS=[['🦄','unicorn'],['🦈','shark'],['🐶','puppy'],['🍕','pizza'],['🦖','dino'],['🐱','kitty'],['🐸','frog'],['🚀','rocket'],['🐼','panda'],['🦋','butterfly']];
+  const FCOLORS=['#FF5FA2','#FFC83D','#4DBCEC','#72D69A','#7138D1','#FF8A3D'];
+  const fdb=(function(){ let dbp=null, useLS=false; const LS='mojia.fridge2';
+    function open(){ if(dbp) return dbp; dbp=new Promise((res,rej)=>{ if(!window.indexedDB){ rej(new Error('no idb')); return; } let r; try{ r=indexedDB.open('mojia',1); }catch(e){ rej(e); return; }
+      r.onupgradeneeded=()=>{ const d=r.result; if(!d.objectStoreNames.contains('drawings')) d.createObjectStore('drawings',{keyPath:'id'}); }; r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); r.onblocked=()=>rej(new Error('blocked')); }); return dbp; }
+    function tx(mode,fn){ return open().then(d=>new Promise((res,rej)=>{ const t=d.transaction('drawings',mode), q=fn(t.objectStore('drawings')); let out; if(q) q.onsuccess=()=>{ out=q.result; }; t.oncomplete=()=>res(out); t.onerror=()=>rej(t.error); t.onabort=()=>rej(t.error||new Error('abort')); })); }
+    function lsAll(){ try{ const v=JSON.parse(localStorage.getItem(LS)||'[]'); return Array.isArray(v)?v:[]; }catch(e){ return []; } }
+    function lsDo(fn){ return new Promise((res,rej)=>{ try{ localStorage.setItem(LS,JSON.stringify(fn(lsAll()))); res(); }catch(e){ rej(e); } }); }
+    return {
+      all(){ return tx('readonly',st=>st.getAll()).catch(()=>{ useLS=true; return lsAll(); }); },
+      put(list){ if(useLS) return lsDo(v=>{ list.forEach(it=>{ const i=v.findIndex(x=>x.id===it.id); if(i>=0) v[i]=it; else v.push(it); }); return v; }); return tx('readwrite',st=>{ list.forEach(it=>st.put(it)); }); },
+      del(id){ if(useLS) return lsDo(v=>v.filter(x=>x.id!==id)); return tx('readwrite',st=>{ st.delete(id); }); } }; })();
+  const FIRST={id:'f1',e:'🦄',c:'#FF5FA2',name:''};
+  function fmeta(){ let m=store.get('fridges',null); if(!m||!Array.isArray(m.list)) m={list:[],cur:'f1'};
+    m.list=m.list.filter(f=>f&&typeof f.id==='string'&&typeof f.e==='string').slice(0,MAXF).map(f=>({id:f.id,e:f.e,c:typeof f.c==='string'?f.c:'#FF5FA2',name:typeof f.name==='string'?f.name.slice(0,18):''}));
+    if(!m.list.length) m.list=[Object.assign({},FIRST)]; if(!m.list.some(f=>f.id===m.cur)) m.cur=m.list[0].id; return m; }
+  let FM=fmeta(), DR=null, loading=null, busy=false, viewing=null, trashIt=null, trashT=0, drag=null, dragJust=0, editing=null;
+  function saveMeta(){ store.set('fridges',FM); }
+  const curF=()=>FM.list.find(f=>f.id===FM.cur)||FM.list[0];
+  const mine=()=>DR?DR.filter(x=>x.f===FM.cur):[];
   function basketOf(list){ return list.filter(x=>x.slot<0).sort((a,b)=>(b.t||0)-(a.t||0)); }
-  function paper(it,k){ const b=document.createElement('button'); b.className='fslot full'; b.style.setProperty('--r',(((k*37)%9)-4)+'deg'); b.setAttribute('aria-label','Open this drawing');
-    const img=document.createElement('img'); img.src=it.src; img.alt=''; b.appendChild(img); const m=document.createElement('span'); m.className='fmag'; m.style.background=MAGNETS[k%MAGNETS.length]; m.setAttribute('aria-hidden','true'); b.appendChild(m); b.onclick=()=>openDrawing(it); return b; }
-  function renderFridge(fresh,fell){ const g=$('#dfslots'), list=loadF(), ready=!isEmpty(); g.innerHTML=''; let firstEmpty=true;
+  const doorFull=list=>[...Array(SLOTS).keys()].every(k=>list.some(x=>x.slot===k));
+  function flabel(f){ const n=FFRIENDS.find(x=>x[0]===f.e); return f.name||((n?n[1]:'my')+' fridge'); }
+  /* Drawings from the old single fridge (localStorage mojia.fridge) move into the first fridge once, spots kept. */
+  function migrate(v){ v=v.filter(x=>x&&typeof x.src==='string'&&x.src.startsWith('data:image/'));
+    if(v.length&&!v.some(x=>'slot' in x)){ v.sort((a,b)=>(a.t||0)-(b.t||0)); const n=v.length; v.forEach((x,i)=>{ x.slot=i>=n-SLOTS?i-(n-Math.min(n,SLOTS)):-1; }); }
+    const seen={}; return v.map((x,i)=>{ let id='m'+String(x.id||i); while(seen[id]) id+='x'; seen[id]=1; return {id,f:FM.list[0].id,slot:typeof x.slot==='number'?x.slot:-1,t:x.t||0,src:x.src}; }); }
+  function tidy(){ const ids=new Set(FM.list.map(f=>f.id)), seen={}; DR.slice().sort((a,b)=>(b.t||0)-(a.t||0)).forEach(x=>{ if(!ids.has(x.f)) x.f=FM.list[0].id; const k=x.f+':'+x.slot; if(typeof x.slot!=='number'||x.slot<0||x.slot>=SLOTS||seen[k]) x.slot=-1; else seen[k]=1; }); }
+  function loadAll(){ if(DR) return Promise.resolve(DR); if(loading) return loading;
+    loading=fdb.all().then(v=>{ v=(v||[]).filter(x=>x&&typeof x.src==='string'&&x.src.startsWith('data:image/')); let old=null; try{ old=JSON.parse(localStorage.getItem(OLDKEY)||'null'); }catch(e){}
+      if(!Array.isArray(old)) return v; const mig=migrate(old).filter(x=>!v.some(y=>y.id===x.id)); if(!mig.length){ try{ localStorage.removeItem(OLDKEY); }catch(e){} return v; }
+      return fdb.put(mig).then(()=>{ try{ localStorage.removeItem(OLDKEY); }catch(e){} return v.concat(mig); },()=>v.concat(mig)); })
+      .catch(()=>[]).then(v=>{ DR=v; tidy(); loading=null; return DR; }); return loading; }
+
+  /* ---- the fridge screen ---- */
+  const fpanel=$('#dfridge');
+  function renderKids(){ const g=$('#dfkids'); g.innerHTML='';
+    FM.list.forEach(f=>{ const b=document.createElement('button'); b.className='fkid'+(f.id===FM.cur?' on':'')+(f.name?'':' solo'); b.setAttribute('role','tab'); b.setAttribute('aria-selected',String(f.id===FM.cur)); b.setAttribute('aria-label',flabel(f));
+      const k=document.createElement('span'); k.className='fk'; k.style.background=f.c; k.textContent=f.e; k.setAttribute('aria-hidden','true'); b.appendChild(k);
+      if(f.name){ const t=document.createElement('b'); t.textContent=f.name; b.appendChild(t); }
+      b.onclick=()=>{ ctx(); if(f.id===FM.cur){ sfx.boop(); return; } sfx.chime(); FM.cur=f.id; saveMeta(); hideSheets(); showBasket(false); renderFridge(-1); say(flabel(f)); }; g.appendChild(b); });
+    const e=document.createElement('button'); e.className='fkid edit'; e.id='dfeditBtn'; e.setAttribute('aria-label','Change this fridge'); e.innerHTML='<span aria-hidden="true">✏️</span>'; e.onclick=()=>{ ctx(); sfx.boop(); openEdit(); }; g.appendChild(e);
+    if(FM.list.length<MAXF){ const a=document.createElement('button'); a.className='fkid add'; a.id='dfadd'; a.setAttribute('aria-label','Add a fridge'); a.innerHTML='<span aria-hidden="true">+</span>'; a.onclick=()=>{ ctx(); addFridge(); }; g.appendChild(a); }
+    const on=g.querySelector('.fkid.on'); if(on&&(on.offsetLeft<g.scrollLeft||on.offsetLeft+on.offsetWidth>g.scrollLeft+g.clientWidth)) g.scrollLeft=on.offsetLeft-8; }
+  function paper(it,k){ const b=document.createElement('button'); b.className='fslot full'; b.style.setProperty('--r',(((k*37)%9)-4)+'deg'); b.setAttribute('aria-label','Your drawing'); b.dataset.id=it.id;
+    const img=document.createElement('img'); img.src=it.src; img.alt=''; img.draggable=false; b.appendChild(img); const m=document.createElement('span'); m.className='fmag'; m.style.background=MAGNETS[k%MAGNETS.length]; m.setAttribute('aria-hidden','true'); b.appendChild(m);
+    b.onclick=()=>{ if(Date.now()-dragJust<400) return; ctx(); sfx.boop(); view(it); }; dragable(b,it); return b; }
+  function renderFridge(fresh){ const f=curF(), o=$('#dfown'); o.textContent=f.e; o.style.background=f.c; renderKids();
+    const g=$('#dfslots'), list=mine(), ready=!isEmpty(), full=doorFull(list); g.innerHTML=''; let firstEmpty=true;
     for(let k=0;k<SLOTS;k++){ const it=list.find(x=>x.slot===k);
       if(it){ const b=paper(it,k); if(fresh===k) b.classList.add('new'); g.appendChild(b); continue; }
-      const e=document.createElement('button'); e.className='fslot empty'+(ready&&firstEmpty?' glow':''); e.setAttribute('aria-label','Hang my drawing here'); e.innerHTML='<span aria-hidden="true">+</span>'; if(fell===k) e.classList.add('fell'); firstEmpty=false;
+      const e=document.createElement('button'); e.className='fslot empty'+(ready&&firstEmpty?' glow':''); e.setAttribute('aria-label','Hang my drawing here'); e.innerHTML='<span aria-hidden="true">+</span>'; firstEmpty=false;
       e.onclick=()=>hang(k,e); g.appendChild(e); }
-    const n=basketOf(list).length, bk=$('#dbasket'); bk.querySelector('b').textContent=n; bk.classList.toggle('hidden',!n); }
-  /* A full door and a new drawing on the canvas: the oldest drawing on the door slides down into the basket so a spot opens. */
-  function makeRoom(){ const list=loadF(); if(isEmpty()||[...Array(SLOTS).keys()].some(k=>!list.some(x=>x.slot===k))) return -1;
-    const old=list.filter(x=>x.slot>=0).sort((a,b)=>(a.t||0)-(b.t||0))[0]; if(!old) return -1; const k=old.slot; old.slot=-1;
-    const bk=basketOf(list); bk.slice(BASKET).forEach(x=>list.splice(list.indexOf(x),1)); saveF(list); return k; }
+    const n=basketOf(list).length, bk=$('#dbasket'); bk.querySelector('b').textContent=n; bk.classList.toggle('hidden',!n&&!(full&&ready)); bk.classList.toggle('glow',full&&ready); }
+  function layerImage(){ const sc=Math.min(1,1600/Math.max(cMain.width,cMain.height)); if(sc>=1) return cMain.toDataURL('image/png');
+    const c=document.createElement('canvas'); c.width=Math.round(cMain.width*sc); c.height=Math.round(cMain.height*sc); c.getContext('2d').drawImage(cMain,0,0,c.width,c.height); return c.toDataURL('image/png'); }
+  function record(slot){ const r={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),f:FM.cur,slot,t:Date.now(),src:exportImage(1000),w:W,h:H}, F=friendNow();
+    if(F){ const fr=frame(); r.page=F.id; r.layer=layerImage(); r.rel={x:-fr.x/fr.s,y:-fr.y/fr.s,w:W/fr.s,h:H/fr.s}; } return r; }
   function hang(k,el){ ctx(); size(); if(isEmpty()){ sfx.hmm(); el.animate([{transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},{transform:'translateX(0)'}],{duration:300}); say('Draw something first!'); return; }
-    const list=loadF(); if(list.some(x=>x.slot===k)) return; list.push({id:Date.now().toString(36),src:exportImage(1000),t:Date.now(),slot:k});
-    if(!saveF(list)){ sfx.hmm(); return; } push({t:'c'}); cheered=false; redraw(); renderFridge(k); sfx.cheer();
-    const r=el.getBoundingClientRect(), s=stage.getBoundingClientRect(); confetti(stage,r.left-s.left+r.width/2,r.top-s.top+r.height/2,22); say('On the fridge!'); }
-  function openDrawing(it){ ctx(); const img=new Image(); img.onload=()=>{ push({t:'i',img}); cheered=false; redraw(); closePanels(); sfx.chime(); }; img.src=it.src; }
-  function renderBasket(){ const g=$('#dfgrid'); g.innerHTML=''; basketOf(loadF()).forEach((it,i)=>{ const b=document.createElement('button'); b.style.setProperty('--r',((i*37%9)-4)+'deg'); b.setAttribute('aria-label','Open this drawing');
-      const img=document.createElement('img'); img.src=it.src; img.alt=''; b.appendChild(img); b.onclick=()=>openDrawing(it); g.appendChild(b); }); }
-  function showBasket(on){ $('#dfbasketview').classList.toggle('hidden',!on); $('#dfridgebox').classList.toggle('hidden',on); if(on) renderBasket(); }
-  function openFridge(){ closePanels(); showBasket(false); const fell=makeRoom(); renderFridge(-1,fell); $('#dfridge').classList.remove('hidden'); $('#dfridge').scrollTop=0; }
+    if(busy||!DR) return; if(k>=0&&mine().some(x=>x.slot===k)) return; const r=record(k); busy=true;
+    fdb.put([r]).then(()=>{ busy=false; DR.push(r); push({t:'c'}); cheered=false; redraw(); renderFridge(k); sfx.cheer();
+      if(k<0){ showBasket(true,r.id); say('In the basket!'); return; }
+      const a=el.getBoundingClientRect(), p=fpanel.getBoundingClientRect(), s=$('#dfslots').children[k]; const b=s?s.getBoundingClientRect():a; confetti(fpanel,b.left-p.left+b.width/2,b.top-p.top+b.height/2,22); say('On the fridge!'); },
+      ()=>{ busy=false; sfx.hmm(); say('The fridge is too full. Throw a drawing away first.'); }); }
+  /* Opening a drawing puts a copy on the canvas. Coloring pages come back with live page lines and the coloring under them. Every drawing keeps its shape. */
+  function openDrawing(it){ ctx(); size(); if(!W) return; const F=it.page&&it.layer&&it.rel?friendById(it.page):null, img=new Image();
+    img.onload=()=>{ if(F){ push({t:'i',img,rel:it.rel}); redraw(); push({t:'f',id:F.id}); cheered=true; }
+      else { const iw=it.w||img.naturalWidth, ih=it.h||img.naturalHeight, sc=Math.min(W/iw,H/ih), w=iw*sc, h=ih*sc; push({t:'i',img,x:(W-w)/2,y:(H-h)/2,w,h}); cheered=false; }
+      redraw(); closePanels(); sfx.chime(); say('Keep drawing!'); };
+    img.onerror=()=>sfx.hmm(); img.src=F?it.layer:it.src; }
+  function renderBasket(fresh){ const g=$('#dfgrid'); g.innerHTML=''; basketOf(mine()).forEach((it,i)=>{ const b=document.createElement('button'); b.style.setProperty('--r',((i*37%9)-4)+'deg'); b.setAttribute('aria-label','Your drawing'); if(it.id===fresh) b.classList.add('new');
+      const img=document.createElement('img'); img.src=it.src; img.alt=''; b.appendChild(img); b.onclick=()=>{ ctx(); sfx.boop(); view(it); }; g.appendChild(b); }); }
+  function showBasket(on,fresh){ $('#dfbasketview').classList.toggle('hidden',!on); $('#dfridgebox').classList.toggle('hidden',on); if(on) renderBasket(fresh); }
+  function hideSheets(){ ['#dfview','#dftconfirm','#dfedit'].forEach(s=>$(s).classList.add('hidden')); clearTimeout(trashT); const a=document.activeElement; if(a&&a.id==='dfname') a.blur(); }
+  function openFridge(){ closePanels(); hideSheets(); showBasket(false); fpanel.classList.remove('hidden'); renderFridge(-1); if(!DR) loadAll().then(()=>{ if(!fpanel.classList.contains('hidden')) renderFridge(-1); }); }
   $('#dfridgeBtn').onclick=()=>{ ctx(); sfx.boop(); openFridge(); say(isEmpty()?'The fridge!':'Tap a spot to hang your drawing!'); };
-  $('#dbasket').onclick=()=>{ ctx(); sfx.boop(); showBasket(true); };
+  $('#dbasket').onclick=()=>{ ctx(); if(!isEmpty()&&doorFull(mine())){ hang(-1,$('#dbasket')); return; } sfx.boop(); showBasket(true); };
   $('#dfback').onclick=()=>{ ctx(); sfx.boop(); showBasket(false); };
 
-  /* ---- Grown-ups: Save to Photos (behind the number gate) ---- */
+  /* ---- look at one drawing: draw more on a copy, or throw it away ---- */
+  function view(it){ hideSheets(); viewing=it; $('#dfvimg').src=it.src; $('#dfview').classList.remove('hidden'); say('Draw more, or throw it away?'); }
+  $('#dfvdraw').onclick=()=>{ if(viewing) openDrawing(viewing); };
+  $('#dfvtrash').onclick=()=>{ ctx(); if(viewing) askTrash(viewing); };
+  $('#dfview').addEventListener('click',e=>{ if(e.target===e.currentTarget){ ctx(); sfx.boop(); hideSheets(); } });
+  /* ---- trash can: the drawing shrinks toward a wobbling trash. Red trash throws it away. Green arrow, a tap outside, or 5 seconds keeps it. ---- */
+  function askTrash(it){ hideSheets(); trashIt=it; const im=$('#dftimg'); im.src=it.src; im.style.animation='none'; void im.offsetWidth; im.style.animation=''; $('#dftconfirm').classList.remove('hidden'); sfx.boop(); say('Throw it away?'); trashT=setTimeout(keepIt,5000); }
+  function keepIt(){ clearTimeout(trashT); if($('#dftconfirm').classList.contains('hidden')) return; sfx.boop(); hideSheets(); }
+  $('#dftno').onclick=()=>{ ctx(); keepIt(); };
+  $('#dftconfirm').addEventListener('click',e=>{ if(e.target===e.currentTarget){ ctx(); keepIt(); } });
+  $('#dftyes').onclick=()=>{ ctx(); clearTimeout(trashT); const it=trashIt; if(!it) return; trashIt=null;
+    fdb.del(it.id).then(()=>{ DR=DR.filter(x=>x.id!==it.id); const snap=$('#dftconfirm .dcsnap img');
+      const done=()=>{ hideSheets(); renderFridge(-1); if(!$('#dfbasketview').classList.contains('hidden')) renderBasket(); say('All gone!'); };
+      sfx.poof(); const a=snap.animate([{transform:'scale(1) rotate(0)',opacity:1},{transform:'translate(40%,40%) scale(.1) rotate(25deg)',opacity:0}],{duration:420,easing:'cubic-bezier(.45,0,.2,1)'}); a.onfinish=done; },()=>{ sfx.hmm(); hideSheets(); }); };
+  $('#dftrash').onclick=()=>{ ctx(); sfx.hmm(); const t=$('#dftrash'); t.animate([{transform:'rotate(0)'},{transform:'rotate(-14deg)'},{transform:'rotate(14deg)'},{transform:'rotate(0)'}],{duration:450}); say(mine().some(x=>x.slot>=0)?'Drag a drawing here, or tap a drawing.':'Nothing to throw away.'); };
+  /* Drag a drawing on the door to the trash can. Let go anywhere else and it springs back. */
+  function overTrash(ev){ const r=$('#dftrash').getBoundingClientRect(); return ev.clientX>r.left-18&&ev.clientX<r.right+18&&ev.clientY>r.top-18&&ev.clientY<r.bottom+18; }
+  function dragable(b,it){
+    b.addEventListener('pointerdown',ev=>{ if(drag||!ev.isPrimary) return; drag={id:ev.pointerId,b,it,x:ev.clientX,y:ev.clientY,on:false,g:null}; try{ b.setPointerCapture(ev.pointerId); }catch(e){} });
+    b.addEventListener('pointermove',ev=>{ const d=drag; if(!d||ev.pointerId!==d.id) return;
+      if(!d.on){ if(Math.hypot(ev.clientX-d.x,ev.clientY-d.y)<12) return; d.on=true; d.g=document.createElement('div'); d.g.className='fghost'; const im=document.createElement('img'); im.src=it.src; im.alt=''; d.g.appendChild(im); fpanel.appendChild(d.g); b.classList.add('lift'); sfx.boop(); }
+      const p=fpanel.getBoundingClientRect(); d.g.style.left=(ev.clientX-p.left)+'px'; d.g.style.top=(ev.clientY-p.top)+'px'; const hot=overTrash(ev), t=$('#dftrash'); if(hot!==t.classList.contains('hot')){ t.classList.toggle('hot',hot); if(hot) tone(300,0,.08,'sine',.1); } });
+    const fin=(ev,cancel)=>{ const d=drag; if(!d||ev.pointerId!==d.id) return; drag=null; if(!d.on) return; dragJust=Date.now(); $('#dftrash').classList.remove('hot'); b.classList.remove('lift'); if(d.g) d.g.remove(); if(!cancel&&overTrash(ev)){ ctx(); askTrash(it); } };
+    b.addEventListener('pointerup',ev=>fin(ev,false)); b.addEventListener('pointercancel',ev=>fin(ev,true)); }
+
+  /* ---- add a fridge, or change one: a friend, a color, and a name box open to kids. Up to 6. An empty fridge can go. ---- */
+  function addFridge(){ if(FM.list.length>=MAXF){ sfx.hmm(); return; } const e=(FFRIENDS.find(x=>!FM.list.some(f=>f.e===x[0]))||FFRIENDS[0])[0], c=FCOLORS.find(x=>!FM.list.some(f=>f.c===x))||FCOLORS[0];
+    const f={id:'f'+Date.now().toString(36),e,c,name:''}; FM.list.push(f); FM.cur=f.id; saveMeta(); sfx.chime(); hideSheets(); showBasket(false); renderFridge(-1); openEdit(); }
+  function paintEdit(){ const f=editing, p=$('#dfeprev'); p.textContent=f.e; p.style.background=f.c;
+    $$('#dfefriends button').forEach(b=>{ const on=b.dataset.e===f.e; b.classList.toggle('on',on); b.setAttribute('aria-checked',String(on)); });
+    $$('#dfecolors button').forEach(b=>{ const on=b.dataset.c===f.c; b.classList.toggle('on',on); b.setAttribute('aria-checked',String(on)); }); }
+  function openEdit(){ hideSheets(); editing=curF(); $('#dfname').value=editing.name||''; paintEdit(); $('#dferm').classList.toggle('hidden',FM.list.length<2||mine().length>0); $('#dfedit').classList.remove('hidden'); say('Pick a friend and a color for your fridge.'); }
+  FFRIENDS.forEach(([e,n])=>{ const b=document.createElement('button'); b.dataset.e=e; b.textContent=e; b.setAttribute('role','radio'); b.setAttribute('aria-label',n); b.onclick=()=>{ ctx(); sfx.boop(); if(!editing) return; editing.e=e; saveMeta(); paintEdit(); renderFridge(-1); say(n); }; $('#dfefriends').appendChild(b); });
+  FCOLORS.forEach(c=>{ const b=document.createElement('button'); b.dataset.c=c; b.style.background=c; b.setAttribute('role','radio'); b.setAttribute('aria-label','color'); b.onclick=()=>{ ctx(); sfx.boop(); if(!editing) return; editing.c=c; saveMeta(); paintEdit(); renderFridge(-1); }; $('#dfecolors').appendChild(b); });
+  $('#dfname').addEventListener('input',()=>{ if(!editing) return; editing.name=$('#dfname').value.replace(/[\u0000-\u001f<>]/g,'').slice(0,18); saveMeta(); renderKids(); });
+  $('#dfname').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); $('#dfname').blur(); } });
+  $('#dfname').addEventListener('pointerdown',e=>e.stopPropagation());
+  $('#dfedone').onclick=()=>{ ctx(); sfx.chime(); if(editing){ editing.name=editing.name.trim(); saveMeta(); } hideSheets(); renderFridge(-1); if(editing) say(flabel(editing)); editing=null; };
+  $('#dferm').onclick=()=>{ ctx(); if(!editing||FM.list.length<2||mine().length) return; sfx.poof(); FM.list=FM.list.filter(f=>f!==editing); FM.cur=FM.list[0].id; editing=null; saveMeta(); hideSheets(); renderFridge(-1); };
+
+  /* ---- Grown-ups: Save to Photos (behind the number gate), every fridge, newest first ---- */
   function fileOf(it){ const bin=atob(it.src.split(',')[1]||''), u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); const type=(it.src.match(/^data:([^;,]+)/)||[])[1]||'image/jpeg'; return new File([u],'mojialand-drawing-'+(it.id||'1')+(type==='image/png'?'.png':'.jpg'),{type}); }
   function savePhoto(it){ let f=null; try{ f=fileOf(it); }catch(e){}
     if(f&&navigator.canShare&&navigator.share){ try{ if(navigator.canShare({files:[f]})){ navigator.share({files:[f]}).catch(()=>{}); return; } }catch(e){} }
     const a=document.createElement('a'); a.href=it.src; a.download=f?f.name:'mojialand-drawing.jpg'; document.body.appendChild(a); a.click(); a.remove(); }
-  function openPhotos(){ const g=$('#pwPhGrid'), list=loadF().sort((a,b)=>(b.t||0)-(a.t||0)); g.innerHTML='';
-    $('#pwPhText').textContent=list.length?'Tap a drawing, then choose Save Image. These drawings stay on this device.':'No drawings on the fridge yet. Kids hang drawings with the fridge button in Draw.';
-    list.forEach(it=>{ const wr=document.createElement('div'); wr.className='pw-photo'; const b=document.createElement('button'); b.className='pic'; b.setAttribute('aria-label','Save this drawing'); const img=document.createElement('img'); img.src=it.src; img.alt=''; b.appendChild(img); b.onclick=()=>{ ctx(); sfx.boop(); savePhoto(it); };
-      wr.appendChild(b); g.appendChild(wr); });
-    $('#pwOvPhotos').classList.remove('hidden'); }
+  function openPhotos(){ const g=$('#pwPhGrid'); g.innerHTML=''; $('#pwPhText').textContent=''; $('#pwOvPhotos').classList.remove('hidden');
+    loadAll().then(all=>{ const list=all.slice().sort((a,b)=>(b.t||0)-(a.t||0)); g.innerHTML='';
+      $('#pwPhText').textContent=list.length?'Tap a drawing, then choose Save Image. These drawings stay on this device.':'No drawings on the fridge yet. Kids hang drawings with the fridge button in Draw.';
+      list.forEach(it=>{ const wr=document.createElement('div'); wr.className='pw-photo'; const b=document.createElement('button'); b.className='pic'; b.setAttribute('aria-label','Save this drawing'); const img=document.createElement('img'); img.src=it.src; img.alt=''; b.appendChild(img); b.onclick=()=>{ ctx(); sfx.boop(); savePhoto(it); };
+        wr.appendChild(b); g.appendChild(wr); }); }); }
 
   /* ---- demo for Watch ---- */
   function fakeAt(fx,fy,fn){ return {getBoundingClientRect(){ const r=cMain.getBoundingClientRect(); return {left:r.left+r.width*fx,top:r.top+r.height*fy,width:0,height:0}; }, click:fn}; }
@@ -1751,7 +1889,7 @@ games.draw=(function(){
   function trailDemo(){ size(); const items=[]; for(let i=0;i<=6;i++) items.push([W*.2+i*W*.1,H*.65+Math.sin(i)*H*.05,emo,32,0]); const o={t:'e',items}; push(o); renderOp(mx,o); sfx.chime(); }
 
   return {
-    enter(){ requestAnimationFrame(()=>{ size(); syncUR(); }); bookHint(); },
+    enter(){ requestAnimationFrame(()=>{ size(); syncUR(); }); bookHint(); loadAll(); },
     leave(){ setFull(false); closePanels(); if(cur){ cur=null; pid=null; lx.clearRect(0,0,W,H); } drawer.close(); },
     openPhotos,
     async demo(tap,stopped){ closePanels(); say('Pick a crayon and a color.'); await tap($('#dtools [data-tool=crayon]')); if(stopped()) return; await tap($$('#dswatches .dsw')[1]); if(stopped()) return;
