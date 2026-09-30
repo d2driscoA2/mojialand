@@ -37,7 +37,7 @@ if STAGING:
     (site_dir / 'robots.txt').write_text('User-agent: *\nDisallow: /\n', encoding='utf-8')
 else:
     # Live: let search engines read the website, skip private pages, point to the sitemap.
-    (site_dir / 'robots.txt').write_text('User-agent: *\nDisallow: /admin/\nDisallow: /pass/\nDisallow: /r/\n\nSitemap: https://mojialand.com/sitemap.xml\n', encoding='utf-8')
+    (site_dir / 'robots.txt').write_text('User-agent: *\nDisallow: /admin/\nDisallow: /pass/\nDisallow: /r/\nDisallow: /g/\n\nSitemap: https://mojialand.com/sitemap.xml\n', encoding='utf-8')
 
 
 # Pass token public key. Only a public EC P-256 key is allowed in a page:
@@ -86,6 +86,13 @@ site = script_hash('index.html')
 pay_hashes = "'sha256-%s' 'sha256-%s'" % (script_hash('pass/index.html'), script_hash('pass/done/index.html'))
 redeem = script_hash('r/index.html')
 admin = script_hash('admin/index.html')
+friend = script_hash('g/index.html')
+
+# Friend pass link (/g/CODE): shows a link preview card, then opens /r/CODE.
+# On staging the preview image points at the staging site.
+if STAGING:
+    g = site_dir / 'g/index.html'
+    g.write_text(g.read_text(encoding='utf-8').replace('https://mojialand.com/img/', 'https://mojialand.displayedux.com/img/'), encoding='utf-8')
 
 # Game: same strict policy as before. The website may show the game in its
 # play window, so the game allows framing by its own site only.
@@ -102,6 +109,10 @@ site_csp = ("default-src 'none'; script-src 'self' 'sha256-%s'; style-src 'self'
 redeem_csp = ("default-src 'none'; script-src 'self' 'sha256-%s'; style-src 'self' 'unsafe-inline'; "
               "img-src 'self' data:; font-src 'self'; connect-src 'self'; "
               "base-uri 'self'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests") % redeem
+
+# Friend pass link page (/g/CODE): one inline script that forwards to /r/CODE.
+friend_csp = ("default-src 'none'; script-src 'sha256-%s'; style-src 'unsafe-inline'; "
+              "img-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests") % friend
 
 # Admin page: same-site only, never indexed, never cached.
 admin_csp = ("default-src 'none'; script-src 'self' 'sha256-%s'; style-src 'self' 'unsafe-inline'; "
@@ -145,6 +156,7 @@ headers = "".join([
     block('/index.html', site_csp, 'DENY'),
     block('/play/*', game_csp, 'SAMEORIGIN'),
     block('/r/*', redeem_csp, 'DENY') + "  Cache-Control: no-store\n",
+    block('/g/*', friend_csp, 'DENY'),
     block('/admin/*', admin_csp, 'DENY') + "  Cache-Control: no-store\n  X-Robots-Tag: noindex, nofollow\n",
     block('/pass/*', pass_csp, 'DENY') + "  Permissions-Policy: %s\n" % pass_pp,
     "/fonts/*\n  Cache-Control: public, max-age=31536000, immutable\n",

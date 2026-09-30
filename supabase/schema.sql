@@ -394,3 +394,9 @@ begin
   delete from plays_hourly     where hour_start < now() - interval '400 days';
 end;
 $$;
+
+-- Release 1.1 #3 (September 30, 2026): batch label on passes. FRIEND marks a
+-- friend pass (one per parent pass, made from the parent pass ID, never stored).
+-- Counts codes, never people.
+alter table public.passes add column if not exists batch text;
+create index if not exists passes_batch_idx on public.passes (batch);

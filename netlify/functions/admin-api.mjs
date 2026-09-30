@@ -5,6 +5,7 @@ import { rest, patchPass, safeErr } from './_lib/db.mjs';
 import { isSignedIn } from './_lib/admin.mjs';
 import { randomCode, codeHash, codeLast4, deriveCode, codeNoDashes } from './_lib/codes.mjs';
 import { buildEmail, sendEmail } from './_lib/email.mjs';
+import { friendPass } from './_lib/friend.mjs';
 import { getStripe } from './_lib/stripe.mjs';
 import { liveView, historyView, campaignsView, createCampaign, setCampaignActive } from './_lib/analytics-admin.mjs';
 
@@ -13,7 +14,7 @@ const HOUR = 3600e3;
 const DAY = 24 * HOUR;
 const enc = encodeURIComponent;
 const UUID = /^[0-9a-f-]{36}$/i;
-const PASS_FIELDS = 'id,code_last4,prefix,kind,source,email,stripe_session_id,amount_cents,created_at,starts_at,ends_at,device_limit,status,uses_left,use_by,note,emailed_at';
+const PASS_FIELDS = 'id,code_last4,prefix,kind,source,email,stripe_session_id,amount_cents,created_at,starts_at,ends_at,device_limit,status,uses_left,use_by,note,emailed_at,batch';
 const SETTING_KEYS = ['first_visit_minutes', 'daily_minutes', 'daily_reset', 'devices_per_code', 'warning_minutes', 'credit_days', 'delete_ended_after_days'];
 
 async function passWithDevices(id) {
@@ -48,7 +49,8 @@ const actions = {
     if (!EMAIL_RE.test(addr)) throw new Error('type a full email address');
     const { p, code } = await paidCode(id);
     const plan = p.kind === 'forever' ? 'life' : 'pass';
-    const ok = await sendEmail(addr, buildEmail({ plan, pass: p, code, origin: originFromHost(header(event, 'host')) }));
+    const friend = await friendPass(p).catch(() => null);
+    const ok = await sendEmail(addr, buildEmail({ plan, pass: p, code, origin: originFromHost(header(event, 'host')), friend }));
     if (ok === false) throw new Error('email is not set up on this site');
     await patchPass('id=eq.' + enc(id), { note: ((p.note ? p.note + ' · ' : '') + 'code emailed from admin ' + new Date().toISOString().slice(0, 10)).slice(0, 500) });
     return { pass: await passWithDevices(id), sent: true };

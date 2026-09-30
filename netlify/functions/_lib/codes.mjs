@@ -34,6 +34,15 @@ export function deriveCode(pepper, sessionId) {
   return formatCode('MOJI', mapBytes(next, 12));
 }
 
+// Friend pass (Release 1.1 #3): one GIFT code per parent pass, made again from
+// the parent pass ID whenever needed, so the code is never stored.
+export function deriveFriendCode(pepper, passId) {
+  if (!pepper) throw new Error('pepper missing');
+  let i = 0;
+  const next = () => crypto.createHmac('sha256', pepper).update('friend:' + passId + (i++ ? ':' + i : '')).digest();
+  return formatCode('GIFT', mapBytes(next, 12));
+}
+
 export function randomCode(prefix = 'MOJI') {
   return formatCode(prefix, mapBytes(() => crypto.randomBytes(32), 12));
 }

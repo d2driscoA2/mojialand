@@ -3,7 +3,9 @@
 // and by "Have a code?" in Grown-ups. Codes are looked up by hash only.
 import { guard, envName } from './_lib/env.mjs';
 import { json, fail, readJson, clientIp, maskEmail } from './_lib/http.mjs';
-import { rateHit, getPassBy, patchPass, addDevice, safeErr, DEVICE_RE } from './_lib/db.mjs';
+import { rateHit, getPassBy, patchPass, addDevice, safeErr, DEVICE_RE, rest } from './_lib/db.mjs';
+import { sha256hex } from './_lib/http.mjs';
+import { FRIEND_BATCH } from './_lib/friend.mjs';
 import { normalizeCode, codeHash } from './_lib/codes.mjs';
 import { makeTokenPayload, signToken } from './_lib/token.mjs';
 import { getStripe } from './_lib/stripe.mjs';
@@ -53,7 +55,13 @@ export const handler = async (event) => {
       return fail(403, 'This code no longer works. Contact us if this looks wrong.');
     }
     if (pass.status === 'unused') {
-      if (pass.use_by && new Date(pass.use_by).getTime() < Date.now()) return fail(410, 'This gift code has expired.');
+      if (pass.use_by && new Date(pass.use_by).getTime() < Date.now()) return fail(410, pass.batch === FRIEND_BATCH ? 'This friend pass has expired. Friend passes work for 30 days.' : 'This gift code has expired.');
+      // Friend passes are for families new to Mojialand: never on a device that had a pass.
+      if (pass.batch === FRIEND_BATCH) {
+        const h = sha256hex((process.env.RESTORE_CODE_PEPPER || '') + ':dev:' + device);
+        const { data: seen } = await rest('GET', 'devices?device_id_hash=eq.' + h + '&select=id&limit=1');
+        if (Array.isArray(seen) && seen.length) return fail(403, 'Friend passes are for families new to Mojialand. This device had a pass before, so please share this one with a new friend.');
+      }
       // Gift and support codes start on first use.
       const now = Date.now();
       const rows = await patchPass('id=eq.' + encodeURIComponent(pass.id) + '&status=eq.unused', {

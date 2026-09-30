@@ -12,7 +12,7 @@ export function fmtDetroit(iso) {
 
 // Builds {subject, text, html}. The button carries the code and turns the
 // pass on for the device that taps it. The code also shows for typing by hand.
-export function buildEmail({ plan, pass, code, origin }) {
+export function buildEmail({ plan, pass, code, origin, friend }) {
   const forever = pass.kind === 'forever';
   const subject = {
     pass: 'Mojialand: your 48-hour pass',
@@ -38,10 +38,18 @@ export function buildEmail({ plan, pass, code, origin }) {
   const byHand = 'Or type the code in Mojialand: open Grown-ups, then tap Have a code?';
   const keep = 'Keep this email. You only need the code if you ever have to show you paid.';
   const preheader = link ? how : when;
+  // Friend pass (Release 1.1 #3): one free 48-hour pass to give another family.
+  const fLink = friend && friend.code ? origin + friend.path : null;
+  const fUntil = friend && friend.use_by ? new Date(friend.use_by).toLocaleDateString('en-US', { timeZone: 'America/Detroit', month: 'long', day: 'numeric' }) : '';
+  const fHead = 'Give a friend 48 free hours';
+  const fWhy = 'Your pass comes with one free 48-hour pass for another family. It works once, on a device new to Mojialand' + (fUntil ? ', until ' + fUntil : '') + '.';
+  const fMsg = 'Here are 48 free hours of Mojialand, emoji games for kids 3 and up. No ads. Tap to play: ' + fLink;
+  const fSms = fLink ? 'sms:?&body=' + encodeURIComponent(fMsg) : null;
 
   const text = [
     head, '', when, '',
     ...(link ? [how, 'Turn on Mojialand: ' + link, '', already, '', byHand, 'Your code: ' + code, '', keep, ''] : []),
+    ...(fLink ? [fHead, fWhy, 'Send this link to a friend: ' + fLink, ''] : []),
     'Questions? Reply to this email.', '',
     'Mojialand is made by DisplayedUX: https://displayedux.com',
   ].join('\n');
@@ -69,6 +77,14 @@ export function buildEmail({ plan, pass, code, origin }) {
 <p style="margin:0 0 ${link ? 20 : 0}px;font:700 16px/1.45 ${F};color:${INK};text-align:center">${esc(when)}</p>
 ${link ? `<p style="margin:0 0 14px;font:800 16px/1.45 ${F};color:${INK};text-align:center">${esc(how)}</p>` : ''}${button}
 </td></tr>
+${fLink ? `<tr><td style="padding:16px 0 0"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td bgcolor="#FFFFFF" style="background:#FFFFFF;border:2px dashed #FF5FA2;border-radius:24px;padding:22px 20px">
+<p style="margin:0 0 6px;font:900 21px/1.2 ${F};color:#FF5FA2;text-align:center">&#127873; ${esc(fHead)}</p>
+<p style="margin:0 0 16px;font:700 15px/1.45 ${F};color:${INK};text-align:center">${esc(fWhy)}</p>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0 0 10px"><tr><td align="center" bgcolor="#FF5FA2" style="border-radius:999px">
+<a href="${esc(fSms)}" style="display:block;padding:14px 20px;font:900 17px/1.2 ${F};color:#FFFFFF;text-decoration:none;border-radius:999px">Text a friend</a>
+</td></tr></table>
+<p style="margin:0;font:700 13px/1.45 ${F};color:${SOFT};text-align:center">Or send this link any way you like:<br><a href="${esc(fLink)}" style="color:${P};font-weight:800;word-break:break-all">${esc(fLink)}</a></p>
+</td></tr></table></td></tr>` : ''}
 ${link ? `<tr><td style="padding:16px 8px 0"><p style="margin:0;font:700 14px/1.45 ${F};color:${SOFT};text-align:center">${esc(keep)}</p></td></tr>` : ''}
 <tr><td style="padding:14px 8px 0"><p style="margin:0;font:700 14px/1.45 ${F};color:${SOFT};text-align:center">Questions? Reply to this email.</p></td></tr>
 <tr><td style="padding:6px 8px 0"><p style="margin:0;font:700 13px/1.45 ${F};color:${SOFT};text-align:center">Mojialand is made by <a href="https://displayedux.com" style="color:${P};font-weight:800">DisplayedUX</a></p></td></tr>

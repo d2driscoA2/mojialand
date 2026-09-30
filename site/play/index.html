@@ -488,6 +488,15 @@ textarea.pw-in{resize:none;min-height:88px}
 .pw-ok h2{font-family:var(--display);font-weight:900;font-size:25px;line-height:1.15;margin:0;color:var(--ink);text-wrap:balance}
 .pw-ok #pwOkText{margin:0;color:var(--mute);font-size:14px;font-weight:700;max-width:30ch}
 .pw-okhs{align-items:center;text-align:left;width:100%;padding:14px}
+/* Friend pass card (Release 1.1 #3): parent screens only (All set, Grown-ups behind the gate) */
+.pw-gift{width:100%;background:var(--white);border:2px dashed var(--pink);border-radius:24px;padding:16px;display:grid;gap:8px;text-align:center}
+.pw-gift h4{margin:0;font-family:var(--display);font-weight:900;font-size:19px;color:var(--pink)}
+.pw-gift p{margin:0;font-weight:700;font-size:14px;color:var(--ink);line-height:1.4}
+.pw-giftbtns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.pw-giftbtns button{min-height:48px;border-radius:999px;padding:10px 18px;font-family:var(--display);font-weight:900;font-size:16px;cursor:pointer}
+.pw-giftshare{background:var(--pink);color:var(--white);border:0}
+.pw-giftcopy{background:var(--white);color:var(--purple);border:2px solid var(--purple)}
+.pw-giftlink{font-weight:800;font-size:13px;color:var(--purple);word-break:break-all;user-select:text;-webkit-user-select:text}
 .pw-okhs>div:last-child{padding-bottom:0}
 .pw-okhs .pw-mini{border-bottom:5px solid var(--ink);border-radius:18px}
 .pw-okhs .pw-secondary{width:auto;padding:8px 14px;font-size:14px;margin-top:8px}
@@ -882,6 +891,7 @@ body.in-draw #app{max-width:none}
     <p id="pwOkText"></p>
   </div>
   <div class="pw-hsbig pw-okhs" id="pwOkHS"><div class="pw-mini" id="pwOkMini" aria-hidden="true"></div><div><p class="pw-hst">Mojialand on your Home Screen!</p><p>Add Mojialand to your device. One tap to play, full screen. Your pass comes with it.</p><button class="pw-secondary" id="pwOkHow">Show me how</button></div></div>
+  <div class="pw-gift" id="pwOkGift" hidden></div>
   <button class="pw-textbtn" id="pwOkShare"><span aria-hidden="true">📲</span> Send code to another device</button>
   <div class="pw-next"><span class="pw-eyebrow">Next</span><button class="pw-primary" id="pwOkBack">▶ Hand it back to your kid</button></div>
 </section>
@@ -943,6 +953,7 @@ body.in-draw #app{max-width:none}
   <p>Thanks. We write back to you by email.</p>
   <button class="pw-primary" data-pw-close>OK</button>
 </div></div>
+<div class="pw-ov hidden" id="pwOvGift" role="dialog" aria-label="Give a friend 48 hours"><div class="pw-card"><div class="pw-gift" id="pwGuGift"></div><button class="pw-secondary" data-pw-close>Done</button></div></div>
 <div class="pw-ov hidden" id="pwOvSoon" role="dialog" aria-label="Coming soon"><div class="pw-card">
   <h3 id="pwSoonTitle">Coming soon</h3>
   <p id="pwSoonText">This part of Mojialand is on the way.</p>
@@ -1891,7 +1902,7 @@ const pay=(function(){
     $('#pwOkTitle').textContent=a.plan==='redeem'?'Mojialand is on!':p.kind==='forever'?'Mojialand is yours for good':(a.plan==='add'?'Added 48 hours':"You're all set for 48 hours");
     const mail=a.plan==='redeem'?'':String(a.email_masked||p.email_masked||'');
     $('#pwOkText').textContent=(p.kind==='forever'?'Forever pass on.':'Pass on until '+fmtT(p.ends_at)+'.')+(mail?' Code emailed to '+mail+'.':'');
-    $('#pwOkHS').hidden=standalone(); go('allset'); return true; }
+    $('#pwOkHS').hidden=standalone(); $('#pwOkGift').hidden=true; go('allset'); showGiftOnAllset(); return true; }
   $('#pwOkHow').addEventListener('click',()=>{ ctx(); sfx.boop(); showHow(); });
   /* Send the pass to another device: the phone's share sheet (Messages, Mail, AirDrop). Falls back to a sheet with the link and code. */
   async function sharePass(){ const p=getPass(); if(!p||!p.code){ soon('Send code to another device'); return; }
@@ -1901,6 +1912,22 @@ const pay=(function(){
     try{ await navigator.clipboard.writeText(text); toast('Copied'); }catch(e){}
     $('#pwOvSoon').classList.remove('hidden'); }
   $('#pwOkShare').addEventListener('click',()=>{ ctx(); sfx.boop(); sharePass(); });
+  /* Friend pass (Release 1.1 #3): every pass comes with one free 48-hour pass for another family. Parent screens only. */
+  let giftCache=null;
+  async function loadGift(){ const raw=store.get('pass',null); if(!raw||!raw.token) return null; if(giftCache&&giftCache.token===raw.token) return giftCache.data;
+    try{ const res=await fetch('/.netlify/functions/friend-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:raw.token}),credentials:'same-origin',cache:'no-store'});
+      const d=res.status===200?await res.json():null; const data=d&&typeof d.code==='string'&&typeof d.link==='string'?d:null; giftCache={token:raw.token,data}; return data; }catch(e){ return null; } }
+  const GIFT_MSG='Here are 48 free hours of Mojialand, emoji games for kids 3 and up. No ads. Tap to play:';
+  function giftDate(iso){ try{ return new Date(iso).toLocaleDateString('en-US',{month:'long',day:'numeric'}); }catch(e){ return ''; } }
+  function paintGift(el,d){ if(!d||d.state==='expired'){ el.hidden=true; el.innerHTML=''; return false; } el.hidden=false;
+    if(d.state==='used'){ el.innerHTML='<h4>🎁 Your friend pass is in use</h4><p>A friend is playing on the 48 free hours you shared. Thank you for spreading the word!</p>'; return true; }
+    el.innerHTML='<h4>🎁 Give a friend 48 free hours</h4><p>Your pass comes with one free 48-hour pass for another family. It works once, on a device new to Mojialand'+(d.use_by?', until '+giftDate(d.use_by):'')+'.</p>'
+      +'<div class="pw-giftbtns"><button class="pw-giftshare" type="button" data-gift="share">Share with a friend</button><button class="pw-giftcopy" type="button" data-gift="copy">Copy link</button></div><span class="pw-giftlink"></span>'; el.querySelector('.pw-giftlink').textContent=d.link;
+    el.querySelector('[data-gift="share"]').onclick=async()=>{ ctx(); sfx.boop(); if(navigator.share){ try{ await navigator.share({title:'48 free hours of Mojialand',text:GIFT_MSG,url:d.link}); return; }catch(e){ if(e&&e.name==='AbortError') return; } } try{ await navigator.clipboard.writeText(GIFT_MSG+' '+d.link); toast('Link copied'); }catch(e){ toast('Press and hold the link to copy'); } };
+    el.querySelector('[data-gift="copy"]').onclick=async()=>{ ctx(); sfx.boop(); try{ await navigator.clipboard.writeText(GIFT_MSG+' '+d.link); toast('Link copied'); }catch(e){ toast('Press and hold the link to copy'); } };
+    return true; }
+  async function showGiftOnAllset(){ const el=$('#pwOkGift'); paintGift(el,await loadGift()); }
+  async function openGift(){ const el=$('#pwGuGift'); el.hidden=false; el.innerHTML='<p>One moment…</p>'; $('#pwOvGift').classList.remove('hidden'); const d=await loadGift(); if(!paintGift(el,d)){ el.hidden=false; el.innerHTML='<h4>🎁 Give a friend 48 free hours</h4><p>This pass has no friend pass to give. Friend passes come with each pass and work for 30 days.</p>'; } }
   $('#pwOkBack').addEventListener('click',()=>{ ctx(); sfx.boop(); go('home'); });
   $$('.pw-ov').forEach(ov=>ov.addEventListener('click',e=>{ if(e.target===ov||e.target.closest('[data-pw-close]')){ ov.classList.add('hidden'); } }));
 
@@ -1992,6 +2019,7 @@ const pay=(function(){
     if(/displayedux\.com$|netlify\.app$/.test(location.hostname)){ h+='<span style="opacity:.6">Staging check: '+(standalone()?'Home Screen app':'browser')+' · opened with pass in address: '+dbgRestore+' · address carries pass now: '+(/restore=/.test(location.search)?'yes':'no')+' · server handoff: '+dbgClaim+'</span>'; }
     const el=$('#pwStatus'); if(el.innerHTML!==h) el.innerHTML=h; }
   function buildGU(){ paintStatus(); const p=getPass(), rows=[];
+    if(p) rows.push(['🎁 Give a friend 48 hours','›','gift']);
     if(passOn(p)){ rows.push(['📲 Send code to another device','›','share']); if(p.kind==='48h') rows.push(['Add 48 hours',money(PRICES.add),'add'],['Upgrade to Forever',money(PRICES.up),'up']); }
     else rows.push(['Get a pass',money(PRICES.pass)+' or '+money(PRICES.life),'buy']);
     rows.push(['🖼️ Save drawings to Photos','›','photos'],['Have a code?','›','code'],['Contact us','›','help']);
@@ -2001,7 +2029,7 @@ const pay=(function(){
     $('#pwHSbtn').hidden=on; }
   $('#pwGuList').addEventListener('click',e=>{ const b=e.target.closest('.pw-gurow'); if(!b) return; ctx(); sfx.boop(); const a=b.dataset.a;
     if(a==='add'||a==='up') openGate('plans','gate',a); else if(a==='buy') openGate('plans','gate','pass');
-    else if(a==='share') sharePass(); else if(a==='photos') games.draw.openPhotos(); else if(a==='code') openCode(); else if(a==='help') openContact(); });
+    else if(a==='share') sharePass(); else if(a==='gift') openGift(); else if(a==='photos') games.draw.openPhotos(); else if(a==='code') openCode(); else if(a==='help') openContact(); });
 
   function onScreen(name){ if(name==='ngate'){ newGate(); claimHandoff().then(ok=>{ if(ok) showAllset(); }); } else if(name==='plans') buildPlans(); else if(name==='gate') buildGU(); if(name!=='rest') $('#pwZeroChip').classList.remove('shake'); $$('.pw-ov').forEach(o=>o.classList.add('hidden')); paintChips(); }
   async function start(route){ deviceId(); rollDay(); await restoreFromUrl(); await verifyStored(); if(await claimHandoff()) route='allset'; ackEnd(getPass()); paintChips();

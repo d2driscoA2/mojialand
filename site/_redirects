@@ -8,3 +8,6 @@ https://www.mojialand.com/*  https://mojialand.com/:splat  301!
 
 # Email button: /r/CODE shows the code link page, which turns the pass on.
 /r/*  /r/index.html  200
+
+# Friend pass link (Release 1.1 #3): /g/CODE shows a link preview card, then opens /r/CODE.
+/g/*  /g/index.html  200

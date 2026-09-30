@@ -6,6 +6,7 @@ import { grantPass } from './_lib/grant.mjs';
 import { getStripe } from './_lib/stripe.mjs';
 import { buildEmail, sendEmail } from './_lib/email.mjs';
 import { campaignHit } from './_lib/analytics.mjs';
+import { friendPass } from './_lib/friend.mjs';
 
 const REQUIRED = [
   'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'SUPABASE_URL', 'SUPABASE_SERVICE_KEY', 'RESTORE_CODE_PEPPER',
@@ -34,7 +35,8 @@ async function emailOnce(session, result) {
     release = () => releaseEvent('email:' + session.id);
   }
   try {
-    await sendEmail(to, buildEmail({ plan: result.plan, pass: result.pass, code: result.code, origin }));
+    const friend = (result.plan === 'pass' || result.plan === 'life') ? await friendPass(result.pass).catch(() => null) : null;
+    await sendEmail(to, buildEmail({ plan: result.plan, pass: result.pass, code: result.code, origin, friend }));
   } catch (e) {
     await release().catch(() => {});
     throw e;

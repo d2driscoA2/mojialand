@@ -84,6 +84,7 @@ function serve(site) {
     let f = path.join(site, p);
     if (!f.startsWith(site)) { res.writeHead(403).end(); return; }
     if (/^\/r\/[^/]+$/.test(p)) f = path.join(site, 'r', 'index.html'); // _redirects: /r/*  /r/index.html  200
+    if (/^\/g\/[^/]+$/.test(p)) f = path.join(site, 'g', 'index.html'); // _redirects: /g/*  /g/index.html  200
     if (p.endsWith('/')) f = path.join(f, 'index.html');
     if (!fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404).end('not found'); return; }
     const h = {};
@@ -1219,6 +1220,45 @@ for (const [w, h, name] of [[375, 667, 'se'], [820, 1180, 'ipad']]) {
   await page.screenshot({ path: path.join(SHOTS, 'howto-card-390.png') });
   await page.click('#gGo'); await page.waitForTimeout(300);
   check('how-to card: Play closes the card', await page.evaluate(() => document.querySelector('#glass').classList.contains('hidden')));
+  await ctx.close();
+}
+
+// Release 1.1 #3: friend pass on All set and in Grown-ups; /g/ link page with a preview card
+{
+  const { ctx, page } = await newPage();
+  const { token, payload } = tokenFor('48h', Date.now() + 48 * 3600e3);
+  const useBy = new Date(Date.now() + 30 * 86400e3).toISOString();
+  let fcalls = [];
+  await page.route('**/.netlify/functions/confirm-session', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 'MOJI-TEST-CODE-2345', kind: '48h', ends_at: payload.e, token, email_masked: 'p•••@example.com', plan: 'pass' }) }));
+  await page.route('**/.netlify/functions/friend-code', (r) => { fcalls.push(r.request().postDataJSON()); r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 'GIFT-ABCD-EFGH-JKMN', link: base + '/g/GIFTABCDEFGHJKMN', use_by: useBy, state: 'ready' }) }); });
+  await page.goto(base + '/pass/done/?session_id=cs_test_gift');
+  await page.waitForSelector('#s-allset:not(.hidden)', { timeout: 15000 });
+  await page.waitForSelector('#pwOkGift:not([hidden]) [data-gift="share"]');
+  check('friend pass: All set shows the card with Share and Copy link', /Give a friend 48 free hours/.test(await page.textContent('#pwOkGift')) && /\/g\/GIFTABCDEFGHJKMN/.test(await page.textContent('#pwOkGift')));
+  check('friend pass: asks the server with the pass token', fcalls.length === 1 && fcalls[0].token === token);
+  await page.screenshot({ path: path.join(SHOTS, 'allset-friend-390.png'), fullPage: true });
+  await page.click('#pwOkBack');
+  await page.waitForSelector('#s-home:not(.hidden)');
+  await page.click('#lockBtn');
+  await page.waitForSelector('#s-ngate:not(.hidden)');
+  { const ans = await page.getAttribute('#pwChoices', 'data-a'); await page.click('#pwChoices [data-n="' + ans + '"]'); }
+  await page.waitForSelector('#s-gate:not(.hidden)');
+  check('friend pass: Grown-ups row', await page.isVisible('.pw-gurow[data-a="gift"]'));
+  await page.click('.pw-gurow[data-a="gift"]');
+  await page.waitForSelector('#pwOvGift:not(.hidden) [data-gift="share"]');
+  check('friend pass: Grown-ups sheet shows the card', /use|30|Give a friend/.test(await page.textContent('#pwGuGift')));
+  await page.screenshot({ path: path.join(SHOTS, 'gu-friend-390.png') });
+  check('friend pass: no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
+  await ctx.close();
+}
+{
+  const { ctx, page } = await newPage();
+  const hop = page.waitForRequest((q) => /\/r\/GIFTABCDEFGHJKMN\?c=fair$/.test(q.url()), { timeout: 5000 });
+  await page.goto(base + '/g/GIFTABCDEFGHJKMN?c=fair');
+  check('/g/ forwards to /r/ with the code and campaign', !!(await hop.catch(() => null)));
+  const html = fs.readFileSync(path.join(site, 'g', 'index.html'), 'utf8');
+  check('/g/ has the preview card tags', /og:image" content="https:\/\/[a-z.]+\/img\/friend-pass-card\.jpg"/.test(html) && /og:title" content="48 free hours of Mojialand"/.test(html) && fs.existsSync(path.join(site, 'img', 'friend-pass-card.jpg')));
+  check('/g/ no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
   await ctx.close();
 }
 

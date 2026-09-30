@@ -17,6 +17,8 @@ import { handler as adminApi } from '../netlify/functions/admin-api.mjs';
 import { handler as redeemFn } from '../netlify/functions/redeem-code.mjs';
 import { handler as settingsFn } from '../netlify/functions/settings.mjs';
 import { handler as handoff } from '../netlify/functions/handoff.mjs';
+import { handler as friendFn } from '../netlify/functions/friend-code.mjs';
+import { deriveFriendCode } from '../netlify/functions/_lib/codes.mjs';
 import ping from '../netlify/functions/ping.mjs';
 import { placeFromGeo, readPing } from '../netlify/functions/_lib/analytics.mjs';
 import { localMidnight, lastDays } from '../netlify/functions/_lib/analytics-admin.mjs';
@@ -235,7 +237,9 @@ test('webhook: completed grants once and emails once; base64 body; refund; dispu
   const dup = await webhook(signed(evt));
   assert.equal(dup.statusCode, 200); assert.equal(JSON.parse(dup.body).duplicate, true);
   assert.equal((await webhook(signed({ ...evt, id: 'evt_2b' }))).statusCode, 200);
-  assert.equal(db.passes.length, 1);
+  assert.equal(db.passes.filter((p) => p.source === 'stripe').length, 1);
+  { const fr = db.passes.filter((p) => p.batch === 'FRIEND'); assert.equal(fr.length, 1, 'one friend pass made with the email'); assert.equal(fr[0].status, 'unused'); assert.equal(fr[0].source, 'gift'); }
+  assert.match(db.emails.at(-1).text, /Give a friend 48 free hours/); assert.match(db.emails.at(-1).html, /sms:\?&(amp;)?body=/);
   assert.equal(db.emails.length, 1);
   const m = db.emails[0];
   const code = deriveCode(process.env.RESTORE_CODE_PEPPER, s.id);
@@ -275,7 +279,7 @@ test('webhook: email skipped without EMAIL_API_KEY', async () => {
   setEnv({ EMAIL_API_KEY: undefined });
   const s = paidSession('cs_test_wh7', 'life');
   assert.equal((await webhook(signed({ id: 'evt_7', type: 'checkout.session.completed', data: { object: s } }))).statusCode, 200);
-  assert.equal(db.passes.length, 1);
+  assert.equal(db.passes.filter((p) => p.source === 'stripe').length, 1);
   assert.equal(db.emails.length, 0);
 });
 
@@ -693,4 +697,41 @@ test('admin analytics: 90-day range compares with the 90 days before; bad ranges
   assert.equal(r.prev, null, 'no comparison past the 400 days kept');
   r = JSON.parse((await adminApi(ev({ action: 'analytics.history', range: 12 }, { cookie }))).body);
   assert.equal(r.range, 7);
+});
+
+
+test('friend pass: one per pass, from the pass token; only for devices new to Mojialand; 30 days', async () => {
+  const { pass } = await grantPass(paidSession('cs_test_fr1', 'pass'));
+  const tok = signToken(makeTokenPayload(pass, 'staging'), process.env.PASS_SIGNING_PRIVATE_KEY);
+  assert.equal((await friendFn(ev({ token: 'nope.nope' }))).statusCode, 403);
+  assert.equal((await friendFn(ev({ token: signToken(makeTokenPayload(pass, 'live'), process.env.PASS_SIGNING_PRIVATE_KEY) }))).statusCode, 403, 'live token on staging');
+  let r = await friendFn(ev({ token: tok }));
+  assert.equal(r.statusCode, 200);
+  const f = JSON.parse(r.body);
+  assert.equal(f.code, deriveFriendCode(process.env.RESTORE_CODE_PEPPER, pass.id)); assert.match(f.code, /^GIFT-/);
+  assert.equal(f.state, 'ready'); assert.ok(f.link.endsWith('/g/' + f.code.replace(/-/g, '')));
+  assert.equal(JSON.parse((await friendFn(ev({ token: tok }))).body).code, f.code, 'same code again');
+  assert.equal(db.passes.filter((p) => p.batch === 'FRIEND').length, 1, 'one friend pass per pass');
+  assert.ok(!JSON.stringify(db.passes).includes(f.code) && !JSON.stringify(db.passes).includes(f.code.replace(/-/g, '')), 'friend code never stored');
+  const useBy = new Date(db.passes.find((p) => p.batch === 'FRIEND').use_by).getTime();
+  assert.ok(Math.abs(useBy - (new Date(pass.starts_at).getTime() + 30 * 86400e3)) < 5000, 'use by 30 days after the pass started');
+  // the buyer's own device had a pass: the friend pass refuses it
+  await redeem(ev({ code: deriveCode(process.env.RESTORE_CODE_PEPPER, 'cs_test_fr1'), device_id: 'c'.repeat(32) }));
+  r = await redeem(ev({ code: f.code, device_id: 'c'.repeat(32) }));
+  assert.equal(r.statusCode, 403); assert.match(JSON.parse(r.body).error, /families new to Mojialand/);
+  // a new family's device: turns on for 48 hours
+  r = await redeem(ev({ code: f.code, device_id: 'd'.repeat(32) }));
+  assert.equal(r.statusCode, 200); assert.equal(JSON.parse(r.body).kind, '48h');
+  assert.equal(JSON.parse((await friendFn(ev({ token: tok }))).body).state, 'used');
+  // the friend gets one friend pass of their own
+  const fp = db.passes.find((p) => p.batch === 'FRIEND');
+  const ftok = signToken(makeTokenPayload(fp, 'staging'), process.env.PASS_SIGNING_PRIVATE_KEY);
+  const f2 = JSON.parse((await friendFn(ev({ token: ftok }))).body);
+  assert.match(f2.code, /^GIFT-/); assert.notEqual(f2.code, f.code);
+  // refunded passes give nothing; old passes past 30 days give nothing new
+  const { pass: old } = await grantPass(paidSession('cs_test_fr2', 'pass'));
+  old.starts_at = new Date(Date.now() - 31 * 86400e3).toISOString(); db.passes.find((p) => p.id === old.id).starts_at = old.starts_at;
+  assert.equal((await friendFn(ev({ token: signToken(makeTokenPayload(old, 'staging'), process.env.PASS_SIGNING_PRIVATE_KEY) }))).statusCode, 410);
+  db.passes.find((p) => p.id === pass.id).status = 'refunded';
+  assert.equal((await friendFn(ev({ token: tok }))).statusCode, 410);
 });
