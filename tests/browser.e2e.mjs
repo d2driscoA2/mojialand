@@ -593,17 +593,21 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await page.waitForSelector('#s-pattern:not(.hidden)');
   await page.waitForTimeout(800);
   check('pattern: the next dot pulses', (await page.locator('#pdots i.next').count()) === 1 && (await page.locator('#pdots i.on').count()) === 0);
-  for (let i = 0; i < 3; i++) {
+  check('pattern: 8 dots per level', (await page.locator('#pdots i').count()) === 8);
+  for (let i = 0; i < 8; i++) {
     await page.waitForSelector('#pchoices .choice[data-ok="1"]');
     await page.click('#pchoices .choice[data-ok="1"]');
     await page.waitForTimeout(300);
     if (i === 0) check('pattern: first right answer lights one dot', (await page.locator('#pdots i.on').count()) === 1);
-    if (i === 2) { await page.waitForTimeout(400); check('pattern: third dot sets off the party and confetti', await page.locator('#pdots.full').count() === 1 && (await page.locator('#s-pattern .confetti').count()) > 0); await page.screenshot({ path: path.join(SHOTS, 'pattern-dots-full-390.png') }); }
+    if (i === 2) check('pattern: 3 right answers do not end the level', (await page.locator('#pdots.full').count()) === 0 && await page.isHidden('#preward'));
+    if (i === 3) { check('pattern: halfway sends a friend running across', (await page.locator('#s-pattern .prun').count()) === 1 && (await page.locator('#pdots i.on').count()) === 4); await page.screenshot({ path: path.join(SHOTS, 'pattern-halfway-390.png') }); }
+    if (i === 7) { await page.waitForTimeout(400); check('pattern: eighth dot sets off the party and confetti', await page.locator('#pdots.full').count() === 1 && (await page.locator('#s-pattern .confetti').count()) > 0); await page.screenshot({ path: path.join(SHOTS, 'pattern-dots-full-390.png') }); }
     await page.waitForTimeout(1000);
   }
   await page.waitForSelector('#preward:not(.hidden)', { timeout: 5000 });
   const txt = await page.textContent('#preward');
-  check('pattern: bronze medal after the first place', /bronze medal/.test(txt) && (await page.locator('#preward .shelf span.got').count()) === 1, txt.slice(0, 60));
+  check('pattern: star badge and bronze medal after the first place', /star badge/.test(txt) && /bronze medal/.test(txt) && (await page.locator('#preward .pbadges span.got').count()) === 1 && (await page.locator('#preward .pmedals span.got').count()) === 1, txt.slice(0, 80));
+  check('pattern: progress stays on the device', (await page.evaluate(() => localStorage.getItem('mojia.patStreak'))) === '8');
   await page.screenshot({ path: path.join(SHOTS, 'pattern-reward-390.png') });
   await ctx.close();
 }
