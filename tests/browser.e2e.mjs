@@ -625,7 +625,7 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
 {
   const { ctx, page } = await newPage({ viewport: { width: 1024, height: 900 }, isMobile: false, hasTouch: false, deviceScaleFactor: 1 });
   let signedIn = false; const calls = [];
-  page.on('dialog', (d) => d.accept('note from test'));
+  page.on('dialog', (d) => d.accept(/Send the code email/.test(d.message()) ? 'real.parent@example.com' : 'note from test'));
   await page.route('**/.netlify/functions/admin-login', (r) => {
     const m = r.request().method(); const b = m === 'POST' ? r.request().postDataJSON() : {};
     if (m === 'GET') return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ signed_in: signedIn }) });
@@ -645,7 +645,7 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
     }
     if (!signedIn) return r.fulfill({ status: 401, contentType: 'application/json', body: '{"error":"Please sign in."}' });
     const out = { 'passes.list': { passes: [pass] }, 'passes.note': { pass: { ...pass, note: b.note } }, 'passes.add48': { pass: { ...pass, ends_at: new Date(Date.now() + 49 * 3600e3).toISOString() } },
-      'codes.create': { code: 'GIFT-ABCD-EFGH-JKMN', pass: {} }, 'passes.refund': { pass: { ...pass, status: 'refunded' } }, 'codes.batch': { codes: Array.from({ length: b.count }, (_, i) => ({ code: 'GIFT-B' + String(i).padStart(3, '0') + '-EFGH-JKMN', id: 'id' + i })) }, 'support.list': { messages: [{ id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', email: 'mom@example.com', topic: 'pass', message: 'Code not working\n\nCode ending AB12: pass ...', created_at: new Date().toISOString(), status: 'open' }] },
+      'codes.create': { code: 'GIFT-ABCD-EFGH-JKMN', pass: {} }, 'passes.code': { code: 'MOJI-ABCD-EFGH-JKMN', link: 'https://mojialand.com/r/MOJIABCDEFGHJKMN' }, 'passes.email': b.to === 'real.parent@example.com' ? { pass, sent: true } : null, 'passes.refund': { pass: { ...pass, status: 'refunded' } }, 'codes.batch': { codes: Array.from({ length: b.count }, (_, i) => ({ code: 'GIFT-B' + String(i).padStart(3, '0') + '-EFGH-JKMN', id: 'id' + i })) }, 'support.list': { messages: [{ id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', email: 'mom@example.com', topic: 'pass', message: 'Code not working\n\nCode ending AB12: pass ...', created_at: new Date().toISOString(), status: 'open' }] },
       'support.set': { ok: true }, 'settings.get': { settings: [{ key: 'daily_minutes', value: 3, help: 'Free play each day.' }, { key: 'daily_reset', value: '04:00', help: 'Reset time.' }] }, 'settings.set': { ok: true } }[b.action];
     r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(out || { error: 'Unknown action.' }) });
   });
@@ -664,6 +664,13 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await page.click('#pList [data-act="note"]');
   await page.waitForFunction(() => /note from test/.test(document.querySelector('#pList').textContent));
   check('admin: note saved through prompt', true);
+  await page.click('#pList [data-act="passes.code"]');
+  await page.waitForSelector('#pList .codebox');
+  check('admin: Show code shows the full paid code with copy buttons', /MOJI-ABCD-EFGH-JKMN/.test(await page.textContent('#pList .codebox')) && (await page.locator('#pList .codebox [data-copy]').count()) === 2);
+  await page.click('#pList [data-act="passes.email"]');
+  await page.waitForFunction(() => /Code email sent to real\.parent@example\.com/.test(document.querySelector('#pErr').textContent));
+  check('admin: Email code sends to the typed address', calls.includes('passes.email'));
+  check('admin: search hint names Hide My Email', /Hide My Email/.test(await page.getAttribute('#pq', 'placeholder')));
   check('admin: Refund button on a Stripe pass', await page.isVisible('#pList [data-act="passes.refund"]'));
   await page.click('#pList [data-act="passes.refund"]');
   await page.waitForFunction(() => /refunded/.test(document.querySelector('#pList .pill').textContent));
