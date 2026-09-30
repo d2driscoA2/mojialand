@@ -1,9 +1,10 @@
 // POST {action, ...} for the admin page. Every call needs the session cookie.
 import { guard } from './_lib/env.mjs';
-import { json, fail, readJson } from './_lib/http.mjs';
+import { json, fail, readJson, header, originFromHost } from './_lib/http.mjs';
 import { rest, patchPass, safeErr } from './_lib/db.mjs';
 import { isSignedIn } from './_lib/admin.mjs';
-import { randomCode, codeHash, codeLast4 } from './_lib/codes.mjs';
+import { randomCode, codeHash, codeLast4, deriveCode, codeNoDashes } from './_lib/codes.mjs';
+import { buildEmail, sendEmail } from './_lib/email.mjs';
 import { getStripe } from './_lib/stripe.mjs';
 import { liveView, historyView, campaignsView, createCampaign, setCampaignActive } from './_lib/analytics-admin.mjs';
 
@@ -24,8 +25,34 @@ async function passWithDevices(id) {
   return pass;
 }
 
+// Paid codes come from the Stripe session ID, so the admin can show or re-send
+// them without the code ever being stored. Gift and manual codes are not stored
+// anywhere and cannot be shown again.
+async function paidCode(id) {
+  if (!UUID.test(String(id || ''))) throw new Error('bad id');
+  const p = await passWithDevices(id);
+  if (!p) throw new Error('pass not found');
+  if (p.source !== 'stripe' || !p.stripe_session_id) throw new Error('only paid passes can show their code. For a gift or manual code, make a new code');
+  return { p, code: deriveCode(process.env.RESTORE_CODE_PEPPER, p.stripe_session_id) };
+}
+const EMAIL_RE = /^[^\s@<>(),;:"]{1,64}@[A-Za-z0-9.-]{1,253}\.[A-Za-z]{2,24}$/;
+
 const actions = {
   // ---- passes
+  async 'passes.code'({ id }, event) {
+    const { code } = await paidCode(id);
+    return { code, link: originFromHost(header(event, 'host')) + '/r/' + codeNoDashes(code) };
+  },
+  async 'passes.email'({ id, to }, event) {
+    const addr = String(to || '').trim();
+    if (!EMAIL_RE.test(addr)) throw new Error('type a full email address');
+    const { p, code } = await paidCode(id);
+    const plan = p.kind === 'forever' ? 'life' : 'pass';
+    const ok = await sendEmail(addr, buildEmail({ plan, pass: p, code, origin: originFromHost(header(event, 'host')) }));
+    if (ok === false) throw new Error('email is not set up on this site');
+    await patchPass('id=eq.' + enc(id), { note: ((p.note ? p.note + ' · ' : '') + 'code emailed from admin ' + new Date().toISOString().slice(0, 10)).slice(0, 500) });
+    return { pass: await passWithDevices(id), sent: true };
+  },
   async 'passes.list'({ q }) {
     const s = String(q || '').trim();
     let filter = '';
@@ -173,7 +200,7 @@ export const handler = async (event) => {
   const fn = actions[input.action];
   if (!fn) return fail(400, 'Unknown action.');
   try {
-    const out = await fn(input);
+    const out = await fn(input, event);
     if (!/^analytics\./.test(input.action)) console.log('admin-api: ' + input.action);
     return json(200, out);
   } catch (e) {

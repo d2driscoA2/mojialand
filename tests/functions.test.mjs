@@ -418,6 +418,18 @@ test('admin-api: needs the cookie; passes, codes, support, settings', async () =
   const ends0 = new Date(d.passes[0].ends_at).getTime();
   [st, d] = await A('passes.add48', { id: pass.id });
   assert.equal(new Date(d.pass.ends_at).getTime(), ends0 + 48 * 3600e3);
+  // show and re-send the paid code (hotfix September 30): rebuilt from the Stripe session, never stored
+  [st, d] = await A('passes.code', { id: pass.id });
+  assert.equal(st, 200); assert.equal(d.code, code); assert.ok(d.link.endsWith('/r/' + code.replace(/-/g, '')));
+  const sent0 = db.emails.length;
+  [st, d] = await A('passes.email', { id: pass.id, to: 'not-an-email' });
+  assert.equal(st, 400); assert.equal(db.emails.length, sent0);
+  [st, d] = await A('passes.email', { id: pass.id, to: 'real.parent@example.com' });
+  assert.equal(st, 200); assert.equal(d.sent, true);
+  const em = db.emails.at(-1);
+  assert.deepEqual(em.to, ['real.parent@example.com']); assert.ok(em.subject.startsWith('Mojialand:')); assert.ok(em.text.includes(code));
+  assert.match(d.pass.note, /code emailed from admin/);
+  assert.ok(!JSON.stringify(db.passes).includes(code), 'code still never stored');
   [st, d] = await A('passes.note', { id: pass.id, note: 'called mom' });
   assert.equal(d.pass.note, 'called mom');
   await redeemFn(ev({ code, device_id: 'a'.repeat(32) }));
@@ -441,6 +453,7 @@ test('admin-api: needs the cookie; passes, codes, support, settings', async () =
   // gift code: shown once, works in redeem-code, never stored
   [st, d] = await A('codes.create', { kind: '48h', source: 'gift', days_valid: 30, note: 'grandma' });
   assert.equal(st, 200); assert.match(d.code, /^GIFT-/); assert.equal(d.pass.status, 'unused');
+  { const [s2] = await A('passes.code', { id: d.pass.id }); assert.equal(s2, 400, 'gift codes cannot be shown again'); }
   assert.ok(!JSON.stringify(db.passes).includes(d.code) && !JSON.stringify(db.passes).includes(d.code.replace(/-/g, '')));
   const rr = await redeemFn(ev({ code: d.code, device_id: 'b'.repeat(32) }));
   assert.equal(rr.statusCode, 200);

@@ -123,7 +123,7 @@ textarea{resize:vertical;min-height:80px}
   <section class="card" data-panel="passes">
     <h2>Passes</h2>
     <p>Search by email, the last 4 characters of a code, or a Stripe session id. Empty search shows the latest 50.</p>
-    <div class="row"><label>Search<input id="pq" placeholder="parent@example.com or AB12"></label><button class="primary" id="pGo" type="button">Search</button></div>
+    <div class="row"><label>Search<input id="pq" placeholder="Email, Hide My Email, last 4 (AB12), or cs_ session"></label><button class="primary" id="pGo" type="button">Search</button></div>
     <p class="err" id="pErr"></p>
     <div class="list" id="pList" style="margin-top:14px"></div>
   </section>
@@ -244,21 +244,26 @@ function passItem(p){ const st=p.status; const ends=p.kind==='forever'?'Forever'
     +'<div class="meta">'+esc(ends)+(p.use_by&&st==='unused'?' · use by '+fmt(p.use_by):'')+(typeof p.devices==='number'?' · '+p.devices+' of '+p.device_limit+' devices':'')+(p.stripe_session_id?' · '+esc(p.stripe_session_id):'')+'</div>'
     +(p.note?'<div class="meta">Note: '+esc(p.note)+'</div>':'')
     +'<div class="acts">'+(p.kind!=='forever'?'<button class="secondary" data-act="passes.add48">Add 48 hours</button><button class="secondary" data-act="passes.forever">Make Forever</button>':'')
-    +'<button class="secondary" data-act="passes.devices_reset">Reset devices</button><button class="secondary" data-act="note">Note</button>'
+    +(p.source==='stripe'&&p.stripe_session_id?'<button class="secondary" data-act="passes.code">Show code</button><button class="secondary" data-act="passes.email">Email code</button>':'')+'<button class="secondary" data-act="passes.devices_reset">Reset devices</button><button class="secondary" data-act="note">Note</button>'
     +(st==='active'?'<button class="danger" data-act="passes.end">End pass</button>':'')+(p.source==='stripe'&&p.stripe_session_id&&st!=='refunded'?'<button class="danger" data-act="passes.refund">Refund</button>':'')+'</div></div>'; }
 async function loadPasses(){ $('pErr').textContent=''; $('pList').innerHTML='<p>Loading…</p>';
   try{ const d=await api('passes.list',{q:$('pq').value}); $('pList').innerHTML=d.passes.length?d.passes.map(passItem).join(''):'<p>No passes found.</p>'; }
   catch(e){ $('pList').innerHTML=''; $('pErr').textContent=e.message; } }
 $('pGo').addEventListener('click',loadPasses);
 $('pq').addEventListener('keydown',e=>{ if(e.key==='Enter') loadPasses(); });
-$('pList').addEventListener('click',async e=>{ const b=e.target.closest('[data-act]'); if(!b) return; const item=b.closest('.item'), id=item.dataset.id, act=b.dataset.act; $('pErr').textContent='';
+$('pList').addEventListener('click',async e=>{ const cp=e.target.closest('[data-copy]'); if(cp){ try{ await navigator.clipboard.writeText(cp.dataset.copy); cp.textContent='Copied'; }catch(_){ const r=document.createRange(); const v=cp.parentElement.querySelector('.codeval'); if(v){ r.selectNodeContents(v); const sel=getSelection(); sel.removeAllRanges(); sel.addRange(r); } } return; }
+  const b=e.target.closest('[data-act]'); if(!b) return; const item=b.closest('.item'), id=item.dataset.id, act=b.dataset.act; $('pErr').textContent='';
   let extra={id:id};
   if(act==='note'){ const cur=(item.querySelector('.meta:last-of-type')||{}).textContent||''; const n=prompt('Note for this pass:',/^Note: /.test(cur)?cur.slice(6):''); if(n===null) return; extra.note=n; }
   else if(act==='passes.end'&&!confirm('End this pass now?')) return;
   else if(act==='passes.refund'&&!confirm('Refund the full '+(item.textContent.match(/\$\d+\.\d\d/)||['amount'])[0]+' to the card and end this pass? Add 48 hours and upgrade payments are separate; refund those in Stripe.')) return;
   else if(act==='passes.devices_reset'&&!confirm('Forget every device on this pass? The family taps the email button or types the code again on each device.')) return;
+  else if(act==='passes.email'){ const t=prompt('Send the code email to which address? Use the parent\'s real email if the one on file is a Hide My Email address.',((item.querySelector('.meta')||{}).textContent||'').split(' · ')[0].replace('(no email)','')); if(t===null) return; extra.to=t.trim(); }
+  if(act==='passes.code'){ b.disabled=true; try{ const d=await api('passes.code',extra); let box=item.querySelector('.codebox'); if(!box){ box=document.createElement('div'); box.className='meta codebox'; item.insertBefore(box,item.querySelector('.acts')); }
+      box.innerHTML='Code: <b class="codeval">'+esc(d.code)+'</b> <button class="secondary" type="button" data-copy="'+esc(d.code)+'">Copy code</button> <button class="secondary" type="button" data-copy="'+esc(d.link)+'">Copy link</button>'; }
+    catch(err){ $('pErr').textContent=err.message; } b.disabled=false; return; }
   b.disabled=true;
-  try{ const d=await api(act==='note'?'passes.note':act,extra); item.outerHTML=passItem(d.pass); }
+  try{ const d=await api(act==='note'?'passes.note':act,extra); item.outerHTML=passItem(d.pass); if(act==='passes.email') $('pErr').textContent='Code email sent to '+extra.to+'.'; }
   catch(err){ $('pErr').textContent=err.message; b.disabled=false; } });
 
 /* ---- codes */
