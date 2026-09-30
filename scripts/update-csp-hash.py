@@ -116,7 +116,7 @@ friend_csp = ("default-src 'none'; script-src 'sha256-%s'; style-src 'unsafe-inl
 
 # Admin page: same-site only, never indexed, never cached.
 admin_csp = ("default-src 'none'; script-src 'self' 'sha256-%s'; style-src 'self' 'unsafe-inline'; "
-             "img-src 'self' data:; font-src 'self'; connect-src 'self'; "
+             "img-src 'self' data:; font-src 'self'; connect-src 'self'; worker-src 'self'; manifest-src 'self'; "
              "base-uri 'self'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests") % admin
 
 # Checkout pages (/pass/ and /pass/done/): the only place Stripe may load.

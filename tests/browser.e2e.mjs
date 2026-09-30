@@ -651,7 +651,7 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
     if (!signedIn) return r.fulfill({ status: 401, contentType: 'application/json', body: '{"error":"Please sign in."}' });
     const out = { 'passes.list': { passes: [pass] }, 'passes.note': { pass: { ...pass, note: b.note } }, 'passes.add48': { pass: { ...pass, ends_at: new Date(Date.now() + 49 * 3600e3).toISOString() } },
       'codes.create': { code: 'GIFT-ABCD-EFGH-JKMN', pass: {} }, 'passes.code': { code: 'MOJI-ABCD-EFGH-JKMN', link: 'https://mojialand.com/r/MOJIABCDEFGHJKMN' }, 'passes.email': b.to === 'real.parent@example.com' ? { pass, sent: true } : null, 'passes.refund': { pass: { ...pass, status: 'refunded' } }, 'codes.batch': { codes: Array.from({ length: b.count }, (_, i) => ({ code: 'GIFT-B' + String(i).padStart(3, '0') + '-EFGH-JKMN', id: 'id' + i })) }, 'support.list': { messages: [{ id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', email: 'mom@example.com', topic: 'pass', message: 'Code not working\n\nCode ending AB12: pass ...', created_at: new Date().toISOString(), status: 'open' }] },
-      'support.set': { ok: true }, 'settings.get': { settings: [{ key: 'daily_minutes', value: 3, help: 'Free play each day.' }, { key: 'daily_reset', value: '04:00', help: 'Reset time.' }] }, 'settings.set': { ok: true } }[b.action];
+      'support.set': { ok: true }, 'settings.get': { settings: [{ key: 'daily_minutes', value: 3, help: 'Free play each day.' }, { key: 'daily_reset', value: '04:00', help: 'Reset time.' }] }, 'settings.set': { ok: true }, 'alerts.get': { ready: true, publicKey: 'BAAA', mode: 'each', phones: [], today: 'No new players, no gift codes used.' }, 'alerts.mode': { ok: true, mode: b.mode } }[b.action];
     r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(out || { error: 'Unknown action.' }) });
   });
   await page.goto(base + '/admin/');
@@ -698,6 +698,19 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await page.click('[data-tab="support"]');
   await page.waitForSelector('#sList .item');
   check('admin: support inbox lists the message', /mom@example\.com/.test(await page.textContent('#sList')));
+  // phone alerts (Release 1.1 #23)
+  await page.click('[data-tab="settings"]');
+  await page.waitForFunction(() => /Today so far/.test(document.querySelector('#alInfo').textContent));
+  check('admin: Phone alerts card with turn on, test, and when to buzz', await page.isVisible('#alOn') && await page.isVisible('#alTest') && (await page.inputValue('#alMode')) === 'each' && /No phones get alerts yet/.test(await page.textContent('#alInfo')));
+  await page.selectOption('#alMode', 'daily');
+  await page.waitForFunction(() => /Saved/.test(document.querySelector('#alOk').textContent));
+  check('admin: changing when to buzz saves', calls.includes('alerts.mode'));
+  check('admin: page carries a Home Screen manifest', (await page.getAttribute('link[rel=manifest]', 'href')) === '/admin/manifest.webmanifest');
+  const man = await page.evaluate(() => fetch('/admin/manifest.webmanifest').then((r) => r.json()));
+  const sw = await page.evaluate(() => fetch('/admin/sw.js').then((r) => r.text()));
+  check('admin: manifest opens standalone at /admin/; service worker shows pushes', man.display === 'standalone' && man.start_url === '/admin/' && man.scope === '/admin/' && /showNotification/.test(sw) && !/addEventListener\('fetch'/.test(sw));
+  await page.screenshot({ path: path.join(SHOTS, 'admin-alerts.png') });
+  await page.click('[data-tab="support"]'); await page.waitForSelector('#sList .item');
   await page.click('#sList [data-st="done"]');
   await page.waitForTimeout(300);
   check('admin: mark done calls support.set', calls.includes('support.set'));
@@ -802,6 +815,27 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   check('play: zero third-party requests', page.reqs.every((u) => u.startsWith(base) || u.startsWith('data:')));
   check('play: no CSP violations', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
   await ctx.close();
+}
+
+// 10a. new-player alert (Release 1.1 #23): one bare ping the first time the game starts on a new device
+{
+  const { ctx, page } = await newPage();
+  const pings = [];
+  await page.route('**/api/ping', (r) => { pings.push(JSON.parse(r.request().postData() || 'null')); r.fulfill({ status: 204 }); });
+  await page.goto(base + '/play/');
+  await page.waitForTimeout(300);
+  const firsts = () => pings.filter((p) => p && p.e === 'first');
+  check('alerts: a new device sends one first-start ping with nothing else in it', firsts().length === 1 && JSON.stringify(firsts()[0]) === '{"e":"first"}', JSON.stringify(pings));
+  await page.reload(); await page.waitForTimeout(300);
+  check('alerts: the same device never sends it again', firsts().length === 1);
+  await ctx.close();
+  const b = await newPage();
+  const p2 = [];
+  await b.page.route('**/api/ping', (r) => { p2.push(JSON.parse(r.request().postData() || 'null')); r.fulfill({ status: 204 }); });
+  await b.page.addInitScript(() => { localStorage.setItem('mojia.welcomed', 'true'); });
+  await b.page.goto(base + '/play/'); await b.page.waitForTimeout(300);
+  check('alerts: a device that played before the update is not counted as new', !p2.some((p) => p && p.e === 'first'));
+  await b.ctx.close();
 }
 
 // 10b. play counts: QR label saved and counted once, game open and close pings carry no personal data

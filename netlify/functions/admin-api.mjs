@@ -7,6 +7,7 @@ import { randomCode, codeHash, codeLast4, deriveCode, codeNoDashes } from './_li
 import { buildEmail, sendEmail } from './_lib/email.mjs';
 import { friendPass } from './_lib/friend.mjs';
 import { getStripe } from './_lib/stripe.mjs';
+import { pushReady, readSubscription, MODES, alertMode, pushAll, sendPush, summaryText, michiganDay } from './_lib/push.mjs';
 import { liveView, historyView, campaignsView, createCampaign, setCampaignActive } from './_lib/analytics-admin.mjs';
 
 const REQUIRED = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY', 'RESTORE_CODE_PEPPER', 'STRIPE_SECRET_KEY'];
@@ -168,10 +169,43 @@ const actions = {
   async 'campaigns.create'(input) { await createCampaign(input); return campaignsView(); },
   async 'campaigns.active'(input) { await setCampaignActive(input); return campaignsView(); },
 
+  // ---- phone alerts (Release 1.1 #23)
+  async 'alerts.get'() {
+    const { data } = await rest('GET', 'push_subs?select=endpoint,created_at');
+    const subs = Array.isArray(data) ? data : [];
+    const t = await rest('GET', 'alert_counts?day=eq.' + michiganDay() + '&select=kind,label,n');
+    return { ready: pushReady(), publicKey: process.env.VAPID_PUBLIC_KEY || '', mode: await alertMode(), phones: subs.map((x) => x.endpoint), today: summaryText(Array.isArray(t.data) ? t.data : []).body };
+  },
+  async 'alerts.subscribe'({ sub }) {
+    if (!pushReady()) throw new Error('alerts are not set up on this site yet');
+    const row = readSubscription(sub);
+    if (!row) throw new Error('this browser gave an address that is not a push service');
+    const { data } = await rest('GET', 'push_subs?select=endpoint');
+    if (Array.isArray(data) && data.length >= 10 && !data.some((x) => x.endpoint === row.endpoint)) throw new Error('10 phones at most. Remove one first');
+    await rest('POST', 'push_subs?on_conflict=endpoint', { body: { ...row, created_at: new Date().toISOString() }, prefer: 'resolution=merge-duplicates,return=minimal' });
+    const r = await sendPush(row, { title: 'Alerts are on', body: 'This phone gets Mojialand alerts.', tag: 'test' });
+    return { ok: true, test: r };
+  },
+  async 'alerts.unsubscribe'({ endpoint }) {
+    const e = String(endpoint || '');
+    if (!e || e.length > 600) throw new Error('bad phone');
+    await rest('DELETE', 'push_subs?endpoint=eq.' + enc(e), { prefer: 'return=minimal' });
+    return { ok: true };
+  },
+  async 'alerts.mode'({ mode }) {
+    if (!MODES.includes(mode)) throw new Error('unknown choice');
+    await rest('POST', 'settings?on_conflict=key', { body: { key: 'alerts_mode', value: mode, help: 'Phone alerts: each, daily, or off.', updated_at: new Date().toISOString() }, prefer: 'resolution=merge-duplicates,return=minimal' });
+    return { ok: true, mode };
+  },
+  async 'alerts.test'() {
+    if (!pushReady()) throw new Error('alerts are not set up on this site yet');
+    return { sent: await pushAll({ title: 'Test alert', body: 'Mojialand alerts work.', tag: 'test' }) };
+  },
+
   // ---- settings
   async 'settings.get'() {
     const { data } = await rest('GET', 'settings?select=key,value,help,updated_at&order=key');
-    return { settings: Array.isArray(data) ? data : [] };
+    return { settings: Array.isArray(data) ? data.filter((r) => r.key !== 'alerts_mode') : [] };
   },
   async 'settings.set'({ key, value }) {
     if (!SETTING_KEYS.includes(key)) throw new Error('unknown setting');

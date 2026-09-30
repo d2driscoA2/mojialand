@@ -8,6 +8,8 @@
 <link rel="icon" type="image/svg+xml" href="/logo/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/logo/icon-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/logo/icon-180.png">
+<link rel="manifest" href="/admin/manifest.webmanifest">
+<meta name="apple-mobile-web-app-title" content="Moji admin">
 <title>Mojialand admin</title>
 <link rel="stylesheet" href="/admin/analytics.css">
 <style>
@@ -175,6 +177,16 @@ textarea{resize:vertical;min-height:80px}
     <div class="list" id="sList" style="margin-top:14px"></div>
   </section>
 
+  <section class="card" data-panel="settings" id="alCard" hidden>
+    <h2>Phone alerts</h2>
+    <p>Your phone buzzes for each new player and each gift code used. Alerts never name a family, an email, a device, or a place.</p>
+    <p id="alHint" hidden></p>
+    <p class="err" id="alErr"></p><p class="ok" id="alOk"></p>
+    <div class="row" style="margin-bottom:10px"><button class="primary" id="alOn">Turn on alerts on this phone</button><button class="secondary" id="alOff" hidden>Turn off on this phone</button><button class="secondary" id="alTest">Send a test alert</button></div>
+    <label>When to buzz<select id="alMode"><option value="each">Each new player and gift code, plus a summary at 8 PM</option><option value="daily">One summary at 8 PM</option><option value="off">Off</option></select></label>
+    <p class="meta" id="alInfo" style="margin-top:10px"></p>
+  </section>
+
   <section class="card settings" data-panel="settings" hidden>
     <h2>Settings</h2>
     <p>The game reads these on the next open. Numbers are minutes or days. Reset time is 24-hour, like 04:00.</p>
@@ -235,7 +247,7 @@ $('tabs').addEventListener('click',e=>{ const b=e.target.closest('[data-tab]'); 
   document.querySelectorAll('#tabs [data-tab]').forEach(x=>x.setAttribute('aria-selected',String(x===b)));
   document.querySelectorAll('[data-panel]').forEach(p=>{ p.hidden=p.dataset.panel!==t; });
   if(window.MojiAnalytics){ if(t==='analytics') window.MojiAnalytics.show(); else window.MojiAnalytics.hide(); }
-  if(t==='passes') loadPasses(); else if(t==='support') loadSupport(); else if(t==='settings') loadSettings(); else if(t==='services') renderServices(); });
+  if(t==='passes') loadPasses(); else if(t==='support') loadSupport(); else if(t==='settings'){ loadSettings(); loadAlerts(); } else if(t==='services') renderServices(); });
 
 /* ---- passes */
 function passItem(p){ const st=p.status; const ends=p.kind==='forever'?'Forever':(p.ends_at?'Ends '+fmt(p.ends_at):'Not started');
@@ -320,6 +332,34 @@ async function loadSettings(){ $('stErr').textContent=''; $('stOk').textContent=
 $('stList').addEventListener('change',async e=>{ const inp=e.target; if(inp.tagName!=='INPUT') return; const key=inp.closest('.item').dataset.key; $('stErr').textContent=''; $('stOk').textContent='';
   try{ await api('settings.set',{key:key,value:inp.value}); $('stOk').textContent='Saved '+key.replace(/_/g,' ')+'.'; }catch(err){ $('stErr').textContent=err.message; } });
 
+/* ---- phone alerts (Release 1.1 #23): web push to this page saved on a Home Screen */
+let alKey='', alPhones=[];
+const alStandalone=()=>{ try{ return matchMedia('(display-mode: standalone)').matches||navigator.standalone===true; }catch(e){ return false; } };
+const alIOS=()=>/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const u8=s=>{ const b=atob(s.replace(/-/g,'+').replace(/_/g,'/')+'='.repeat((4-s.length%4)%4)); return Uint8Array.from(b,c=>c.charCodeAt(0)); };
+async function alMine(){ try{ if(!('serviceWorker' in navigator)) return null; const r=await navigator.serviceWorker.getRegistration('/admin/'); return r&&r.pushManager?await r.pushManager.getSubscription():null; }catch(e){ return null; } }
+async function loadAlerts(){ $('alErr').textContent=''; $('alOk').textContent='';
+  try{ const d=await api('alerts.get'); alKey=d.publicKey; alPhones=d.phones||[]; $('alMode').value=d.mode;
+    const sub=await alMine(), on=!!(sub&&alPhones.includes(sub.endpoint)), can='PushManager' in window&&'serviceWorker' in navigator&&'Notification' in window;
+    $('alOn').hidden=on; $('alOff').hidden=!on; $('alOn').disabled=!d.ready||!can;
+    let hint=''; if(!d.ready) hint='Alerts need two keys in Netlify first: VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY.'; else if(!can&&alIOS()&&!alStandalone()) hint='On iPhone: tap Share, then Add to Home Screen. Open Moji admin from your Home Screen and turn alerts on there.'; else if(!can) hint='This browser cannot get alerts.';
+    $('alHint').textContent=hint; $('alHint').hidden=!hint;
+    $('alInfo').textContent=(alPhones.length?alPhones.length+(alPhones.length===1?' phone gets':' phones get')+' alerts. ':'No phones get alerts yet. ')+(on?'This phone is one of them. ':'')+'Today so far: '+d.today; }
+  catch(e){ $('alErr').textContent=e.message; } }
+$('alOn').addEventListener('click',async()=>{ const b=$('alOn'); $('alErr').textContent=''; $('alOk').textContent=''; b.disabled=true;
+  try{ const perm=await Notification.requestPermission(); if(perm!=='granted') throw new Error('Alerts are blocked. On iPhone: Settings, Notifications, Moji admin, Allow Notifications.');
+    const reg=await navigator.serviceWorker.register('/admin/sw.js',{scope:'/admin/'}); await navigator.serviceWorker.ready;
+    let sub=await reg.pushManager.getSubscription(); if(!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:u8(alKey)});
+    const d=await api('alerts.subscribe',{sub:sub.toJSON()}); $('alOk').textContent=d.test==='ok'?'Alerts are on. A test alert is on its way.':'Alerts are on. The test alert did not go through yet; try Send a test alert.'; }
+  catch(e){ $('alErr').textContent=e.message||'That did not work. Try again.'; }
+  b.disabled=false; loadAlerts(); });
+$('alOff').addEventListener('click',async()=>{ $('alErr').textContent=''; $('alOk').textContent='';
+  try{ const sub=await alMine(); if(sub){ await api('alerts.unsubscribe',{endpoint:sub.endpoint}); await sub.unsubscribe(); } $('alOk').textContent='This phone no longer gets alerts.'; }catch(e){ $('alErr').textContent=e.message; } loadAlerts(); });
+$('alTest').addEventListener('click',async()=>{ $('alErr').textContent=''; $('alOk').textContent='';
+  try{ const d=await api('alerts.test'); $('alOk').textContent=d.sent?'Sent to '+d.sent+(d.sent===1?' phone.':' phones.'):'No phones get alerts yet.'; }catch(e){ $('alErr').textContent=e.message; } });
+$('alMode').addEventListener('change',async()=>{ $('alErr').textContent=''; $('alOk').textContent='';
+  try{ await api('alerts.mode',{mode:$('alMode').value}); $('alOk').textContent='Saved.'; }catch(e){ $('alErr').textContent=e.message; } });
+
 /* ---- services (also listed in the project doc Mojialand-Services) */
 const SERVICES=[
   ['Stripe','Payments, receipts, refunds, fraud checks.',[['Dashboard','https://dashboard.stripe.com/acct_1UJGyyERXhRT8V6d/dashboard'],['Test mode','https://dashboard.stripe.com/acct_1UJGyyERXhRT8V6d/test/dashboard'],['Webhooks','https://dashboard.stripe.com/acct_1UJGyyERXhRT8V6d/test/workbench/webhooks']]],
@@ -329,6 +369,7 @@ const SERVICES=[
   ['Netlify','Hosting, functions, secrets, DNS.',[['Staging site','https://app.netlify.com/projects/mojialand-staging'],['Environment variables','https://app.netlify.com/projects/mojialand-staging/configuration/env']]],
   ['GitHub','The code. Staging branch first, main after approval.',[['Repository','https://github.com/d2driscoA2/mojialand']]],
   ['GoDaddy','Owns mojialand.com and mojialand.app.',[['Domains','https://dcc.godaddy.com/control/portfolio']]],
+  ['Phone alerts','Web push to Moji admin on your Home Screen. Apple carries the message. Free, no account. Keys: VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY in Netlify.',[]],
   ['Apple Passwords','Every password and recovery code for the accounts above.',[]],
 ];
 function renderServices(){ $('svcList').innerHTML=SERVICES.map(s=>'<div class="item"><div class="top"><b>'+esc(s[0])+'</b></div><div class="meta">'+esc(s[1])+'</div>'+(s[2].length?'<div class="acts">'+s[2].map(l=>'<a class="secondary" style="text-decoration:none;display:inline-flex;align-items:center" href="'+esc(l[1])+'" target="_blank" rel="noopener">'+esc(l[0])+'</a>').join('')+'</div>':'')+'</div>').join(''); }

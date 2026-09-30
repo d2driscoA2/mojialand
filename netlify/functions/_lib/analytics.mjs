@@ -1,10 +1,11 @@
 // Analytics counting. Counts only: a city, a state, a game, a number.
 // No IP address, device, session, ZIP code or coordinates is ever stored.
 import { rest, rateHit, safeErr } from './db.mjs';
+import { notify } from './push.mjs';
 
 export const GAMES = ['pattern', 'bounce', 'match', 'parade', 'draw'];
 export const LABEL_RE = /^[a-z0-9][a-z0-9-]{1,23}$/;
-const EVENTS = ['open', 'beat', 'close', 'camp'];
+const EVENTS = ['open', 'beat', 'close', 'camp', 'first'];
 
 // City and state from Netlify's geo data. Everything else is dropped here.
 export function placeFromGeo(geo) {
@@ -22,6 +23,8 @@ export function readPing(body) {
   const e = body.e;
   if (!EVENTS.includes(e)) return null;
   const out = { e };
+  // First start on a new device (Release 1.1 #23): no game, no label, nothing else.
+  if (e === 'first') return out;
   if (e === 'camp') {
     if (typeof body.c !== 'string' || !LABEL_RE.test(body.c)) return null;
     out.c = body.c;
@@ -67,6 +70,10 @@ export async function recordPing(raw, geo, ip) {
   if (!p) return 400;
   // A classroom on one network opens many games; 300 pings per 10 minutes is plenty.
   if (!(await rateHit('ping', ip, 300, 600))) return 429;
+  if (p.e === 'first') {
+    await notify('player');
+    return 204;
+  }
   const place = placeFromGeo(geo);
   if (p.e === 'camp') {
     await campaignHit(p.c, 'open', place);

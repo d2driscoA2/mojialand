@@ -735,3 +735,140 @@ test('friend pass: one per pass, from the pass token; only for devices new to Mo
   db.passes.find((p) => p.id === pass.id).status = 'refunded';
   assert.equal((await friendFn(ev({ token: tok }))).statusCode, 410);
 });
+
+// ---- Release 1.1 #23: phone alerts (web push)
+import { encryptPayload, vapidAuth, readSubscription, summaryText, michiganDay, dailySummary } from '../netlify/functions/_lib/push.mjs';
+import { handler as redeemAlert } from '../netlify/functions/redeem-code.mjs';
+
+function vapidEnv() {
+  const e = crypto.createECDH('prime256v1'); e.generateKeys();
+  setEnv({ VAPID_PUBLIC_KEY: e.getPublicKey().toString('base64url'), VAPID_PRIVATE_KEY: Buffer.concat([Buffer.alloc(32 - e.getPrivateKey().length), e.getPrivateKey()]).toString('base64url') });
+}
+// A pretend phone: its own key pair and auth secret, and the RFC 8291 decrypt step.
+function phone() {
+  const e = crypto.createECDH('prime256v1'); e.generateKeys();
+  const auth = crypto.randomBytes(16);
+  const sub = { endpoint: 'https://web.push.apple.com/QOkPzI2cfake', keys: { p256dh: e.getPublicKey().toString('base64url'), auth: auth.toString('base64url') } };
+  const hm = (k, d) => crypto.createHmac('sha256', k).update(d).digest();
+  sub.read = (buf) => {
+    const salt = buf.subarray(0, 16), idlen = buf[20], asPublic = buf.subarray(21, 21 + idlen), ct = buf.subarray(21 + idlen);
+    const shared = e.computeSecret(asPublic);
+    const ikm = hm(hm(auth, shared), Buffer.concat([Buffer.from('WebPush: info\0'), e.getPublicKey(), asPublic, Buffer.from([1])]));
+    const prk = hm(salt, ikm);
+    const cek = hm(prk, Buffer.from('Content-Encoding: aes128gcm\0\x01')).subarray(0, 16);
+    const nonce = hm(prk, Buffer.from('Content-Encoding: nonce\0\x01')).subarray(0, 12);
+    const d = crypto.createDecipheriv('aes-128-gcm', cek, nonce); d.setAuthTag(ct.subarray(ct.length - 16));
+    const pt = Buffer.concat([d.update(ct.subarray(0, ct.length - 16)), d.final()]);
+    assert.equal(pt[pt.length - 1], 2);
+    return JSON.parse(pt.subarray(0, pt.length - 1).toString('utf8'));
+  };
+  return sub;
+}
+const saveSub = (sub) => db.push_subs.push({ endpoint: sub.endpoint, p256dh: sub.keys.p256dh, auth: sub.keys.auth });
+
+test('alerts: encryption only the phone can read; VAPID note signed by our key; only real push services', () => {
+  vapidEnv();
+  const p = phone(), row = readSubscription(p);
+  assert.ok(row);
+  assert.deepEqual(p.read(encryptPayload(JSON.stringify({ title: 'Hi' }), row)), { title: 'Hi' });
+  const auth = vapidAuth(p.endpoint);
+  const [, jwt, k] = /^vapid t=([^,]+), k=(.+)$/.exec(auth);
+  const [h, b, sig] = jwt.split('.');
+  const pub = Buffer.from(k, 'base64url');
+  const key = crypto.createPublicKey({ key: { kty: 'EC', crv: 'P-256', x: pub.subarray(1, 33).toString('base64url'), y: pub.subarray(33).toString('base64url') }, format: 'jwk' });
+  assert.ok(crypto.verify('sha256', Buffer.from(h + '.' + b), { key, dsaEncoding: 'ieee-p1363' }, Buffer.from(sig, 'base64url')));
+  const claims = JSON.parse(Buffer.from(b, 'base64url'));
+  assert.equal(claims.aud, 'https://web.push.apple.com');
+  assert.equal(claims.sub, 'mailto:admin@example.test');
+  for (const endpoint of ['https://evil.example.com/x', 'http://web.push.apple.com/x', 'https://web.push.apple.com:8443/x', 'https://169.254.169.254/x']) assert.equal(readSubscription({ ...p, endpoint }), null, endpoint);
+  assert.equal(readSubscription({ ...p, keys: { p256dh: 'short', auth: p.keys.auth } }), null);
+});
+
+test('alerts: first start ping buzzes the phone with no game, place or device; counts for the day', async () => {
+  vapidEnv();
+  const p = phone(); saveSub(p);
+  const res = await ping(pingReq({ e: 'first', g: 'draw', c: 'x' }), { geo: { city: 'Ann Arbor', subdivision: { code: 'MI' }, country: { code: 'US' } }, ip: '1.2.3.4' });
+  assert.equal(res.status, 204);
+  assert.equal(db.analytics.length, 0);
+  assert.deepEqual(db.alerts, [{ p_day: michiganDay(), p_kind: 'player', p_label: '' }]);
+  assert.equal(db.pushes.length, 1);
+  const msg = p.read(db.pushes[0].body);
+  assert.deepEqual(msg, { title: 'New player', body: 'Mojialand opened on a new device.', tag: 'player' });
+  assert.ok(!JSON.stringify(msg).includes('Ann Arbor'));
+  assert.equal(db.pushes[0].headers['Content-Encoding'], 'aes128gcm');
+  assert.deepEqual(readPing({ e: 'first', g: 'draw' }), { e: 'first' });
+});
+
+test('alerts: daily mode and off mode only count; 12 alerts an hour at most; a gone phone is dropped', async () => {
+  vapidEnv();
+  const p = phone(); saveSub(p);
+  db.settings.push({ key: 'alerts_mode', value: 'daily' });
+  await ping(pingReq({ e: 'first' }), { ip: '1.1.1.1' });
+  assert.equal(db.pushes.length, 0); assert.equal(db.alerts.length, 1);
+  db.settings.find((r) => r.key === 'alerts_mode').value = 'each';
+  for (let i = 0; i < 15; i++) await ping(pingReq({ e: 'first' }), { ip: '1.1.1.' + i });
+  assert.equal(db.pushes.length, 12); assert.equal(db.alerts.length, 16);
+  db.rate.clear(); db.pushStatus = 410;
+  await ping(pingReq({ e: 'first' }), { ip: '2.2.2.2' });
+  assert.equal(db.push_subs.length, 0);
+});
+
+test('alerts: a gift code first use buzzes with its batch; a second device does not', async () => {
+  vapidEnv();
+  const p = phone(); saveSub(p);
+  const code = randomCode('GIFT');
+  db.passes.push({ id: crypto.randomUUID(), code_hash: codeHash(process.env.RESTORE_CODE_PEPPER, code), code_last4: codeLast4(code), prefix: 'GIFT', kind: '48h', source: 'gift', status: 'unused', device_limit: 5, ends_at: null, batch: 'IN-FAIR-OCT', use_by: null });
+  const r1 = await redeemAlert(ev({ code, device_id: DEV('a') }));
+  assert.equal(r1.statusCode, 200);
+  const r2 = await redeemAlert(ev({ code, device_id: DEV('b') }));
+  assert.equal(r2.statusCode, 200);
+  assert.deepEqual(db.alerts.map((a) => a.p_kind + ':' + a.p_label), ['gift:IN-FAIR-OCT']);
+  assert.deepEqual(p.read(db.pushes[0].body), { title: 'Gift code used', body: 'Batch IN-FAIR-OCT.', tag: 'gift' });
+});
+
+test('alerts: evening summary text; skipped when off', async () => {
+  assert.equal(summaryText([]).body, 'No new players, no gift codes used.');
+  assert.equal(summaryText([{ kind: 'player', label: '', n: 3 }, { kind: 'gift', label: 'FRIEND', n: 1 }, { kind: 'gift', label: 'IN-FAIR-OCT', n: 2 }]).body, '3 new players, 3 gift codes used (IN-FAIR-OCT 2, FRIEND 1).');
+  assert.equal(summaryText([{ kind: 'player', label: '', n: 1 }, { kind: 'gift', label: '', n: 1 }]).body, '1 new player, 1 gift code used.');
+  vapidEnv();
+  const p = phone(); saveSub(p);
+  db.alert_counts.push({ day: michiganDay(), kind: 'player', label: '', n: 2 });
+  assert.equal(await dailySummary(), true);
+  assert.deepEqual(p.read(db.pushes[0].body), { title: 'Today in Mojialand', body: '2 new players, no gift codes used.', tag: 'summary' });
+  db.settings.push({ key: 'alerts_mode', value: 'off' });
+  assert.equal(await dailySummary(), false);
+});
+
+test('admin-api: alerts subscribe, mode, test; settings list hides the alerts row', async () => {
+  const cookie = await adminSignIn();
+  const call = (body) => adminApi(withCookie(body, cookie));
+  let r = await call({ action: 'alerts.get' });
+  assert.equal(r.statusCode, 200, r.body);
+  assert.equal(JSON.parse(r.body).ready, false);
+  r = await call({ action: 'alerts.subscribe', sub: phone() });
+  assert.equal(r.statusCode, 400);
+  vapidEnv();
+  const call2 = call;
+  const p = phone();
+  r = await call2({ action: 'alerts.subscribe', sub: { ...p, endpoint: 'https://evil.example.com/x' } });
+  assert.equal(r.statusCode, 400);
+  r = await call2({ action: 'alerts.subscribe', sub: p });
+  assert.equal(r.statusCode, 200, r.body);
+  assert.equal(JSON.parse(r.body).test, 'ok');
+  assert.equal(p.read(db.pushes[0].body).title, 'Alerts are on');
+  r = await call2({ action: 'alerts.subscribe', sub: p });
+  assert.equal(db.push_subs.length, 1);
+  r = await call2({ action: 'alerts.mode', mode: 'daily' });
+  assert.equal(r.statusCode, 200);
+  assert.equal(db.settings.find((x) => x.key === 'alerts_mode').value, 'daily');
+  assert.equal((await call2({ action: 'alerts.mode', mode: 'loud' })).statusCode, 400);
+  r = await call2({ action: 'alerts.test' });
+  assert.equal(JSON.parse(r.body).sent, 1);
+  r = await call2({ action: 'settings.get' });
+  assert.ok(!JSON.parse(r.body).settings.some((x) => x.key === 'alerts_mode'));
+  r = await call2({ action: 'alerts.get' });
+  const g = JSON.parse(r.body);
+  assert.equal(g.mode, 'daily'); assert.equal(g.phones.length, 1); assert.ok(g.publicKey.length > 80);
+  r = await call2({ action: 'alerts.unsubscribe', endpoint: p.endpoint });
+  assert.equal(db.push_subs.length, 0);
+});

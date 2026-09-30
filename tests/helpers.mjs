@@ -29,6 +29,8 @@ export function setEnv(extra = {}) {
     PASS_SIGNING_PRIVATE_KEY: KEYS.pem,
     PASS_SIGNING_PUBLIC_JWK: JSON.stringify(KEYS.jwk),
     RESTORE_CODE_PEPPER: 'pepper-for-tests',
+    VAPID_PUBLIC_KEY: undefined,
+    VAPID_PRIVATE_KEY: undefined,
   };
   for (const [k, v] of Object.entries({ ...base, ...extra })) {
     if (v === undefined) delete process.env[k];
@@ -38,7 +40,7 @@ export function setEnv(extra = {}) {
 
 // In-memory PostgREST covering the calls the functions make.
 export function fakeDb() {
-  const db = { passes: [], stripe_events: [], devices: [], support_messages: [], admin_codes: [], admin_sessions: [], handoffs: [], plays_live: [], campaigns: [], analytics: [], campaignEvents: [], rpcData: {}, settings: [{ key: 'daily_minutes', value: 3, help: 'x' }, { key: 'daily_reset', value: '04:00', help: 'y' }], rate: new Map(), emails: [], calls: [], rateLimit: Infinity };
+  const db = { passes: [], stripe_events: [], devices: [], support_messages: [], admin_codes: [], admin_sessions: [], handoffs: [], plays_live: [], campaigns: [], analytics: [], campaignEvents: [], rpcData: {}, push_subs: [], alert_counts: [], alerts: [], pushes: [], pushStatus: 201, settings: [{ key: 'daily_minutes', value: 3, help: 'x' }, { key: 'daily_reset', value: '04:00', help: 'y' }], rate: new Map(), emails: [], calls: [], rateLimit: Infinity };
   const parseFilters = (qs) => {
     const f = [];
     for (const part of qs.split('&')) {
@@ -58,6 +60,10 @@ export function fakeDb() {
     const u = String(url);
     const method = opts.method || 'GET';
     db.calls.push(method + ' ' + u);
+    if (u.startsWith('https://web.push.apple.com/')) {
+      db.pushes.push({ url: u, headers: opts.headers, body: Buffer.from(opts.body) });
+      return reply(db.pushStatus);
+    }
     if (u.startsWith('https://api.resend.com/')) {
       db.emails.push(JSON.parse(opts.body));
       return reply(200, { id: 'email_1' });
@@ -73,6 +79,7 @@ export function fakeDb() {
       db.rate.set(body.p_key, n);
       return reply(200, n <= Math.min(body.p_limit, db.rateLimit));
     }
+    if (table === 'rpc/alert_add') { db.alerts.push(body); return reply(200, 1); }
     if (table === 'rpc/analytics_add') { db.analytics.push(body); return reply(204); }
     if (table === 'rpc/campaign_add') {
       const ok = db.campaigns.some((c) => c.label === body.p_label && c.active !== false);
@@ -80,6 +87,7 @@ export function fakeDb() {
       return reply(200, ok);
     }
     if (table === 'rpc/analytics_history' || table === 'rpc/campaign_stats') { db.rpcCalls = (db.rpcCalls || []).concat([[table, body]]); return reply(200, db.rpcData[table.slice(4)] || {}); }
+    if (table === 'settings' && method === 'GET' && /key=eq\.alerts_mode/.test(qs)) return reply(200, db.settings.filter((r) => r.key === 'alerts_mode').map((r) => ({ value: r.value })));
     if (table === 'settings' && method === 'GET' && /select=value/.test(qs)) return reply(200, [{ value: 7 }]);
     const rows = db[table];
     if (!rows) throw new Error('unknown table ' + table);
@@ -94,6 +102,7 @@ export function fakeDb() {
     if (method === 'POST') {
       const uniq = table === 'passes' ? ['stripe_session_id', 'code_hash', 'id'] : table === 'stripe_events' ? ['event_id'] : table === 'admin_sessions' ? ['token_hash'] : table === 'handoffs' ? ['key_hash'] : [];
       if (table === 'handoffs' && prefer.includes('merge-duplicates')) { const i = rows.findIndex((r) => r.key_hash === body.key_hash); if (i >= 0) { Object.assign(rows[i], body); return reply(201); } }
+      if ((table === 'push_subs' || table === 'settings') && prefer.includes('merge-duplicates')) { const k = table === 'push_subs' ? 'endpoint' : 'key'; const i = rows.findIndex((r) => r[k] === body[k]); if (i >= 0) { Object.assign(rows[i], body); return reply(201); } }
       const dupDevice = table === 'devices' && rows.some((r) => r.pass_id === body.pass_id && r.device_id_hash === body.device_id_hash);
       if (dupDevice || rows.some((r) => uniq.some((k) => body[k] != null && r[k] === body[k]))) {
         if (!prefer.includes('ignore-duplicates')) return reply(409, { message: 'duplicate' });

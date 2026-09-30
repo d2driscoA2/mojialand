@@ -1028,6 +1028,8 @@ body.in-draw #app{max-width:none}
 </div>
 
 <script>
+/* A device that never ran Mojialand has no mojia.* keys yet (Release 1.1 #23 new-player alert). Read before anything writes. */
+const FRESH=(function(){ try{ for(let i=0;i<localStorage.length;i++){ if(String(localStorage.key(i)).indexOf('mojia.')===0) return false; } return true; }catch(e){ return false; } })();
 (function(){
 'use strict';
 /* Tablets: scale the phone layout to fill the screen. A viewport width above 480 makes the browser zoom the whole
@@ -1109,6 +1111,9 @@ const PS=(function(){
   function camp(){ const c=store.get('camp',null); return c&&typeof c.l==='string'&&LRE.test(c.l)&&Date.now()-c.t<WEEK?c:null; }
   // A QR card link (?c=event-label): remember the event name for 7 days, count the first open once.
   try{ const u=new URL(location.href), c=u.searchParams.get('c'); if(c!=null){ u.searchParams.delete('c'); history.replaceState(null,'',u.pathname+u.search+u.hash); const l=c.toLowerCase(); const old=camp(); if(LRE.test(l)&&(!old||old.l!==l)){ store.set('camp',{l,t:Date.now()}); send({e:'camp',c:l}); } } }catch(e){}
+  // First start on a new device: one ping with no game, no label, nothing about the child. It buzzes the admin's phone.
+  // The iPhone Home Screen app keeps its own storage, so it never counts again as new.
+  try{ const ios=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1); if(FRESH&&!(ios&&mode()==='app')&&!store.get('firstSent',false)){ store.set('firstSent',true); send({e:'first'}); } }catch(e){}
   let g=null, t0=0, last=-1, paused=null;
   function open(id){ g=id; t0=Date.now(); last=slot(); const o={e:'open',g:id,m:mode()}; const c=camp(); if(c&&!c.p){ o.c=c.l; o.cp=1; c.p=1; store.set('camp',c); } send(o); }
   function close(){ if(!g) return; const m=(Date.now()-t0)/60000; send({e:'close',g,m:mode(),b:m<2?0:m<5?1:m<15?2:3}); g=null; }
