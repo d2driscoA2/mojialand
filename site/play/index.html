@@ -552,17 +552,27 @@ textarea.pw-in{resize:none;min-height:88px}
 .dpage .gold{position:absolute;right:-8px;top:-10px;font-size:24px;line-height:1}
 .dpage.blank .bl{display:block;width:100%;height:100%;border-radius:4px;background:repeating-linear-gradient(#fff 0 14px,#EDE6FB 14px 16px)}
 /* Fridge (Release 1.1 #20, #25): its own full screen over Draw, one fridge per kid, a trash can. The drawing underneath never resizes. */
-.fpanel{position:absolute;inset:0;z-index:40;background:#EDE6FB;display:flex;flex-direction:column;align-items:center;gap:8px;padding:max(10px,env(safe-area-inset-top,0px)) 12px max(12px,env(safe-area-inset-bottom,0px));animation:fadein .25s;touch-action:pan-y}
+.fpanel{position:absolute;inset:0;z-index:40;background:#EDE6FB;display:flex;flex-direction:column;align-items:center;gap:8px;padding:calc(max(10px,env(safe-area-inset-top,0px)) + 20px) 12px max(12px,env(safe-area-inset-bottom,0px));animation:fadein .25s;touch-action:pan-y}
 .fptop{flex:0 0 auto;width:100%;display:flex;align-items:center;gap:8px}
 .fptop .dx{position:static;flex:0 0 48px}
-.fkids{flex:1;min-width:0;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:4px 2px}
+.fkids{flex:1;min-width:0;display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;padding:12px 12px 4px 8px}
 .fkids::-webkit-scrollbar{display:none}
-.fkid{flex:0 0 auto;display:flex;align-items:center;gap:6px;height:48px;padding:0 12px 0 4px;border-radius:999px;border:2px solid var(--line);background:#fff;color:var(--ink);font-family:var(--display);font-weight:900;font-size:15px;cursor:pointer;box-shadow:var(--shadow);max-width:190px}
-.fkid b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.fkid.on{border-color:var(--purple);box-shadow:0 0 0 3px rgba(113,56,209,.25),var(--shadow)}
-.fkid.solo{padding:0 4px}
-.fkid.add,.fkid.edit{width:48px;padding:0;justify-content:center;font-size:22px;color:var(--purple)}
-.fkid.add{border-style:dashed;font-size:28px}
+.fptop{align-items:flex-start}
+.fkid{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:62px;max-width:96px;padding:4px 0 0;border:0;background:none;color:var(--ink);font-family:var(--display);font-weight:900;font-size:12px;cursor:pointer}
+.fkid b{max-width:96px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.2;min-height:14px}
+.fmini{position:relative;width:44px;height:56px;border-radius:12px;border:2px solid #D5C6F2;background:#fff;box-shadow:0 3px 6px rgba(48,37,74,.16);display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px;box-sizing:border-box;transition:transform .15s}
+.fmini::before{content:'';position:absolute;left:0;right:0;top:17px;height:2px;background:#D5C6F2}
+.fmini::after{content:'';position:absolute;left:5px;top:5px;width:3px;height:8px;border-radius:2px;background:#D5C6F2}
+.fmini .fk{flex:0 0 28px;width:28px;height:28px;font-size:17px}
+.fkid:active .fmini{transform:scale(.92)}
+.fkid.on .fmini{border:3px solid var(--purple);transform:scale(1.1);box-shadow:0 0 0 4px rgba(113,56,209,.2),0 4px 10px rgba(48,37,74,.2)}
+.fkid.on b{color:var(--purple)}
+.fpen{position:absolute;right:-10px;top:-10px;width:26px;height:26px;border-radius:999px;background:var(--yellow);border:2px solid #fff;box-shadow:0 2px 4px rgba(48,37,74,.3);font-size:13px;line-height:1;display:flex;align-items:center;justify-content:center}
+.fkid.add .fmini{border-style:dashed;align-items:center;padding:0;color:var(--purple);font-size:26px;box-shadow:none;background:rgba(255,255,255,.6)}
+.fkid.add .fmini::before,.fkid.add .fmini::after{display:none}
+.fkid.hop .fmini{animation:fhop .7s cubic-bezier(.34,1.56,.64,1) 2}
+@keyframes fhop{0%,100%{transform:translateY(0)}40%{transform:translateY(-10px) rotate(-5deg)}70%{transform:translateY(0) rotate(3deg)}}
+@media (prefers-reduced-motion: reduce){.fkid.hop .fmini{animation:none}}
 .fk{flex:0 0 38px;width:38px;height:38px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:24px;line-height:1;background:var(--pink)}
 .fk.big{width:84px;height:84px;flex:0 0 84px;font-size:52px}
 .fown{position:absolute;right:10px;top:10px;width:44px;height:44px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:28px;line-height:1;box-shadow:0 3px 6px rgba(48,37,74,.25)}
@@ -1789,18 +1799,19 @@ games.draw=(function(){
 
   /* ---- the fridge screen ---- */
   const fpanel=$('#dfridge');
-  function renderKids(){ const g=$('#dfkids'); g.innerHTML='';
-    FM.list.forEach(f=>{ const b=document.createElement('button'); b.className='fkid'+(f.id===FM.cur?' on':'')+(f.name?'':' solo'); b.setAttribute('role','tab'); b.setAttribute('aria-selected',String(f.id===FM.cur)); b.setAttribute('aria-label',flabel(f));
-      const k=document.createElement('span'); k.className='fk'; k.style.background=f.c; k.textContent=f.e; k.setAttribute('aria-hidden','true'); b.appendChild(k);
-      if(f.name){ const t=document.createElement('b'); t.textContent=f.name; b.appendChild(t); }
-      b.onclick=()=>{ ctx(); if(f.id===FM.cur){ sfx.boop(); return; } sfx.chime(); FM.cur=f.id; saveMeta(); hideSheets(); showBasket(false); renderFridge(-1); say(flabel(f)); }; g.appendChild(b); });
-    const e=document.createElement('button'); e.className='fkid edit'; e.id='dfeditBtn'; e.setAttribute('aria-label','Change this fridge'); e.innerHTML='<span aria-hidden="true">✏️</span>'; e.onclick=()=>{ ctx(); sfx.boop(); openEdit(); }; g.appendChild(e);
-    if(FM.list.length<MAXF){ const a=document.createElement('button'); a.className='fkid add'; a.id='dfadd'; a.setAttribute('aria-label','Add a fridge'); a.innerHTML='<span aria-hidden="true">+</span>'; a.onclick=()=>{ ctx(); addFridge(); }; g.appendChild(a); }
+  /* Fridge picker: each fridge is a small fridge with its friend magnet and name. Tap one to switch. The selected fridge wears a pencil; tap it again to change it. */
+  function renderKids(hop){ const g=$('#dfkids'); g.innerHTML='';
+    FM.list.forEach(f=>{ const on=f.id===FM.cur, b=document.createElement('button'); b.className='fkid'+(on?' on':'')+(hop&&!on?' hop':''); b.setAttribute('role','tab'); b.setAttribute('aria-selected',String(on)); b.setAttribute('aria-label',on?flabel(f)+', change this fridge':flabel(f));
+      const m=document.createElement('span'); m.className='fmini'; m.setAttribute('aria-hidden','true'); const k=document.createElement('span'); k.className='fk'; k.style.background=f.c; k.textContent=f.e; m.appendChild(k);
+      if(on){ const p=document.createElement('span'); p.className='fpen'; p.id='dfeditBtn'; p.textContent='✏️'; m.appendChild(p); } b.appendChild(m);
+      const t=document.createElement('b'); t.textContent=f.name||''; b.appendChild(t);
+      b.onclick=()=>{ ctx(); if(on){ sfx.boop(); openEdit(); return; } sfx.chime(); FM.cur=f.id; saveMeta(); hideSheets(); showBasket(false); renderFridge(-1); say(flabel(f)); }; g.appendChild(b); });
+    if(FM.list.length<MAXF){ const a=document.createElement('button'); a.className='fkid add'; a.id='dfadd'; a.setAttribute('aria-label','Add a fridge'); a.innerHTML='<span class="fmini" aria-hidden="true">+</span><b></b>'; a.onclick=()=>{ ctx(); addFridge(); }; g.appendChild(a); }
     const on=g.querySelector('.fkid.on'); if(on&&(on.offsetLeft<g.scrollLeft||on.offsetLeft+on.offsetWidth>g.scrollLeft+g.clientWidth)) g.scrollLeft=on.offsetLeft-8; }
   function paper(it,k){ const b=document.createElement('button'); b.className='fslot full'; b.style.setProperty('--r',(((k*37)%9)-4)+'deg'); b.setAttribute('aria-label','Your drawing'); b.dataset.id=it.id;
     const img=document.createElement('img'); img.src=it.src; img.alt=''; img.draggable=false; b.appendChild(img); const m=document.createElement('span'); m.className='fmag'; m.style.background=MAGNETS[k%MAGNETS.length]; m.setAttribute('aria-hidden','true'); b.appendChild(m);
     b.onclick=()=>{ if(Date.now()-dragJust<400) return; ctx(); sfx.boop(); view(it); }; dragable(b,it); return b; }
-  function renderFridge(fresh){ const f=curF(), o=$('#dfown'); o.textContent=f.e; o.style.background=f.c; renderKids();
+  function renderFridge(fresh,hop){ const f=curF(), o=$('#dfown'); o.textContent=f.e; o.style.background=f.c; renderKids(hop);
     const g=$('#dfslots'), list=mine(), ready=!isEmpty(), full=doorFull(list); g.innerHTML=''; let firstEmpty=true;
     for(let k=0;k<SLOTS;k++){ const it=list.find(x=>x.slot===k);
       if(it){ const b=paper(it,k); if(fresh===k) b.classList.add('new'); g.appendChild(b); continue; }
@@ -1827,7 +1838,7 @@ games.draw=(function(){
       const img=document.createElement('img'); img.src=it.src; img.alt=''; b.appendChild(img); b.onclick=()=>{ ctx(); sfx.boop(); view(it); }; g.appendChild(b); }); }
   function showBasket(on,fresh){ $('#dfbasketview').classList.toggle('hidden',!on); $('#dfridgebox').classList.toggle('hidden',on); if(on) renderBasket(fresh); }
   function hideSheets(){ ['#dfview','#dftconfirm','#dfedit'].forEach(s=>$(s).classList.add('hidden')); clearTimeout(trashT); const a=document.activeElement; if(a&&a.id==='dfname') a.blur(); }
-  function openFridge(){ closePanels(); hideSheets(); showBasket(false); fpanel.classList.remove('hidden'); renderFridge(-1); if(!DR) loadAll().then(()=>{ if(!fpanel.classList.contains('hidden')) renderFridge(-1); }); }
+  function openFridge(){ closePanels(); hideSheets(); showBasket(false); fpanel.classList.remove('hidden'); const n=store.get('fridgeHop',0), hop=FM.list.length>1&&n<3; if(hop) store.set('fridgeHop',n+1); renderFridge(-1,hop); if(!DR) loadAll().then(()=>{ if(!fpanel.classList.contains('hidden')) renderFridge(-1); }); }
   $('#dfridgeBtn').onclick=()=>{ ctx(); sfx.boop(); openFridge(); say(isEmpty()?'The fridge!':'Tap a spot to hang your drawing!'); };
   $('#dbasket').onclick=()=>{ ctx(); if(!isEmpty()&&doorFull(mine())){ hang(-1,$('#dbasket')); return; } sfx.boop(); showBasket(true); };
   $('#dfback').onclick=()=>{ ctx(); sfx.boop(); showBasket(false); };

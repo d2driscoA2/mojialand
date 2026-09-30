@@ -1031,6 +1031,8 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await page.click('#dfridgeBtn');
   check('draw: fridge scene with 9 empty spots, first spot glows', await page.isVisible('#dfridge .fridge') && (await page.locator('#dfslots .fslot.empty').count()) === 9 && (await page.locator('#dfslots .fslot.glow').count()) === 1);
   check('draw: fridge opens full screen on a phone', await page.evaluate(() => { const r = document.querySelector('#dfridge').getBoundingClientRect(); return r.width >= 389 && r.height >= innerHeight - 1 && r.top <= 0; }));
+  check('draw: fridge row sits 20 px lower, clear of the iPhone status bar', await page.evaluate(() => document.querySelector('#dfkids .fkid .fmini').getBoundingClientRect().top >= 40));
+  check('draw: the selected fridge is a small fridge wearing the pencil; no separate pencil button', (await page.locator('#dfkids .fkid.on .fmini #dfeditBtn').count()) === 1 && (await page.locator('#dfkids .fkid.edit').count()) === 0);
   check('draw: fridge shows its friend and a trash can', (await page.locator('#dfkids .fkid.on .fk').count()) === 1 && (await page.textContent('#dfown')) === '🦄' && await page.isVisible('#dftrash'));
   await page.screenshot({ path: path.join(SHOTS, 'draw-fridge-empty-390.png') });
   await page.click('#dfslots .fslot.glow'); await page.waitForTimeout(800);
@@ -1135,6 +1137,9 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   all = await page.evaluate(idb);
   check('fridges: the drawing hangs on the fridge in use', all.length === 10 && all.filter((x) => x.f === meta.cur).length === 1);
   await page.click('#dfkids .fkid:not(.add):not(.edit) >> nth=0'); await page.waitForTimeout(200);
+  await page.click('#dfclose'); await page.click('#dfridgeBtn'); await page.waitForTimeout(100);
+  check('fridges: with 2 fridges, the other fridge hops to show it is tappable', (await page.locator('#dfkids .fkid.hop:not(.on)').count()) === 1 && (await page.locator('#dfkids .fkid.on.hop').count()) === 0);
+  await page.screenshot({ path: path.join(SHOTS, 'draw-fridges-hop-390.png') });
   check('fridges: switching shows the other kid\'s fridge', (await page.locator('#dfslots .fslot.full').count()) === 8 && (await page.textContent('#dfown')) === '🦄');
   // opening a drawing makes a copy; hanging it adds one, the original stays
   await page.click('#dfslots .fslot.full >> nth=0'); await page.click('#dfvdraw'); await page.waitForTimeout(300);
