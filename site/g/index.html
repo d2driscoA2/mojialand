@@ -22,16 +22,21 @@
 @font-face{font-family:'Nunito';font-style:normal;font-weight:700 900;font-display:swap;src:url('/fonts/nunito-latin.woff2') format('woff2')}
 body{margin:0;min-height:100vh;background:#FFF8E8;color:#30254A;font:800 16px/1.45 Nunito,ui-rounded,system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px 16px;box-sizing:border-box;text-align:center}
 img{width:200px;height:auto}
-a{display:block;background:#7138D1;color:#fff;border-radius:999px;padding:14px 22px;font-weight:900;text-decoration:none}
+h1{margin:0;font-weight:900;font-size:26px;line-height:1.15;color:#7138D1}
+p{margin:0;max-width:30ch;color:#6B6180}
+.s{font-size:14px}
+a{display:block;min-width:260px;background:#FF5FA2;font-size:18px;color:#fff;border-radius:999px;padding:14px 22px;font-weight:900;text-decoration:none}
 a:focus-visible{outline:3px solid #4DBCEC;outline-offset:2px}
 </style>
 </head>
 <body>
 <img src="/logo/logo-3d.png" alt="Mojialand" width="200" height="66">
-<p>Opening your free 48-hour pass…</p>
-<a id="go" href="/r/">Open my free pass</a>
+<h1>A friend sent you 48 free hours</h1>
+<p>Emoji games for kids 3 and up. No accounts. No ads. No tracking.</p>
+<a id="go" href="/r/">Turn on my free 48 hours</a>
+<p class="s">Works once, on a device new to Mojialand.</p>
 <script>
-(function(){ var c=(location.pathname.split('/')[2]||'').replace(/[^A-Za-z0-9]/g,'').slice(0,20); var to='/r/'+c+location.search; document.getElementById('go').href=to; location.replace(to); })();
+(function(){ var c=(location.pathname.split('/')[2]||'').replace(/[^A-Za-z0-9]/g,'').slice(0,20); document.getElementById('go').href='/r/'+c+location.search; })();
 </script>
 </body>
 </html>

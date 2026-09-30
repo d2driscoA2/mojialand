@@ -1253,9 +1253,11 @@ for (const [w, h, name] of [[375, 667, 'se'], [820, 1180, 'ipad']]) {
 }
 {
   const { ctx, page } = await newPage();
+  await page.goto(base + '/g/GIFTABCDEFGHJKMN?c=fair'); await page.waitForTimeout(1500);
+  check('/g/ waits for a tap (link previews never turn the pass on)', /\/g\/GIFTABCDEFGHJKMN/.test(page.url()) && !page.reqs.some((u) => u.includes('/r/GIFT')));
   const hop = page.waitForRequest((q) => /\/r\/GIFTABCDEFGHJKMN\?c=fair$/.test(q.url()), { timeout: 5000 });
-  await page.goto(base + '/g/GIFTABCDEFGHJKMN?c=fair');
-  check('/g/ forwards to /r/ with the code and campaign', !!(await hop.catch(() => null)));
+  await page.click('#go');
+  check('/g/ tap opens /r/ with the code and campaign', !!(await hop.catch(() => null)));
   const html = fs.readFileSync(path.join(site, 'g', 'index.html'), 'utf8');
   check('/g/ has the preview card tags', /og:image" content="https:\/\/[a-z.]+\/img\/friend-pass-card\.jpg"/.test(html) && /og:title" content="48 free hours of Mojialand"/.test(html) && fs.existsSync(path.join(site, 'img', 'friend-pass-card.jpg')));
   check('/g/ no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
