@@ -520,7 +520,6 @@ textarea.pw-in{resize:none;min-height:88px}
 .pw-photo{position:relative}
 .pw-photo .pic{display:block;width:100%;aspect-ratio:3/4;border-radius:12px;border:2px solid var(--line);padding:0;overflow:hidden;background:#fff;cursor:pointer}
 .pw-photo img{width:100%;height:100%;object-fit:cover;display:block}
-.pw-photo .rm{position:absolute;top:-8px;right:-8px;width:40px;height:40px;border-radius:999px;border:2px solid #FFC2D6;background:var(--red-l);color:var(--red);font-weight:900;font-size:14px;cursor:pointer;padding:0}
 .dbookp{justify-content:flex-start;overflow-y:auto;padding-top:14px}
 .dbookhead{flex:0 0 auto;display:flex;align-items:flex-end;font-size:40px;line-height:1}
 .dbookhead span+span{font-size:26px;margin-left:-14px}
@@ -1692,8 +1691,7 @@ games.draw=(function(){
   function openPhotos(){ const g=$('#pwPhGrid'), list=loadF().sort((a,b)=>(b.t||0)-(a.t||0)); g.innerHTML='';
     $('#pwPhText').textContent=list.length?'Tap a drawing, then choose Save Image. These drawings stay on this device.':'No drawings on the fridge yet. Kids hang drawings with the fridge button in Draw.';
     list.forEach(it=>{ const wr=document.createElement('div'); wr.className='pw-photo'; const b=document.createElement('button'); b.className='pic'; b.setAttribute('aria-label','Save this drawing'); const img=document.createElement('img'); img.src=it.src; img.alt=''; b.appendChild(img); b.onclick=()=>{ ctx(); sfx.boop(); savePhoto(it); };
-      const x=document.createElement('button'); x.className='rm'; x.textContent='✕'; x.setAttribute('aria-label','Remove from the fridge'); x.onclick=()=>{ ctx(); sfx.poof(); saveF(loadF().filter(y=>y.id!==it.id)); openPhotos(); };
-      wr.appendChild(b); wr.appendChild(x); g.appendChild(wr); });
+      wr.appendChild(b); g.appendChild(wr); });
     $('#pwOvPhotos').classList.remove('hidden'); }
 
   /* ---- demo for Watch ---- */

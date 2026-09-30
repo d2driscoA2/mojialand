@@ -1043,8 +1043,7 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await page.click('.pw-gurow[data-a="photos"]'); await page.waitForTimeout(400);
   check('draw: Grown-ups Save to Photos lists fridge drawings', await page.isVisible('#pwOvPhotos') && (await page.locator('#pwPhGrid img').count()) === 1);
   await page.screenshot({ path: path.join(SHOTS, 'draw-photos-390.png') });
-  await page.click('#pwPhGrid .rm');
-  check('draw: Grown-ups remove a drawing', (await page.locator('#pwPhGrid img').count()) === 0 && (await page.evaluate(() => JSON.parse(localStorage.getItem('mojia.fridge')).length)) === 0);
+  check('draw: Save to Photos has no delete button', (await page.locator('#pwPhGrid .rm').count()) === 0 && (await page.evaluate(() => JSON.parse(localStorage.getItem('mojia.fridge')).length)) === 1);
   check('draw: zero third-party requests', page.reqs.every((u) => u.startsWith(base) || u.startsWith('data:')));
   check('draw: no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
   await ctx.close();
