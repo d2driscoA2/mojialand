@@ -1356,6 +1356,60 @@ for (const [w, h, name] of [[375, 667, 'se'], [820, 1180, 'ipad']]) {
   check('friend pass: no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
   await ctx.close();
 }
+// Release 1.1.1 #28 with #42: the game re-checks its saved pass, at most once an hour
+{
+  const t1 = tokenFor('48h', Date.now() + 2 * 3600e3), t2 = tokenFor('48h', Date.now() + 50 * 3600e3);
+  const seed = (tok, kind, e) => ({ code: 'MOJI-CHEK-PASS-2345', kind, ends_at: e, token: tok, email_masked: 'p•••@example.com', device_id: 'a'.repeat(32) });
+  const seedInit = (s) => { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); localStorage.setItem('mojia.pass', JSON.stringify(s)); } };
+  const openGU = async (page) => { if (await page.isVisible('#splash')) { await page.click('#splash'); await page.waitForTimeout(400); } await page.click('#lockBtn'); await page.waitForSelector('#s-ngate:not(.hidden)'); const ans = await page.getAttribute('#pwChoices', 'data-a'); await page.click('#pwChoices [data-n="' + ans + '"]'); await page.waitForSelector('#s-gate:not(.hidden)'); };
+  {
+    const { ctx, page } = await newPage(); const calls = [];
+    await page.addInitScript(seedInit, seed(t1.token, '48h', t1.payload.e));
+    await page.route('**/.netlify/functions/pass-check', (r) => { calls.push(r.request().postDataJSON()); r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ state: 'on', kind: '48h', ends_at: t2.payload.e, token: t2.token }) }); });
+    await page.goto(base + '/play/'); await page.waitForTimeout(1200);
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('mojia.pass')));
+    check('pass check: sends only the pass token and a device id', calls.length === 1 && Object.keys(calls[0]).sort().join() === 'device_id,token' && calls[0].token === t1.token && /^[0-9a-f]{32}$/.test(calls[0].device_id), JSON.stringify(calls).slice(0, 120));
+    check('pass check: Add 48 hours reaches the device; code and email kept', saved.ends_at === t2.payload.e && saved.token === t2.token && saved.code === 'MOJI-CHEK-PASS-2345' && saved.email_masked === 'p•••@example.com');
+    await page.reload(); await page.waitForTimeout(900);
+    check('pass check: at most once an hour', calls.length === 1);
+    check('pass check: no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await newPage();
+    await page.addInitScript(seedInit, seed(t1.token, '48h', t1.payload.e));
+    await page.route('**/.netlify/functions/pass-check', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ state: 'off', reason: 'refunded' }) }));
+    await page.goto(base + '/play/'); await page.waitForTimeout(1200);
+    check('pass check: a refund turns the pass off on the device', (await page.evaluate(() => localStorage.getItem('mojia.pass'))) === null);
+    check('pass check: the kid sees free play, no error screen', /\d+:\d\d/.test(await page.locator('#s-home [data-chip]').textContent()) && page.errors.length === 0);
+    await openGU(page);
+    check('pass check: Grown-ups says why the pass turned off', /turned off\. It was refunded\./.test(await page.textContent('#pwStatus')));
+    await page.screenshot({ path: path.join(SHOTS, 'gu-pass-refunded-390.png') });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await newPage();
+    await page.addInitScript(seedInit, seed(t1.token, '48h', t1.payload.e));
+    await page.route('**/.netlify/functions/pass-check', (r) => r.abort());
+    await page.goto(base + '/play/'); await page.waitForTimeout(1200);
+    check('pass check: offline keeps the saved pass', JSON.parse(await page.evaluate(() => localStorage.getItem('mojia.pass'))).token === t1.token && page.errors.length === 0);
+    await ctx.close();
+  }
+  {
+    const old = signToken(makeTokenPayload({ id: crypto.randomUUID(), kind: 'forever', ends_at: null }, 'staging', Date.now() - 40 * 86400e3), PEM);
+    const fresh = tokenFor('forever');
+    for (const online of [false, true]) {
+      const { ctx, page } = await newPage();
+      await page.addInitScript(seedInit, seed(old, 'forever', 0));
+      await page.route('**/.netlify/functions/pass-check', (r) => online ? r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ state: 'on', kind: 'forever', ends_at: 0, token: fresh.token }) }) : r.abort());
+      await page.goto(base + '/play/'); await page.waitForTimeout(1500);
+      const chip = await page.locator('#s-home [data-chip]').textContent();
+      if (online) check('Forever: an expired 30-day token renews on the next check', chip.includes('Forever'), chip);
+      else check('Forever: a token past its 30 days stops working offline', !chip.includes('Forever'), chip);
+      await ctx.close();
+    }
+  }
+}
 // Release 1.1.1 #40: device limit and old links show a clear message with Contact us, never a dead end
 for (const [st, title] of [[403, 'This pass is on 5 devices'], [410, 'This link is more than 7 days old']]) {
   const { ctx, page } = await newPage();

@@ -18,6 +18,7 @@ import { handler as redeemFn } from '../netlify/functions/redeem-code.mjs';
 import { handler as settingsFn } from '../netlify/functions/settings.mjs';
 import { handler as handoff } from '../netlify/functions/handoff.mjs';
 import { handler as friendFn } from '../netlify/functions/friend-code.mjs';
+import { handler as passCheck } from '../netlify/functions/pass-check.mjs';
 import { friendPass } from '../netlify/functions/_lib/friend.mjs';
 import { deriveFriendCode } from '../netlify/functions/_lib/codes.mjs';
 import ping from '../netlify/functions/ping.mjs';
@@ -75,6 +76,8 @@ test('token: sign and verify round trip; tampering fails', () => {
   assert.equal(verifyToken(tok, crypto.generateKeyPairSync('ec', { namedCurve: 'P-256' }).publicKey.export({ format: 'jwk' })), null);
   const fp = makeTokenPayload({ id: 'x', kind: 'forever', ends_at: null }, 'live');
   assert.equal(fp.k, 'forever'); assert.equal(fp.e, 0);
+  assert.ok(Math.abs(fp.x - (Date.now() + 30 * 86400e3)) < 5000, 'Forever token works for 30 days (Release 1.1.1 #42)');
+  assert.equal(payload.x, undefined, '48-hour tokens end at e, no x');
 });
 
 test('startup guard: wrong-mode keys and missing vars refuse to run', async () => {
@@ -338,6 +341,46 @@ test('grant (Release 1.1.1 #41): an old checkout never grants again after cleanu
   db.stripe_events = [];
   await grantPass(add);
   assert.equal(db.passes.find((p) => p.id === pass.id).ends_at, end1, 'add applied once');
+});
+
+test('pass-check (Release 1.1.1 #28 with #42): fresh copy on each check; admin changes reach the device; refunds turn off', async () => {
+  const { pass } = await grantPass(paidSession('cs_test_pc1', 'pass'));
+  const tok = (pp) => signToken(makeTokenPayload(pp, 'staging'), process.env.PASS_SIGNING_PRIVATE_KEY);
+  const check = async (token, dev = DEV('1')) => { const r = await passCheck(ev({ token, device_id: dev })); return [r.statusCode, JSON.parse(r.body)]; };
+  assert.equal((await passCheck(ev({ token: 'nope.nope', device_id: DEV('1') }))).statusCode, 403);
+  assert.equal((await passCheck(ev({ token: tok(pass) }))).statusCode, 400, 'device id needed');
+  assert.equal((await passCheck(ev({ token: signToken(makeTokenPayload(pass, 'live'), process.env.PASS_SIGNING_PRIVATE_KEY), device_id: DEV('1') }))).statusCode, 403, 'live token on staging');
+  let [st, d] = await check(tok(pass));
+  assert.equal(st, 200); assert.equal(d.state, 'on'); assert.equal(d.kind, '48h');
+  assert.equal(verifyToken(d.token, KEYS.jwk).p, pass.id);
+  // admin adds 48 hours: the next check carries the new end time
+  const row = db.passes.find((x) => x.id === pass.id);
+  row.ends_at = new Date(new Date(row.ends_at).getTime() + 48 * 3600e3).toISOString();
+  [st, d] = await check(tok(pass));
+  assert.equal(d.ends_at, new Date(row.ends_at).getTime());
+  // admin makes it Forever: the check returns a 30-day Forever token
+  row.kind = 'forever'; row.ends_at = null;
+  [st, d] = await check(tok(pass));
+  assert.equal(d.kind, 'forever'); assert.equal(d.ends_at, 0);
+  const fx = verifyToken(d.token, KEYS.jwk).x; assert.ok(fx > Date.now() + 29 * 86400e3);
+  // an expired Forever token still identifies the pass and renews
+  const oldTok = signToken(makeTokenPayload(row, 'staging', Date.now() - 40 * 86400e3), process.env.PASS_SIGNING_PRIVATE_KEY);
+  [st, d] = await check(oldTok);
+  assert.equal(d.state, 'on'); assert.ok(verifyToken(d.token, KEYS.jwk).x > Date.now());
+  // refund and dispute turn the pass off, with a reason for the grown-up
+  row.status = 'refunded'; [st, d] = await check(tok(row)); assert.deepEqual(d, { state: 'off', reason: 'refunded' });
+  row.status = 'disputed'; [st, d] = await check(tok(row)); assert.deepEqual(d, { state: 'off', reason: 'disputed' });
+  // admin End
+  row.status = 'ended'; [st, d] = await check(tok(row)); assert.equal(d.state, 'off'); assert.equal(d.reason, 'ended');
+  // pass deleted by cleanup
+  db.passes = db.passes.filter((x) => x.id !== pass.id); [st, d] = await check(tok(row)); assert.deepEqual(d, { state: 'off', reason: 'gone' });
+  // device limit: the check counts the device, so a sixth device through the Home Screen address turns off
+  const { pass: p2 } = await grantPass(paidSession('cs_test_pc2', 'life'));
+  for (const n of [1, 2, 3, 4, 5]) assert.equal((await check(tok(p2), DEV(n)))[1].state, 'on');
+  assert.deepEqual((await check(tok(p2), DEV(6)))[1], { state: 'off', reason: 'devices' });
+  assert.equal((await check(tok(p2), DEV(3)))[1].state, 'on', 'a counted device stays on');
+  // never logs the token or code
+  assert.ok(!db.calls.some((c) => c.includes(tok(p2))));
 });
 
 test('redeem-code: turns a pass on, counts devices, limit 5, refunds stop it', async () => {

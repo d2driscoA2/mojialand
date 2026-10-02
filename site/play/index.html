@@ -1937,7 +1937,7 @@ const pay=(function(){
     const parts=tok.split('.'); if(parts.length!==2) return null;
     try{ const key=await crypto.subtle.importKey('jwk',{kty:'EC',crv:'P-256',x:PASS_PUBLIC_JWK.x,y:PASS_PUBLIC_JWK.y,ext:true},{name:'ECDSA',namedCurve:'P-256'},false,['verify']);
       if(!(await crypto.subtle.verify({name:'ECDSA',hash:'SHA-256'},key,b64u(parts[1]),new TextEncoder().encode(parts[0])))) return null;
-      const p=JSON.parse(new TextDecoder().decode(b64u(parts[0]))); return p&&p.v===1&&(p.k==='48h'||p.k==='forever')&&typeof p.e==='number'?p:null; }catch(e){ return null; } }
+      const p=JSON.parse(new TextDecoder().decode(b64u(parts[0]))); return p&&p.v===1&&(p.k==='48h'||p.k==='forever')&&typeof p.e==='number'&&(p.x===undefined||typeof p.x==='number')?p:null; }catch(e){ return null; } }
   function verifyStored(){ const p=store.get('pass',null), tok=p&&typeof p==='object'&&typeof p.token==='string'?p.token:null;
     if(tok===vcache.token) return vcache.pending||Promise.resolve();
     vcache.token=tok; vcache.payload=null;
@@ -1946,6 +1946,8 @@ const pay=(function(){
   function getPass(){ const p=store.get('pass',null); if(!p||typeof p!=='object'||(p.kind!=='48h'&&p.kind!=='forever')) return null;
     if(p.token!==vcache.token){ verifyStored(); return null; }
     const v=vcache.payload; if(!v||v.k!==p.kind||v.e!==(p.kind==='forever'?0:Number(p.ends_at))) return null;
+    /* Release 1.1.1 #42: a Forever token works until x (30 days); the hourly pass check renews it */
+    if(typeof v.x==='number'&&v.x<=Date.now()) return null;
     return {code:String(p.code||''),kind:v.k,ends_at:v.e,email_masked:String(p.email_masked||''),device_id:p.device_id||deviceId()}; }
   const passOn=p=>!!p&&(p.kind==='forever'||p.ends_at>Date.now());
   /* grace: paid, but the pass did not arrive yet. Free minutes until it does; the game keeps asking the server. */
@@ -1990,7 +1992,7 @@ const pay=(function(){
     if(PLAY.has(current)&&blocked()) showRest();
     else if(current==='rest'&&!blocked()) go('home');
     paintChips(); if(current==='gate') paintStatus(); syncGrace(); }
-  document.addEventListener('visibilitychange',()=>{ last=Date.now(); if(!document.hidden){ tick(); offerHandoff(); claimHandoff().then(ok=>{ if(ok) showAllset(); }); } });
+  document.addEventListener('visibilitychange',()=>{ last=Date.now(); if(!document.hidden){ tick(); offerHandoff(); claimHandoff().then(ok=>{ if(ok) showAllset(); }); checkPass(); } });
 
   /* parent gate: number words */
   const ONES=['','one','two','three','four','five','six','seven','eight','nine'], TENS=['','','twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'];
@@ -2119,9 +2121,31 @@ const pay=(function(){
   /* save a pass the server signed (confirm-session or redeem-code) */
   async function savePass(d,plan){ const v=await checkToken(d&&d.token); if(!v||v.k!==d.kind||v.e!==d.ends_at) return false;
     const old=store.get('pass',null)||{}; const code=typeof d.code==='string'&&d.code?d.code:(typeof old.code==='string'?old.code:'');
-    try{ localStorage.setItem('mojia.pass',JSON.stringify({code:code,kind:v.k,ends_at:v.e,token:d.token,email_masked:String(d.email_masked||''),device_id:deviceId()})); }catch(e){ return false; }
-    try{ localStorage.removeItem('mojia.grace'); }catch(e){}
+    try{ localStorage.setItem('mojia.pass',JSON.stringify({code:code,kind:v.k,ends_at:v.e,token:d.token,email_masked:String(d.email_masked||old.email_masked||''),device_id:deviceId()})); }catch(e){ return false; }
+    try{ localStorage.removeItem('mojia.grace'); localStorage.removeItem('mojia.passOff'); }catch(e){}
     await verifyStored(); paintChips(); if(current==='gate') buildGU(); return true; }
+  /* Release 1.1.1 #28 with #42: ask the server about the saved pass when the game opens or returns to the front,
+     at most once an hour. Sends only the signed pass and the device id. A fresh signed copy comes back, so
+     Add 48 hours and Forever reach the device, and End, Refund and chargebacks turn the pass off.
+     Offline or any error: keep the saved pass and try later. Kids never see an error. */
+  let checkingPass=false;
+  async function checkPass(force){ const raw=store.get('pass',null); if(!raw||typeof raw!=='object'||typeof raw.token!=='string'||checkingPass) return;
+    if(!force&&Date.now()-(Number(store.get('passCheckAt',0))||0)<60*MIN) return;
+    const v=await checkToken(raw.token); if(!v) return;
+    if(v.k==='48h'&&v.e&&Date.now()-v.e>30*DAY) return;
+    checkingPass=true; store.set('passCheckAt',Date.now());
+    try{ const res=await fetch('/.netlify/functions/pass-check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:raw.token,device_id:deviceId()}),credentials:'same-origin',cache:'no-store'});
+      let d={}; try{ d=await res.json(); }catch(e){}
+      if(res.status===200&&d&&d.state==='on'&&typeof d.token==='string') await savePass({token:d.token,kind:d.kind,ends_at:d.ends_at});
+      else if(res.status===200&&d&&d.state==='off'&&!(d.reason==='ended'&&v.k==='48h'&&v.e<=Date.now())){
+        store.set('passOff',{reason:String(d.reason||'ended'),at:Date.now()});
+        try{ localStorage.removeItem('mojia.pass'); }catch(e){}
+        await verifyStored(); syncManifest(); paintChips(); if(current==='gate') buildGU(); }
+    }catch(e){}
+    checkingPass=false; }
+  const OFF_WHY={refunded:'It was refunded.',disputed:'Its payment is under review.',devices:'It is on 5 devices already.',ended:'It ended.',gone:'It ended.'};
+  function passOffLine(){ const o=store.get('passOff',null); if(!o||typeof o!=='object'||Date.now()-Number(o.at||0)>30*DAY) return '';
+    return '<span>Your pass on this device turned off. '+(OFF_WHY[o.reason]||OFF_WHY.ended)+' Contact us below if this looks wrong.</span>'; }
   /* grace retry: every 30 seconds while the app is open, for up to 7 days */
   let syncing=false, lastSync=0;
   async function syncGrace(){ const g=graceInfo(); if(!g||syncing||Date.now()-lastSync<30000) return; lastSync=Date.now();
@@ -2169,7 +2193,7 @@ const pay=(function(){
     if(passOn(p)&&p.kind==='forever') h='<b>Forever pass on</b><span>Code '+p.code+'</span>';
     else if(passOn(p)){ const m=Math.max(0,Math.ceil((p.ends_at-Date.now())/MIN)); h='<b>48-hour pass on</b><span>Ends '+fmtT(p.ends_at)+(m<=60?' ('+m+' min left)':'')+(p.code?' · Code '+p.code:'')+'</span>'; }
     else if(graceOn()){ const m=Math.max(1,Math.ceil((graceInfo().until-Date.now())/MIN)); h='<b>Your pass is on its way</b><span>Payment received. Free play for '+m+' more min while it arrives. Your code also comes by email.</span>'; }
-    else { const s=Math.ceil(freeLeft()/1000); h='<b>Free play</b><span>'+SETTINGS.first_visit_minutes+' minutes on the first visit, then '+SETTINGS.daily_minutes+' minutes a day. Resets each morning.</span><span>Left today: '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0')+'</span>'+(standalone()?'<span>Paid already? Open your pass email and tap the button, or tap Have a code? below.</span>':''); }
+    else { const s=Math.ceil(freeLeft()/1000); h=passOffLine()+'<b>Free play</b><span>'+SETTINGS.first_visit_minutes+' minutes on the first visit, then '+SETTINGS.daily_minutes+' minutes a day. Resets each morning.</span><span>Left today: '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0')+'</span>'+(standalone()?'<span>Paid already? Open your pass email and tap the button, or tap Have a code? below.</span>':''); }
     if(/displayedux\.com$|netlify\.app$/.test(location.hostname)){ h+='<span style="opacity:.6">Staging check: '+(standalone()?'Home Screen app':'browser')+' · opened with pass in address: '+dbgRestore+' · address carries pass now: '+(/restore=/.test(location.search)?'yes':'no')+' · server handoff: '+dbgClaim+'</span>'; }
     const el=$('#pwStatus'); if(el.innerHTML!==h) el.innerHTML=h; }
   function buildGU(){ paintStatus(); const p=getPass(), rows=[];
@@ -2189,7 +2213,7 @@ const pay=(function(){
     else if(a==='share') sharePass(); else if(a==='gift') openGift(); else if(a==='photos') games.draw.openPhotos(); else if(a==='code') openCode(); else if(a==='help') openContact(); });
 
   function onScreen(name){ if(name==='ngate'){ newGate(); claimHandoff().then(ok=>{ if(ok) showAllset(); }); } else if(name==='plans') buildPlans(); else if(name==='gate') buildGU(); if(name!=='rest') $('#pwZeroChip').classList.remove('shake'); $$('.pw-ov').forEach(o=>o.classList.add('hidden')); paintChips(); }
-  async function start(route){ deviceId(); rollDay(); await restoreFromUrl(); await verifyStored(); if(await claimHandoff()) route='allset'; ackEnd(getPass()); paintChips();
+  async function start(route){ deviceId(); rollDay(); await restoreFromUrl(); await verifyStored(); if(await claimHandoff()) route='allset'; ackEnd(getPass()); paintChips(); checkPass();
     if(route==='allset'&&showAllset()){} else if(route==='passes') openGate('plans','home'); else if(blocked()) showRest();
     setInterval(tick,1000); }
   return { onScreen, start, getPass, openGate };

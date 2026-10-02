@@ -5,9 +5,16 @@ import crypto from 'node:crypto';
 
 const b64u = (buf) => Buffer.from(buf).toString('base64url');
 
-export function makeTokenPayload(pass, env) {
+// Release 1.1.1 #42 (audit M4): a Forever token carries x, the time the token
+// itself stops working (30 days). The game renews it in the background while
+// the pass is still good (pass-check), so a refund or chargeback turns Forever
+// off within 30 days even on a device that never asks again. 48-hour tokens
+// already end at e and carry no x.
+export const FOREVER_TOKEN_DAYS = 30;
+
+export function makeTokenPayload(pass, env, now = Date.now()) {
   const forever = pass.kind === 'forever';
-  return {
+  const payload = {
     v: 1,
     k: forever ? 'forever' : '48h',
     e: forever || !pass.ends_at ? 0 : new Date(pass.ends_at).getTime(),
@@ -15,6 +22,8 @@ export function makeTokenPayload(pass, env) {
     p: pass.id,
     env,
   };
+  if (forever) payload.x = now + FOREVER_TOKEN_DAYS * 86400e3;
+  return payload;
 }
 
 // The private key may be stored as a JWK JSON string (preferred; one line,
