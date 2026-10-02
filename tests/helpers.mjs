@@ -79,6 +79,22 @@ export function fakeDb() {
       db.rate.set(body.p_key, n);
       return reply(200, n <= Math.min(body.p_limit, db.rateLimit));
     }
+    // Release 1.1.1 #38: admin sign-in functions (same rules as supabase/release-1.1.1-38-admin.sql)
+    if (table === 'rpc/admin_locked') return reply(200, !!db.adminLockAt && Date.now() - db.adminLockAt < 3600e3);
+    if (table === 'rpc/admin_code_new') {
+      if (db.adminLockAt && Date.now() - db.adminLockAt < 3600e3) return reply(200, false);
+      db.admin_codes.forEach((r) => { if (!r.used) r.used = true; });
+      db.admin_codes.push({ id: body.p_id, code_hash: body.p_hash, expires_at: body.p_expires, tries: 0, used: false });
+      return reply(200, true);
+    }
+    if (table === 'rpc/admin_code_check') {
+      if (db.adminLockAt && Date.now() - db.adminLockAt < 3600e3) return reply(200, 'locked');
+      const r = db.admin_codes.find((x) => x.id === body.p_id && !x.used && x.tries < 5 && new Date(x.expires_at).getTime() > Date.now());
+      if (r) { r.tries++; if (r.code_hash === body.p_hash) { r.used = true; return reply(200, 'ok'); } }
+      db.adminFails = (db.adminFails || 0) + 1;
+      if (db.adminFails > 20) { if (!db.adminLockAt) db.adminLockAt = Date.now(); db.admin_codes.forEach((x) => { x.used = true; }); return reply(200, db.adminFails === 21 ? 'lockednow' : 'locked'); }
+      return reply(200, 'bad');
+    }
     if (table === 'rpc/alert_add') { db.alerts.push(body); return reply(200, 1); }
     if (table === 'rpc/analytics_add') { db.analytics.push(body); return reply(204); }
     if (table === 'rpc/campaign_add') {

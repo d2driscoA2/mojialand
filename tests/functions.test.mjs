@@ -409,6 +409,50 @@ test('admin-login: five wrong tries burn the code; send is rate limited', async 
   assert.equal((await adminLogin(ev({ step: 'send' }))).statusCode, 429);
 });
 
+test('admin-login (Release 1.1.1 #38): parallel wrong guesses stop at 5 tries', async () => {
+  const { id } = JSON.parse((await adminLogin(ev({ step: 'send' }))).body);
+  const right = codeFromEmail();
+  const wrong = right === '111111' ? '222222' : '111111';
+  const ip = (i) => ({ 'x-nf-client-connection-ip': '198.51.100.' + i });
+  const res = await Promise.all(Array.from({ length: 12 }, (_, i) => adminLogin(ev({ step: 'verify', id, code: wrong }, ip(i)))));
+  assert.ok(res.every((r) => r.statusCode === 401));
+  assert.equal(db.admin_codes.find((r) => r.id === id).tries, 5, 'tries never pass 5');
+  assert.equal((await adminLogin(ev({ step: 'verify', id, code: right }, ip(50)))).statusCode, 401, 'burned after 5 tries');
+});
+
+test('admin-login (Release 1.1.1 #38): a new code cancels the old one', async () => {
+  const { id: first } = JSON.parse((await adminLogin(ev({ step: 'send' }))).body);
+  const firstCode = codeFromEmail();
+  const { id: second } = JSON.parse((await adminLogin(ev({ step: 'send' }))).body);
+  const secondCode = codeFromEmail();
+  assert.equal((await adminLogin(ev({ step: 'verify', id: first, code: firstCode }))).statusCode, 401, 'old code cancelled');
+  assert.equal((await adminLogin(ev({ step: 'verify', id: second, code: secondCode }))).statusCode, 200, 'newest code works');
+  assert.equal(db.admin_codes.filter((r) => !r.used).length, 0);
+});
+
+test('admin-login (Release 1.1.1 #38): 21 failures across networks lock sign-in for an hour and email the admin', async () => {
+  const ip = (i) => ({ 'x-nf-client-connection-ip': '192.0.2.' + i });
+  let fails = 0;
+  for (let round = 0; fails < 20; round++) {
+    const { id } = JSON.parse((await adminLogin(ev({ step: 'send' }, ip(100 + round)))).body);
+    const wrong = codeFromEmail() === '111111' ? '222222' : '111111';
+    for (let t = 0; t < 5 && fails < 20; t++, fails++) assert.equal((await adminLogin(ev({ step: 'verify', id, code: wrong }, ip(fails)))).statusCode, 401);
+  }
+  const before = db.emails.length;
+  const { id } = JSON.parse((await adminLogin(ev({ step: 'send' }, ip(200)))).body);
+  const right = codeFromEmail();
+  let r = await adminLogin(ev({ step: 'verify', id, code: right === '111111' ? '222222' : '111111' }, ip(201)));
+  assert.equal(r.statusCode, 423, '21st failure locks');
+  assert.equal(db.emails.length, before + 2, 'code email plus lock email');
+  assert.equal(db.emails.at(-1).subject, 'Mojialand: admin sign-in locked for 1 hour');
+  assert.deepEqual(db.emails.at(-1).to, ['admin@example.test']);
+  assert.equal((await adminLogin(ev({ step: 'verify', id, code: right }, ip(202)))).statusCode, 423, 'even the right code waits');
+  assert.equal((await adminLogin(ev({ step: 'send' }, ip(203)))).statusCode, 423, 'no new codes while locked');
+  db.adminLockAt = Date.now() - 3601e3; db.adminFails = 0;
+  const { id: id2 } = JSON.parse((await adminLogin(ev({ step: 'send' }, ip(204)))).body);
+  assert.equal((await adminLogin(ev({ step: 'verify', id: id2, code: codeFromEmail() }, ip(205)))).statusCode, 200, 'works again after the hour');
+});
+
 test('admin-api: needs the cookie; passes, codes, support, settings', async () => {
   assert.equal((await adminApi(ev({ action: 'passes.list' }))).statusCode, 401);
   const cookie = await adminSignIn();
@@ -789,7 +833,7 @@ test('alerts: encryption only the phone can read; VAPID note signed by our key; 
   assert.ok(crypto.verify('sha256', Buffer.from(h + '.' + b), { key, dsaEncoding: 'ieee-p1363' }, Buffer.from(sig, 'base64url')));
   const claims = JSON.parse(Buffer.from(b, 'base64url'));
   assert.equal(claims.aud, 'https://web.push.apple.com');
-  assert.equal(claims.sub, 'mailto:admin@example.test');
+  assert.equal(claims.sub, 'mailto:hello@mojialand.com', 'push contact is the public inbox, never ADMIN_EMAIL');
   for (const endpoint of ['https://evil.example.com/x', 'http://web.push.apple.com/x', 'https://web.push.apple.com:8443/x', 'https://169.254.169.254/x']) assert.equal(readSubscription({ ...p, endpoint }), null, endpoint);
   assert.equal(readSubscription({ ...p, keys: { p256dh: 'short', auth: p.keys.auth } }), null);
 });

@@ -40,7 +40,8 @@ function vapidKey() {
 // VAPID (RFC 8292): a short signed note that says this server sent the push.
 export function vapidAuth(endpoint, now = Date.now()) {
   const aud = new URL(endpoint).origin;
-  const sub = 'mailto:' + (process.env.ADMIN_EMAIL || 'hello@mojialand.com');
+  // Fixed public address (Release 1.1.1 #38): ADMIN_EMAIL is private and never leaves Mojialand.
+  const sub = 'mailto:hello@mojialand.com';
   const head = b64u(JSON.stringify({ typ: 'JWT', alg: 'ES256' }));
   const body = b64u(JSON.stringify({ aud, exp: Math.floor(now / 1000) + 12 * 3600, sub }));
   const sig = crypto.sign('sha256', Buffer.from(head + '.' + body), { key: vapidKey(), dsaEncoding: 'ieee-p1363' });

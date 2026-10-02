@@ -24,12 +24,14 @@ export const handler = async (event) => {
     if (input.step === 'send') {
       if (!(await rateHit('admin-send', ip, 5, 3600))) return fail(429, 'Too many codes sent. Wait an hour.');
       const id = await startLogin();
+      if (!id) return fail(423, 'Sign-in is locked for an hour after too many wrong codes.');
       console.log('admin-login: code sent');
       return json(200, { id });
     }
     if (input.step === 'verify') {
       if (!(await rateHit('admin-verify', ip, 15, 3600))) return fail(429, 'Too many tries. Wait an hour.');
-      const token = await finishLogin(input.id, String(input.code || '').replace(/\s/g, ''));
+      const { token, locked } = await finishLogin(input.id, String(input.code || '').replace(/\s/g, ''));
+      if (locked) return fail(423, 'Sign-in is locked for an hour after too many wrong codes.');
       if (!token) return fail(401, 'That code did not work. Check it, or send a new one.');
       console.log('admin-login: signed in');
       return withCookie(json(200, { ok: true }), sessionCookie(token));

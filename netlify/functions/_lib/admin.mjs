@@ -7,7 +7,8 @@ import { sendEmail } from './email.mjs';
 
 export const SESSION_HOURS = 12;
 const CODE_MINUTES = 10;
-const MAX_TRIES = 5;
+const MAX_TRIES = 5; // per code, enforced in admin_code_check
+export const MAX_FAILS = 20; // per hour, all networks, enforced in admin_code_check
 const COOKIE = 'mojia_admin';
 const enc = encodeURIComponent;
 
@@ -19,37 +20,55 @@ export function adminEmail() {
   return process.env.ADMIN_EMAIL || 'hello@mojialand.com';
 }
 
-// Makes a code, stores its hash, emails it. Returns the code row id.
+// Release 1.1.1 #38 (audit H2): the database counts each try in one step
+// before the compare, so parallel guesses never pass 5 tries. After 20 failed
+// tries in an hour from all networks, sign-in locks for 1 hour and the admin
+// gets an email. A new code cancels every older code.
+
+// True while sign-in is locked.
+export async function loginLocked() {
+  const { data } = await rest('POST', 'rpc/admin_locked', { body: {} });
+  return data === true;
+}
+
+// Makes a code, stores its hash, cancels older codes, emails it.
+// Returns the code row id, or null while sign-in is locked.
 export async function startLogin() {
   const code = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
   const id = crypto.randomUUID();
-  await rest('POST', 'admin_codes', {
-    body: { id, code_hash: hashCode(id, code), expires_at: new Date(Date.now() + CODE_MINUTES * 60e3).toISOString() },
-    prefer: 'return=minimal',
+  const { data } = await rest('POST', 'rpc/admin_code_new', {
+    body: { p_id: id, p_hash: hashCode(id, code), p_expires: new Date(Date.now() + CODE_MINUTES * 60e3).toISOString() },
   });
+  if (data !== true) return null;
   const spaced = code.slice(0, 3) + ' ' + code.slice(3);
   await sendEmail(adminEmail(), {
     subject: 'Mojialand: admin sign-in code ' + spaced,
-    text: 'Your Mojialand admin code is ' + spaced + '.\n\nIt works for ' + CODE_MINUTES + ' minutes. If you did not ask for it, ignore this email.',
+    text: 'Your Mojialand admin code is ' + spaced + '.\n\nIt works for ' + CODE_MINUTES + ' minutes. A newer code cancels this one. If you did not ask for it, ignore this email.',
   });
   return id;
 }
 
-// Checks a code. Returns a new session token, or null.
+// Checks a code. Returns { token } on success, { locked: true } while locked,
+// or {} for a wrong, used, cancelled or old code.
 export async function finishLogin(id, code) {
-  if (!/^[0-9a-f-]{36}$/i.test(String(id || '')) || !/^\d{6}$/.test(String(code || ''))) return null;
-  const { data } = await rest('GET', 'admin_codes?id=eq.' + enc(id) + '&select=*&limit=1');
-  const row = Array.isArray(data) && data[0];
-  if (!row || row.used || new Date(row.expires_at).getTime() < Date.now() || row.tries >= MAX_TRIES) return null;
-  const ok = crypto.timingSafeEqual(Buffer.from(row.code_hash), Buffer.from(hashCode(id, code)));
-  await rest('PATCH', 'admin_codes?id=eq.' + enc(id), { body: ok ? { used: true } : { tries: row.tries + 1 }, prefer: 'return=minimal' });
-  if (!ok) return null;
+  if (!/^[0-9a-f-]{36}$/i.test(String(id || '')) || !/^\d{6}$/.test(String(code || ''))) return {};
+  const { data } = await rest('POST', 'rpc/admin_code_check', { body: { p_id: id, p_hash: hashCode(id, code) } });
+  if (data === 'lockednow') {
+    await sendEmail(adminEmail(), {
+      subject: 'Mojialand: admin sign-in locked for 1 hour',
+      text: 'Mojialand admin sign-in saw ' + MAX_FAILS + ' wrong codes in one hour, so sign-in is locked for 1 hour. Every open code is cancelled.\n\nIf this was not you, someone is guessing admin codes. Nothing else changed. After the hour, send a new code as usual.',
+    }).catch(() => {});
+    console.log('admin-login: locked after too many wrong codes');
+    return { locked: true };
+  }
+  if (data === 'locked') return { locked: true };
+  if (data !== 'ok') return {};
   const token = crypto.randomBytes(32).toString('base64url');
   await rest('POST', 'admin_sessions', {
     body: { token_hash: hashToken(token), expires_at: new Date(Date.now() + SESSION_HOURS * 3600e3).toISOString() },
     prefer: 'return=minimal',
   });
-  return token;
+  return { token };
 }
 
 function readCookie(event) {
