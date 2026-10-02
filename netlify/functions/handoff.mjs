@@ -56,11 +56,13 @@ export const handler = async (event) => {
       if (!row || new Date(row.expires_at).getTime() < Date.now()) return fail(404, 'Nothing waiting.');
       const payload = verifyToken(row.token, jwk);
       if (!payload) { await rest('DELETE', 'handoffs?key_hash=eq.' + enc(key)); return fail(404, 'Nothing waiting.'); }
-      await rest('DELETE', 'handoffs?key_hash=eq.' + enc(key));
+      // Release 1.1.1 #40 (audit M2): a claim counts the device and stops at the limit.
+      if (!DEVICE_RE.test(String(input.device_id || ''))) return fail(400, 'This device could not be checked.');
       const pass = payload.p ? await getPassBy('id', payload.p) : null;
-      if (pass && DEVICE_RE.test(String(input.device_id || ''))) {
-        try { await addDevice(pass, input.device_id); } catch (e) { console.error('handoff: device count failed (' + safeErr(e) + ')'); }
-      }
+      if (!pass) return fail(404, 'Nothing waiting.');
+      const dev = await addDevice(pass, input.device_id);
+      if (!dev.ok) return fail(403, 'This pass is on 5 devices already. Contact us to move it to a new device.');
+      await rest('DELETE', 'handoffs?key_hash=eq.' + enc(key));
       console.log('handoff: claimed');
       return json(200, { code: row.code || '', kind: payload.k, ends_at: payload.e, token: row.token, email_masked: '' });
     }

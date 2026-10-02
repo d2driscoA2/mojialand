@@ -190,24 +190,24 @@ test('grantPass: idempotent for pass, life, add, up', async () => {
 });
 
 test('confirm-session: pending, paid, bad ids', async () => {
-  assert.equal((await confirmSession(ev({ session_id: 'nope' }))).statusCode, 400);
-  assert.equal((await confirmSession(ev({ session_id: 'cs_test_missing1' }))).statusCode, 404);
+  assert.equal((await confirmSession(ev({ session_id: 'nope', device_id: DEV('e') }))).statusCode, 400);
+  assert.equal((await confirmSession(ev({ session_id: 'cs_test_missing1', device_id: DEV('e') }))).statusCode, 404);
   stripe.sessions.set('cs_test_pending1', { ...paidSession('cs_test_pending1', 'pass'), payment_status: 'unpaid', status: 'open' });
-  let r = await confirmSession(ev({ session_id: 'cs_test_pending1' }));
+  let r = await confirmSession(ev({ session_id: 'cs_test_pending1', device_id: DEV('e') }));
   assert.equal(r.statusCode, 402); assert.deepEqual(JSON.parse(r.body), { status: 'pending' });
   stripe.sessions.set('cs_test_paid0001', paidSession('cs_test_paid0001', 'pass'));
-  r = await confirmSession(ev({ session_id: 'cs_test_paid0001' }));
+  r = await confirmSession(ev({ session_id: 'cs_test_paid0001', device_id: DEV('e') }));
   assert.equal(r.statusCode, 200);
   const d = JSON.parse(r.body);
   assert.equal(d.code, deriveCode(process.env.RESTORE_CODE_PEPPER, 'cs_test_paid0001'));
   assert.equal(d.kind, '48h'); assert.equal(d.plan, 'pass'); assert.equal(d.email_masked, 'p•••@example.com');
   const payload = verifyToken(d.token, KEYS.jwk);
   assert.ok(payload); assert.equal(payload.e, d.ends_at); assert.equal(payload.env, 'staging');
-  r = await confirmSession(ev({ session_id: 'cs_test_paid0001' }));
+  r = await confirmSession(ev({ session_id: 'cs_test_paid0001', device_id: DEV('e') }));
   assert.equal(JSON.parse(r.body).code, d.code);
   assert.equal(db.passes.length, 1);
   stripe.sessions.set('cs_test_livex1', { ...paidSession('cs_test_livex1', 'pass'), metadata: { plan: 'pass', env: 'live' } });
-  assert.equal((await confirmSession(ev({ session_id: 'cs_test_livex1' }))).statusCode, 400);
+  assert.equal((await confirmSession(ev({ session_id: 'cs_test_livex1', device_id: DEV('e') }))).statusCode, 400);
   assert.equal(maskEmail('abc'), '');
 });
 
@@ -298,6 +298,23 @@ test('confirm-session: paid but database down gives 202 paid_pending; counts the
   await confirmSession(ev({ session_id: 'cs_test_grace01', device_id: DEV('a') }));
   assert.equal(db.devices.length, 1, 'same device counts once');
   assert.ok(!JSON.stringify(db.devices).includes(DEV('a')), 'device value stored only as a hash');
+});
+
+test('confirm-session (Release 1.1.1 #40): device needed, 5-device limit, 7-day window, parallel safe', async () => {
+  stripe.sessions.set('cs_test_lim001', paidSession('cs_test_lim001', 'pass'));
+  assert.equal((await confirmSession(ev({ session_id: 'cs_test_lim001' }))).statusCode, 400, 'no device id');
+  const res = await Promise.all([1, 2, 3, 4, 5, 6, 7, 8].map((n) => confirmSession(ev({ session_id: 'cs_test_lim001', device_id: DEV(n) }))));
+  assert.equal(res.filter((r) => r.statusCode === 200).length, 5, 'five devices turn on');
+  const refused = res.filter((r) => r.statusCode === 403);
+  assert.equal(refused.length, 3); assert.match(JSON.parse(refused[0].body).error, /on 5 devices already/);
+  assert.equal(db.devices.length, 5, 'never more than 5 devices');
+  assert.equal((await confirmSession(ev({ session_id: 'cs_test_lim001', device_id: DEV(1) }))).statusCode, 200, 'a counted device still works');
+  stripe.sessions.set('cs_test_old001', { ...paidSession('cs_test_old001', 'pass'), created: Math.floor(Date.now() / 1000) - 8 * 86400 });
+  let r = await confirmSession(ev({ session_id: 'cs_test_old001', device_id: DEV('a') }));
+  assert.equal(r.statusCode, 410); assert.match(JSON.parse(r.body).error, /more than 7 days old/);
+  assert.equal(db.passes.filter((p) => p.stripe_session_id === 'cs_test_old001').length, 0, 'old link grants nothing');
+  stripe.sessions.set('cs_test_six001', { ...paidSession('cs_test_six001', 'pass'), created: Math.floor(Date.now() / 1000) - 6 * 86400 });
+  assert.equal((await confirmSession(ev({ session_id: 'cs_test_six001', device_id: DEV('a') }))).statusCode, 200, '6 days old still works (payment retry)');
 });
 
 test('redeem-code: turns a pass on, counts devices, limit 5, refunds stop it', async () => {

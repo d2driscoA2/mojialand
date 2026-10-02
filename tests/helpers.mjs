@@ -95,6 +95,12 @@ export function fakeDb() {
       if (db.adminFails > 20) { if (!db.adminLockAt) db.adminLockAt = Date.now(); db.admin_codes.forEach((x) => { x.used = true; }); return reply(200, db.adminFails === 21 ? 'lockednow' : 'locked'); }
       return reply(200, 'bad');
     }
+    if (table === 'rpc/device_add') {
+      if (db.devices.some((r) => r.pass_id === body.p_pass && r.device_id_hash === body.p_hash)) return reply(200, 'ok');
+      if (db.devices.filter((r) => r.pass_id === body.p_pass).length >= body.p_limit) return reply(200, 'limit');
+      db.devices.push({ id: crypto.randomUUID(), pass_id: body.p_pass, device_id_hash: body.p_hash });
+      return reply(200, 'ok');
+    }
     if (table === 'rpc/alert_add') { db.alerts.push(body); return reply(200, 1); }
     if (table === 'rpc/analytics_add') { db.analytics.push(body); return reply(204); }
     if (table === 'rpc/campaign_add') {

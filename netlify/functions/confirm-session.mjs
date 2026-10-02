@@ -4,7 +4,7 @@
 // free minutes and keeps retrying; the webhook also retries the grant.
 import { guard, envName } from './_lib/env.mjs';
 import { json, fail, readJson, clientIp, maskEmail } from './_lib/http.mjs';
-import { rateHit, addDevice, safeErr } from './_lib/db.mjs';
+import { rateHit, addDevice, safeErr, DEVICE_RE } from './_lib/db.mjs';
 import { grantPass } from './_lib/grant.mjs';
 import { getStripe } from './_lib/stripe.mjs';
 import { makeTokenPayload, signToken } from './_lib/token.mjs';
@@ -14,6 +14,11 @@ const REQUIRED = [
   'RESTORE_CODE_PEPPER', 'PASS_SIGNING_PRIVATE_KEY',
 ];
 const SESSION_RE = /^cs_(test|live)_[A-Za-z0-9]{1,200}$/;
+// Release 1.1.1 #40 (Danny, October 1): a checkout link works for 7 days, the
+// same as the game's payment retry. Later restores use the code link.
+export const CHECKOUT_DAYS = 7;
+export const LIMIT_MSG = 'This pass is on 5 devices already. Contact us to move it to a new device.';
+export const OLD_MSG = 'This payment link is more than 7 days old. Tap the button in your pass email, or type your code under Grown-ups, Have a code?';
 
 export const handler = async (event) => {
   const stop = guard('confirm-session', REQUIRED);
@@ -23,6 +28,7 @@ export const handler = async (event) => {
   const input = readJson(event);
   const sid = input && input.session_id;
   if (typeof sid !== 'string' || !SESSION_RE.test(sid)) return fail(400, 'That payment link is not valid.');
+  if (!DEVICE_RE.test(String(input.device_id || ''))) return fail(400, 'This device could not be checked. Reload the page and try again.');
 
   if (!(await rateHit('confirm-session', clientIp(event), 20, 60, { failOpen: true }))) {
     return fail(429, 'Too many tries. Please wait a minute.');
@@ -40,6 +46,7 @@ export const handler = async (event) => {
       return fail(400, 'That payment link is not valid.');
     }
     if (session.payment_status !== 'paid') return json(402, { status: 'pending' });
+    if (Number(session.created) && Date.now() - Number(session.created) * 1000 > CHECKOUT_DAYS * 86400e3) return fail(410, OLD_MSG);
 
     let granted;
     try {
@@ -50,11 +57,14 @@ export const handler = async (event) => {
     }
     const { plan, pass, code } = granted;
     if (pass.status !== 'active') return fail(409, 'This pass is not active. Please contact us.');
+    let dev;
     try {
-      await addDevice(pass, input.device_id);
+      dev = await addDevice(pass, input.device_id);
     } catch (e) {
       console.error('confirm-session: device count failed (' + safeErr(e) + ')');
+      return json(202, { status: 'paid_pending' });
     }
+    if (!dev.ok) return fail(403, LIMIT_MSG);
     const payload = makeTokenPayload(pass, envName());
     const token = signToken(payload, process.env.PASS_SIGNING_PRIVATE_KEY);
     console.log('confirm-session: session ' + session.id);

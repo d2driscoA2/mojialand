@@ -162,6 +162,8 @@ async function run(){
     if(res.status===202) paid=true;
     if(res.status===400||res.status===404){ clearTimeout(slow); return showErr('We could not find this payment','If you paid, your code comes by email. You can also send us a message.'); }
     if(res.status===409){ clearTimeout(slow); return showErr('This pass is not active','Send us a message and we will sort it out.'); }
+    if(res.status===403){ clearTimeout(slow); return showErr('This pass is on 5 devices','Send us a message and we will move it to this device.'); }
+    if(res.status===410){ clearTimeout(slow); return showErr('This link is more than 7 days old','Tap the button in your pass email, or type your code under Grown-ups, Have a code? You can also send us a message.'); }
   }
   clearTimeout(slow);
   grace(paid);

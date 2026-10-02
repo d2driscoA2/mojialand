@@ -1356,6 +1356,16 @@ for (const [w, h, name] of [[375, 667, 'se'], [820, 1180, 'ipad']]) {
   check('friend pass: no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
   await ctx.close();
 }
+// Release 1.1.1 #40: device limit and old links show a clear message with Contact us, never a dead end
+for (const [st, title] of [[403, 'This pass is on 5 devices'], [410, 'This link is more than 7 days old']]) {
+  const { ctx, page } = await newPage();
+  await page.route('**/.netlify/functions/confirm-session', (r) => r.fulfill({ status: st, contentType: 'application/json', body: JSON.stringify({ error: 'x' }) }));
+  await page.goto(base + '/pass/done/?session_id=cs_test_lim' + st);
+  await page.waitForSelector('#dErr:not([hidden])', { timeout: 15000 });
+  check('done ' + st + ': ' + title + ', with Contact us', (await page.textContent('#dErrTitle')) === title && await page.isVisible('#dErr [data-contact]'));
+  check('done ' + st + ': no grace minutes', (await page.evaluate(() => localStorage.getItem('mojia.grace'))) === null);
+  await ctx.close();
+}
 // Release 1.1.1 #37: a friend pass (or support pass) has no friend pass: no card, no Grown-ups row
 {
   const { ctx, page } = await newPage();

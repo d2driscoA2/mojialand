@@ -94,20 +94,17 @@ export async function getSetting(key, fallback) {
 // Devices per pass. Stores only a hash of the random device value.
 export const DEVICE_RE = /^[0-9a-f]{32}$/;
 
+// Counts a device on a pass. Release 1.1.1 #40 (audit M2): the check and the
+// insert run in one database step (device_add), so parallel requests never
+// pass the limit. Returns { ok: false, limit } when the pass is full.
 export async function addDevice(pass, deviceId) {
   if (!DEVICE_RE.test(String(deviceId || ''))) return { ok: true, counted: false };
   const pepper = process.env.RESTORE_CODE_PEPPER || '';
   const h = sha256hex(pepper + ':dev:' + deviceId);
-  const pid = enc(pass.id);
-  const { data: mine } = await rest('GET', 'devices?pass_id=eq.' + pid + '&device_id_hash=eq.' + h + '&select=id&limit=1');
-  if (Array.isArray(mine) && mine.length) return { ok: true, counted: true };
-  const { data: all } = await rest('GET', 'devices?pass_id=eq.' + pid + '&select=id');
   const limit = Number(pass.device_limit) || 5;
-  if (Array.isArray(all) && all.length >= limit) return { ok: false, limit };
-  await rest('POST', 'devices?on_conflict=pass_id,device_id_hash', {
-    body: { pass_id: pass.id, device_id_hash: h },
-    prefer: 'resolution=ignore-duplicates,return=minimal',
-  });
+  const { data } = await rest('POST', 'rpc/device_add', { body: { p_pass: pass.id, p_hash: h, p_limit: limit } });
+  if (data === 'limit') return { ok: false, limit };
+  if (data !== 'ok') throw new Error('device count failed');
   return { ok: true, counted: true };
 }
 

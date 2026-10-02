@@ -2130,7 +2130,7 @@ const pay=(function(){
     try{ const res=await fetch('/.netlify/functions/confirm-session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:g.sid,device_id:deviceId()}),credentials:'same-origin',cache:'no-store'});
       let d={}; try{ d=await res.json(); }catch(e){}
       if(res.status===200&&d&&typeof d.token==='string') await savePass(d);
-      else if(res.status===400||res.status===404||res.status===409){ try{ localStorage.removeItem('mojia.grace'); }catch(e){} }
+      else if(res.status===400||res.status===403||res.status===404||res.status===409||res.status===410){ try{ localStorage.removeItem('mojia.grace'); }catch(e){} }
     }catch(e){}
     syncing=false; }
 
