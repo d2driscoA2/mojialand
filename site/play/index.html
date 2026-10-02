@@ -2125,12 +2125,12 @@ const pay=(function(){
     try{ localStorage.removeItem('mojia.grace'); localStorage.removeItem('mojia.passOff'); }catch(e){}
     await verifyStored(); paintChips(); if(current==='gate') buildGU(); return true; }
   /* Release 1.1.1 #28 with #42: ask the server about the saved pass when the game opens or returns to the front,
-     at most once an hour. Sends only the signed pass and the device id. A fresh signed copy comes back, so
+     at most once an hour, and when a grown-up opens Grown-ups (at most once a minute). Sends only the signed pass and the device id. A fresh signed copy comes back, so
      Add 48 hours and Forever reach the device, and End, Refund and chargebacks turn the pass off.
      Offline or any error: keep the saved pass and try later. Kids never see an error. */
   let checkingPass=false;
   async function checkPass(force){ const raw=store.get('pass',null); if(!raw||typeof raw!=='object'||typeof raw.token!=='string'||checkingPass) return;
-    if(!force&&Date.now()-(Number(store.get('passCheckAt',0))||0)<60*MIN) return;
+    const since=Date.now()-(Number(store.get('passCheckAt',0))||0); if(since<(force?MIN:60*MIN)) return;
     const v=await checkToken(raw.token); if(!v) return;
     if(v.k==='48h'&&v.e&&Date.now()-v.e>30*DAY) return;
     checkingPass=true; store.set('passCheckAt',Date.now());
@@ -2196,7 +2196,7 @@ const pay=(function(){
     else { const s=Math.ceil(freeLeft()/1000); h=passOffLine()+'<b>Free play</b><span>'+SETTINGS.first_visit_minutes+' minutes on the first visit, then '+SETTINGS.daily_minutes+' minutes a day. Resets each morning.</span><span>Left today: '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0')+'</span>'+(standalone()?'<span>Paid already? Open your pass email and tap the button, or tap Have a code? below.</span>':''); }
     if(/displayedux\.com$|netlify\.app$/.test(location.hostname)){ h+='<span style="opacity:.6">Staging check: '+(standalone()?'Home Screen app':'browser')+' · opened with pass in address: '+dbgRestore+' · address carries pass now: '+(/restore=/.test(location.search)?'yes':'no')+' · server handoff: '+dbgClaim+'</span>'; }
     const el=$('#pwStatus'); if(el.innerHTML!==h) el.innerHTML=h; }
-  function buildGU(){ paintStatus(); const p=getPass(), rows=[];
+  function buildGU(){ paintStatus(); checkPass(true); const p=getPass(), rows=[];
     /* Give a friend shows only when the server says this pass has a friend pass (Release 1.1.1 #37: friend passes and support passes have none). */
     if(p){ const raw=store.get('pass',null), gc=raw&&giftCache&&giftCache.token===raw.token?giftCache:null;
       if(gc&&gc.data&&gc.data.state!=='expired') rows.push(['🎁 Give a friend 48 hours','›','gift']);

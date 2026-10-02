@@ -1372,6 +1372,9 @@ for (const [w, h, name] of [[375, 667, 'se'], [820, 1180, 'ipad']]) {
     check('pass check: Add 48 hours reaches the device; code and email kept', saved.ends_at === t2.payload.e && saved.token === t2.token && saved.code === 'MOJI-CHEK-PASS-2345' && saved.email_masked === 'p•••@example.com');
     await page.reload(); await page.waitForTimeout(900);
     check('pass check: at most once an hour', calls.length === 1);
+    await page.evaluate(() => localStorage.setItem('mojia.passCheckAt', String(Date.now() - 2 * 60e3)));
+    await openGU(page); await page.waitForTimeout(600);
+    check('pass check: opening Grown-ups checks again (once a minute at most)', calls.length === 2);
     check('pass check: no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
     await ctx.close();
   }
