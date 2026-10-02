@@ -18,6 +18,7 @@ import { handler as redeemFn } from '../netlify/functions/redeem-code.mjs';
 import { handler as settingsFn } from '../netlify/functions/settings.mjs';
 import { handler as handoff } from '../netlify/functions/handoff.mjs';
 import { handler as friendFn } from '../netlify/functions/friend-code.mjs';
+import { friendPass } from '../netlify/functions/_lib/friend.mjs';
 import { deriveFriendCode } from '../netlify/functions/_lib/codes.mjs';
 import ping from '../netlify/functions/ping.mjs';
 import { placeFromGeo, readPing } from '../netlify/functions/_lib/analytics.mjs';
@@ -723,11 +724,20 @@ test('friend pass: one per pass, from the pass token; only for devices new to Mo
   r = await redeem(ev({ code: f.code, device_id: 'd'.repeat(32) }));
   assert.equal(r.statusCode, 200); assert.equal(JSON.parse(r.body).kind, '48h');
   assert.equal(JSON.parse((await friendFn(ev({ token: tok }))).body).state, 'used');
-  // the friend gets one friend pass of their own
+  // Release 1.1.1 #37 (audit H1): a friend pass never makes another friend pass
   const fp = db.passes.find((p) => p.batch === 'FRIEND');
   const ftok = signToken(makeTokenPayload(fp, 'staging'), process.env.PASS_SIGNING_PRIVATE_KEY);
-  const f2 = JSON.parse((await friendFn(ev({ token: ftok }))).body);
-  assert.match(f2.code, /^GIFT-/); assert.notEqual(f2.code, f.code);
+  r = await friendFn(ev({ token: ftok }));
+  assert.equal(r.statusCode, 410, 'friend pass gets no friend code');
+  assert.equal(db.passes.filter((p) => p.batch === 'FRIEND').length, 1, 'no second friend pass row');
+  assert.equal(await friendPass(fp), null);
+  // a printed gift card pass still gives one; a support pass gives none
+  const gift = { id: crypto.randomUUID(), code_hash: 'h-gift', code_last4: 'GFT1', prefix: 'GIFT', kind: '48h', source: 'gift', status: 'active', device_limit: 5, starts_at: new Date().toISOString(), batch: 'IN-FAIR-OCT' };
+  const sup = { ...gift, id: crypto.randomUUID(), code_hash: 'h-sup', code_last4: 'SUP1', source: 'support', batch: null };
+  db.passes.push(gift, sup);
+  const gf = await friendPass(gift); assert.ok(gf && /^GIFT-/.test(gf.code), 'gift card pass gives one friend pass');
+  assert.equal(await friendPass(sup), null, 'support pass gives none');
+  assert.equal((await friendFn(ev({ token: signToken(makeTokenPayload(sup, 'staging'), process.env.PASS_SIGNING_PRIVATE_KEY) }))).statusCode, 410);
   // refunded passes give nothing; old passes past 30 days give nothing new
   const { pass: old } = await grantPass(paidSession('cs_test_fr2', 'pass'));
   old.starts_at = new Date(Date.now() - 31 * 86400e3).toISOString(); db.passes.find((p) => p.id === old.id).starts_at = old.starts_at;

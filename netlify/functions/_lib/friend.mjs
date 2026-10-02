@@ -1,5 +1,8 @@
-// Friend pass (Release 1.1 #3). Every 48-hour or Forever pass holder, paid or
-// free, gets one free 48-hour pass to give to another family.
+// Friend pass (Release 1.1 #3). Paid Stripe passes and printed gift card passes
+// each give one free 48-hour pass to another family.
+// Release 1.1.1 #37 (audit H1, Danny October 1): friend passes never make friend
+// passes, so the chain stops after one link. Support passes made by hand in
+// admin give none.
 // Guardrails (Danny, September 30): one friend pass per pass; it only turns on
 // for a device that never had a pass (redeem-code checks); it must be used
 // within 30 days of the parent pass starting. Rows carry batch FRIEND so they
@@ -11,8 +14,15 @@ const DAY = 86400e3;
 export const FRIEND_DAYS = 30;
 export const FRIEND_BATCH = 'FRIEND';
 
+export function givesFriendPass(parent) {
+  if (!parent || !parent.id) return false;
+  if (parent.batch === FRIEND_BATCH) return false;
+  if (parent.source === 'stripe') return true;
+  return parent.source === 'gift';
+}
+
 export async function friendPass(parent) {
-  if (!parent || !parent.id) return null;
+  if (!givesFriendPass(parent)) return null;
   if (['refunded', 'disputed', 'unused'].includes(parent.status)) return null;
   const pepper = process.env.RESTORE_CODE_PEPPER;
   const code = deriveFriendCode(pepper, parent.id);

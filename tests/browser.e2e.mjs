@@ -1356,6 +1356,28 @@ for (const [w, h, name] of [[375, 667, 'se'], [820, 1180, 'ipad']]) {
   check('friend pass: no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
   await ctx.close();
 }
+// Release 1.1.1 #37: a friend pass (or support pass) has no friend pass: no card, no Grown-ups row
+{
+  const { ctx, page } = await newPage();
+  const { token, payload } = tokenFor('48h', Date.now() + 48 * 3600e3);
+  let fcalls = 0;
+  await page.route('**/.netlify/functions/confirm-session', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 'GIFT-FRND-PASS-2345', kind: '48h', ends_at: payload.e, token, email_masked: '', plan: 'pass' }) }));
+  await page.route('**/.netlify/functions/friend-code', (r) => { fcalls++; r.fulfill({ status: 410, contentType: 'application/json', body: JSON.stringify({ error: 'This pass has no friend pass to give.' }) }); });
+  await page.goto(base + '/pass/done/?session_id=cs_test_nofriend');
+  await page.waitForSelector('#s-allset:not(.hidden)', { timeout: 15000 });
+  await page.waitForTimeout(600);
+  check('no friend pass: All set shows no Give a friend card', fcalls >= 1 && await page.isHidden('#pwOkGift'));
+  await page.click('#pwOkBack');
+  await page.waitForSelector('#s-home:not(.hidden)');
+  await page.click('#lockBtn');
+  await page.waitForSelector('#s-ngate:not(.hidden)');
+  { const ans = await page.getAttribute('#pwChoices', 'data-a'); await page.click('#pwChoices [data-n="' + ans + '"]'); }
+  await page.waitForSelector('#s-gate:not(.hidden)');
+  await page.waitForTimeout(400);
+  check('no friend pass: Grown-ups has no Give a friend row', (await page.locator('.pw-gurow[data-a="gift"]').count()) === 0);
+  check('no friend pass: no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
+  await ctx.close();
+}
 {
   const { ctx, page } = await newPage();
   await page.goto(base + '/g/GIFTABCDEFGHJKMN?c=fair'); await page.waitForTimeout(1500);
