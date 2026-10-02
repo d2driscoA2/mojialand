@@ -317,6 +317,29 @@ test('confirm-session (Release 1.1.1 #40): device needed, 5-device limit, 7-day 
   assert.equal((await confirmSession(ev({ session_id: 'cs_test_six001', device_id: DEV('a') }))).statusCode, 200, '6 days old still works (payment retry)');
 });
 
+test('grant (Release 1.1.1 #41): an old checkout never grants again after cleanup', async () => {
+  const s = paidSession('cs_test_m3a', 'pass');
+  stripe.sessions.set('cs_test_m3a', s);
+  assert.equal((await confirmSession(ev({ session_id: 'cs_test_m3a', device_id: DEV('1') }))).statusCode, 200);
+  assert.deepEqual(db.granted_checkouts.map((r) => Object.keys(r)), [['session_id']], 'checkout ID only, no email, no code');
+  // nightly cleanup deletes the ended pass and the Stripe events
+  db.passes = []; db.stripe_events = []; db.devices = [];
+  const r = await confirmSession(ev({ session_id: 'cs_test_m3a', device_id: DEV('2') }));
+  assert.equal(r.statusCode, 410, 'no fresh 48 hours');
+  assert.equal(db.passes.length, 0);
+  const evt = { id: 'evt_m3', type: 'checkout.session.completed', data: { object: s } };
+  assert.equal((await webhook(signed(evt))).statusCode, 200);
+  assert.equal(db.passes.length, 0, 'webhook replay grants nothing');
+  // add 48 hours: applied once, never again after its event row is gone
+  const { pass } = await grantPass(paidSession('cs_test_m3b', 'pass'));
+  const add = paidSession('cs_test_m3c', 'add', { pass_id: pass.id });
+  await grantPass(add);
+  const end1 = db.passes.find((p) => p.id === pass.id).ends_at;
+  db.stripe_events = [];
+  await grantPass(add);
+  assert.equal(db.passes.find((p) => p.id === pass.id).ends_at, end1, 'add applied once');
+});
+
 test('redeem-code: turns a pass on, counts devices, limit 5, refunds stop it', async () => {
   const s = paidSession('cs_test_red01', 'pass');
   const { code } = await grantPass(s);

@@ -86,7 +86,11 @@ export const handler = async (event) => {
   try {
     if (evt.type === 'checkout.session.completed' || evt.type === 'checkout.session.async_payment_succeeded') {
       if (obj.payment_status === 'paid') {
-        const result = await grantPass(obj);
+        let result;
+        try { result = await grantPass(obj); } catch (e) {
+          if (e && e.code === 'used') { console.log('stripe-webhook: checkout granted before, nothing new (' + evt.id + ')'); return json(200, { received: true, used: true }); }
+          throw e;
+        }
         console.log('stripe-webhook: granted for session ' + obj.id + ' (' + evt.id + ')');
         await emailOnce(obj, result);
         const md = obj.metadata || {};

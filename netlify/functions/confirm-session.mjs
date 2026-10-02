@@ -52,6 +52,7 @@ export const handler = async (event) => {
     try {
       granted = await grantPass(session);
     } catch (e) {
+      if (e && e.code === 'used') return fail(410, OLD_MSG);
       console.error('confirm-session: grant failed for ' + session.id + ' (' + safeErr(e) + ')');
       return json(202, { status: 'paid_pending' });
     }

@@ -5,7 +5,24 @@ import { deriveCode, codeHash, codeLast4 } from './codes.mjs';
 
 const HOUR = 3600e3;
 
-export class GrantError extends Error {}
+export class GrantError extends Error {
+  constructor(msg, code) { super(msg); this.code = code || ''; }
+}
+
+// Release 1.1.1 #41 (audit M3): a small permanent record of every checkout
+// that ever granted (checkout ID and time only, no email, no code). Nightly
+// cleanup never touches it, so an old paid checkout never grants again after
+// its pass row or Stripe event row is gone.
+async function wasGranted(sessionId) {
+  const { data } = await rest('GET', 'granted_checkouts?session_id=eq.' + encodeURIComponent(sessionId) + '&select=session_id&limit=1');
+  return Array.isArray(data) && data.length > 0;
+}
+async function markGranted(sessionId) {
+  await rest('POST', 'granted_checkouts?on_conflict=session_id', {
+    body: { session_id: sessionId },
+    prefer: 'resolution=ignore-duplicates,return=minimal',
+  });
+}
 
 // Add and upgrade keep the original code. Paid codes come from the first
 // session ID, so the code can be made again without ever storing it.
@@ -35,12 +52,16 @@ export async function grantPass(session) {
       device_limit: 5,
       status: 'active',
     };
+    const had = await getPassBy('stripe_session_id', session.id);
+    if (had) return { plan, pass: had, code };
+    if (await wasGranted(session.id)) throw new GrantError('checkout already used', 'used');
     await rest('POST', 'passes?on_conflict=stripe_session_id', {
       body: row,
       prefer: 'resolution=ignore-duplicates,return=minimal',
     });
     const pass = await getPassBy('stripe_session_id', session.id);
     if (!pass) throw new GrantError('pass missing after insert');
+    await markGranted(session.id);
     return { plan, pass, code };
   }
 
@@ -50,7 +71,7 @@ export async function grantPass(session) {
     const pass = await getPassBy('id', passId);
     if (!pass) throw new GrantError('pass not found');
     const guardId = 'grant:' + session.id;
-    if (!(await claimEvent(guardId, session.id))) {
+    if ((await wasGranted(session.id)) || !(await claimEvent(guardId, session.id))) {
       // Already applied. Read again so the caller sees the updated row.
       await new Promise((r) => setTimeout(r, 300));
       return { plan, pass: (await getPassBy('id', passId)) || pass, code: sameCode(pass, pepper) };
@@ -65,6 +86,7 @@ export async function grantPass(session) {
       }
       const rows = await patchPass('id=eq.' + encodeURIComponent(passId), patch);
       if (!rows.length) throw new GrantError('pass update failed');
+      await markGranted(session.id);
       return { plan, pass: rows[0], code: sameCode(pass, pepper) };
     } catch (e) {
       await releaseEvent(guardId); // let a retry apply it
