@@ -551,37 +551,61 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await ctx.close();
 }
 
-// 9d2. Home Screen handoff through the server: Safari offers, the standalone app claims
+// 9d2. Release 1.1.1 #39: pairing number. Safari shows it in Grown-ups; the Home Screen app asks for it.
 {
-  const { ctx, page } = await newPage();
-  const { token, payload } = tokenFor('48h', Date.now() + 30 * 3600e3);
-  const offers = [];
-  await page.route('**/.netlify/functions/handoff', (r) => { const b = r.request().postDataJSON(); offers.push(b); r.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' }); });
-  await page.evaluate(() => 0).catch(() => {});
-  await page.goto(base + '/play/');
-  await page.evaluate(([tok, e]) => localStorage.setItem('mojia.pass', JSON.stringify({ code: 'MOJI-HAND-OFFF-2345', kind: '48h', ends_at: e, token: tok })), [token, payload.e]);
-  await page.reload(); await page.waitForTimeout(900);
-  check('safari: offers the pass to the server once, with device traits', offers.length === 1 && offers[0].action === 'offer' && offers[0].token === token && offers[0].code === 'MOJI-HAND-OFFF-2345' && /\|/.test(offers[0].traits), JSON.stringify(offers).slice(0, 80));
-  await page.reload(); await page.waitForTimeout(700);
-  check('safari: no second offer within 10 minutes', offers.length === 1);
-  await ctx.close();
-}
-{
-  const { ctx, page } = await newPage();
-  await page.emulateMedia({ media: null });
-  await page.addInitScript(() => { Object.defineProperty(navigator, 'standalone', { get: () => true }); });
-  const { token, payload } = tokenFor('48h', Date.now() + 30 * 3600e3);
-  const claims = [];
-  await page.route('**/.netlify/functions/handoff', (r) => { const b = r.request().postDataJSON(); claims.push(b);
-    if (b.action === 'claim') return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 'MOJI-HAND-OFFF-2345', kind: '48h', ends_at: payload.e, token, email_masked: '' }) });
-    r.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' }); });
-  await page.goto(base + '/play/');
-  await page.waitForSelector('#s-allset:not(.hidden)', { timeout: 8000 });
-  check('home screen app: claims the pass on first open and shows Mojialand is on', claims.some((c) => c.action === 'claim' && /^[0-9a-f]{32}$/.test(c.device_id)) && (await page.textContent('#pwOkTitle')) === 'Mojialand is on!');
-  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('mojia.pass')));
-  check('home screen app: pass saved from the claim', saved && saved.token === token && saved.code === 'MOJI-HAND-OFFF-2345');
-  check('home screen app: never offers back', !claims.some((c) => c.action === 'offer'));
-  await ctx.close();
+  const gu = async (page) => { if (await page.isVisible('#splash')) { await page.click('#splash'); await page.waitForTimeout(400); } await page.click('#lockBtn'); await page.waitForSelector('#s-ngate:not(.hidden)'); const ans = await page.getAttribute('#pwChoices', 'data-a'); await page.click('#pwChoices [data-n="' + ans + '"]'); await page.waitForSelector('#s-gate:not(.hidden)'); await page.waitForTimeout(500); };
+  {
+    const { ctx, page } = await newPage();
+    const { token, payload } = tokenFor('48h', Date.now() + 30 * 3600e3);
+    const calls = [];
+    await page.route('**/.netlify/functions/handoff', (r) => { const b = r.request().postDataJSON(); calls.push(b); r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ pin: '4821', expires_at: new Date(Date.now() + 30 * 60e3).toISOString() }) }); });
+    await page.route('**/.netlify/functions/pass-check', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ state: 'on', kind: '48h', ends_at: payload.e, token }) }));
+    await page.addInitScript(([tok, e]) => { if (!sessionStorage.getItem('s')) { sessionStorage.setItem('s', '1'); localStorage.setItem('mojia.pass', JSON.stringify({ code: 'MOJI-HAND-OFFF-2345', kind: '48h', ends_at: e, token: tok })); } }, [token, payload.e]);
+    await page.goto(base + '/play/'); await page.waitForTimeout(900);
+    check('safari: nothing goes to the server before Grown-ups opens', calls.length === 0);
+    await gu(page);
+    check('safari: Grown-ups shows the 4-digit pairing number', (await page.textContent('#pwPairPin')) === '4821' && await page.isVisible('#pwPair') && await page.isHidden('#pwPairIn'));
+    check('safari: the offer sends the pass token and traits, never the code', calls.length === 1 && calls[0].action === 'offer' && calls[0].token === token && !('code' in calls[0]) && /\|/.test(calls[0].traits));
+    await page.screenshot({ path: path.join(SHOTS, 'gu-pairing-number-390.png'), fullPage: true });
+    await page.click('#s-gate [data-go="home"]'); await gu(page);
+    check('safari: the same number shows again, no new offer', calls.length === 1 && (await page.textContent('#pwPairPin')) === '4821');
+    check('safari pairing: no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await newPage();
+    await page.addInitScript(() => { Object.defineProperty(navigator, 'standalone', { get: () => true }); });
+    const { token, payload } = tokenFor('48h', Date.now() + 30 * 3600e3);
+    const claims = []; let n = 0;
+    await page.route('**/.netlify/functions/handoff', (r) => { const b = r.request().postDataJSON(); claims.push(b); n++;
+      if (n === 1) return r.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ error: 'That number did not match.', left: 2 }) });
+      r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ kind: '48h', ends_at: payload.e, token }) }); });
+    await page.goto(base + '/play/'); await page.waitForTimeout(900);
+    check('home screen app: no claim on open; free play until a grown-up types the number', claims.length === 0 && (await page.evaluate(() => localStorage.getItem('mojia.pass'))) === null);
+    await gu(page);
+    check('home screen app: Grown-ups asks for the pairing number', await page.isVisible('#pwPairIn') && await page.isHidden('#pwPair'));
+    await page.fill('#pwPairCode', '12'); await page.click('#pwPairGo');
+    check('home screen app: fewer than 4 numbers asks for 4', /4 numbers/.test(await page.textContent('#pwPairErr')) && claims.length === 0);
+    await page.fill('#pwPairCode', '1111'); await page.click('#pwPairGo'); await page.waitForTimeout(400);
+    check('home screen app: a wrong number says how many tries are left', /did not match\. 2 tries left\./.test(await page.textContent('#pwPairErr')));
+    await page.screenshot({ path: path.join(SHOTS, 'gu-pairing-wrong-390.png'), fullPage: true });
+    await page.fill('#pwPairCode', '4821'); await page.click('#pwPairGo');
+    await page.waitForSelector('#s-allset:not(.hidden)', { timeout: 8000 });
+    check('home screen app: the right number turns the pass on and shows Mojialand is on', (await page.textContent('#pwOkTitle')) === 'Mojialand is on!');
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('mojia.pass')));
+    check('home screen app: claim sends the number, device id and traits; no code comes back', claims[1].action === 'claim' && claims[1].pin === '4821' && /^[0-9a-f]{32}$/.test(claims[1].device_id) && saved.token === token && saved.code === '');
+    check('home screen app pairing: no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
+    await ctx.close();
+  }
+  for (const [st, body, want] of [[401, { left: 0 }, /stopped working\. In Safari, open Mojialand, then Grown-ups, for a new number\. Or type your pass code under Have a code\?/], [404, { error: 'x' }, /stopped working/], [403, { error: 'This pass is on 5 devices already. Contact us to move it to a new device.' }, /on 5 devices already.*Contact us below/]]) {
+    const { ctx, page } = await newPage();
+    await page.addInitScript(() => { Object.defineProperty(navigator, 'standalone', { get: () => true }); });
+    await page.route('**/.netlify/functions/handoff', (r) => r.fulfill({ status: st, contentType: 'application/json', body: JSON.stringify(body) }));
+    await page.goto(base + '/play/'); await gu(page);
+    await page.fill('#pwPairCode', '1234'); await page.click('#pwPairGo'); await page.waitForTimeout(400);
+    check('home screen app ' + st + ': friendly next step, never a dead end', want.test(await page.textContent('#pwPairErr')) && await page.isVisible('.pw-gurow[data-a="code"]') && await page.isVisible('.pw-gurow[data-a="help"]'), await page.textContent('#pwPairErr'));
+    await ctx.close();
+  }
 }
 
 // 9e. Pattern: a badge after each place, like Match
