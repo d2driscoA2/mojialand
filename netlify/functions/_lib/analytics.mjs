@@ -71,6 +71,9 @@ export async function recordPing(raw, geo, ip) {
   // A classroom on one network opens many games; 300 pings per 10 minutes is plenty.
   if (!(await rateHit('ping', ip, 300, 600))) return 429;
   if (p.e === 'first') {
+    // Release 1.1.1 #44 L1: one new-device count per network per day, so fake
+    // pings cannot inflate the count. Extra pings answer 204 and count nothing.
+    if (!(await rateHit('ping-first', ip, 1, 86400))) return 204;
     await notify('player');
     return 204;
   }

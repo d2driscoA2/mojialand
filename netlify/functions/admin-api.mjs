@@ -1,6 +1,6 @@
 // POST {action, ...} for the admin page. Every call needs the session cookie.
 import { guard } from './_lib/env.mjs';
-import { json, fail, readJson, header, originFromHost } from './_lib/http.mjs';
+import { json, fail, readJson, header, originFromHost, sameOrigin } from './_lib/http.mjs';
 import { rest, patchPass, safeErr } from './_lib/db.mjs';
 import { isSignedIn } from './_lib/admin.mjs';
 import { randomCode, codeHash, codeLast4, deriveCode, codeNoDashes } from './_lib/codes.mjs';
@@ -226,6 +226,7 @@ export const handler = async (event) => {
   const stop = guard('admin-api', REQUIRED);
   if (stop) return stop;
   if (event.httpMethod !== 'POST') return fail(405, 'Use POST.');
+  if (!sameOrigin(event)) return fail(403, 'Open the admin page on this site.');
   try {
     if (!(await isSignedIn(event))) return fail(401, 'Please sign in.');
   } catch (e) {

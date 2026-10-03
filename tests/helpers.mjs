@@ -207,7 +207,7 @@ export function paidSession(id, plan, extra = {}) {
 
 export const ev = (body, headers = {}, method = 'POST') => ({
   httpMethod: method,
-  headers: { host: 'mojialand.displayedux.com', 'x-nf-client-connection-ip': '203.0.113.9', ...headers },
+  headers: { host: 'mojialand.displayedux.com', origin: 'https://mojialand.displayedux.com', 'x-nf-client-connection-ip': '203.0.113.9', ...headers },
   body: typeof body === 'string' ? body : JSON.stringify(body),
   isBase64Encoded: false,
 });

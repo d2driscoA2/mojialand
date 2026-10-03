@@ -1,7 +1,7 @@
 // POST {plan, code?, promo?} -> {clientSecret, publishableKey}
 // Prices come only from environment Price IDs. Never from the browser.
 import { guard, envName } from './_lib/env.mjs';
-import { json, fail, readJson, clientIp, header, originFromHost } from './_lib/http.mjs';
+import { json, fail, readJson, clientIp, header, originFromHost, tail6 } from './_lib/http.mjs';
 import { rateHit, getPassBy, getSetting } from './_lib/db.mjs';
 import { codeHash } from './_lib/codes.mjs';
 import { getStripe, PLANS } from './_lib/stripe.mjs';
@@ -79,7 +79,7 @@ export const handler = async (event) => {
     }
 
     const session = await stripe.checkout.sessions.create(params);
-    console.log('create-checkout: session ' + session.id);
+    console.log('create-checkout: session ' + tail6(session.id));
     return json(200, { clientSecret: session.client_secret, publishableKey: process.env.STRIPE_PUBLISHABLE_KEY });
   } catch (e) {
     console.error('create-checkout: failed (' + (e && (e.type || e.name)) + ')');

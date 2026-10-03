@@ -3,7 +3,7 @@
 // Paid but our side failed -> 202 {status:'paid_pending'}. The page then gives
 // free minutes and keeps retrying; the webhook also retries the grant.
 import { guard, envName } from './_lib/env.mjs';
-import { json, fail, readJson, clientIp, maskEmail } from './_lib/http.mjs';
+import { json, fail, readJson, clientIp, maskEmail, tail6 } from './_lib/http.mjs';
 import { rateHit, addDevice, safeErr, DEVICE_RE } from './_lib/db.mjs';
 import { grantPass } from './_lib/grant.mjs';
 import { getStripe } from './_lib/stripe.mjs';
@@ -53,7 +53,7 @@ export const handler = async (event) => {
       granted = await grantPass(session);
     } catch (e) {
       if (e && e.code === 'used') return fail(410, OLD_MSG);
-      console.error('confirm-session: grant failed for ' + session.id + ' (' + safeErr(e) + ')');
+      console.error('confirm-session: grant failed for ' + tail6(session.id) + ' (' + safeErr(e) + ')');
       return json(202, { status: 'paid_pending' });
     }
     const { plan, pass, code } = granted;
@@ -68,7 +68,7 @@ export const handler = async (event) => {
     if (!dev.ok) return fail(403, LIMIT_MSG);
     const payload = makeTokenPayload(pass, envName());
     const token = signToken(payload, process.env.PASS_SIGNING_PRIVATE_KEY);
-    console.log('confirm-session: session ' + session.id);
+    console.log('confirm-session: session ' + tail6(session.id));
     return json(200, {
       code,
       kind: payload.k,
@@ -78,7 +78,7 @@ export const handler = async (event) => {
       plan,
     });
   } catch (e) {
-    console.error('confirm-session: failed for ' + sid + ' (' + safeErr(e) + ')');
+    console.error('confirm-session: failed for ' + tail6(sid) + ' (' + safeErr(e) + ')');
     return fail(500, 'We could not turn your pass on yet. Please try again.');
   }
 };

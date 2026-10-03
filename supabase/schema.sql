@@ -419,6 +419,7 @@ create table if not exists public.alert_counts (
 );
 alter table public.push_subs    enable row level security;
 alter table public.alert_counts enable row level security;
+revoke all on public.push_subs, public.alert_counts from public, anon, authenticated; -- Release 1.1.1 #44 L7
 grant select, insert, update, delete on public.push_subs, public.alert_counts to service_role;
 
 create or replace function public.alert_add(p_day date, p_kind text, p_label text) returns integer

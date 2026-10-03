@@ -116,6 +116,8 @@ export async function addSupportMessage(row) {
 export function safeErr(e) {
   if (!e) return 'unknown';
   const kind = e.type || e.name || 'Error';
-  const msg = String(e.message || '').replace(/(sk|rk|pk|whsec|re|sb_secret)_[A-Za-z0-9_]+/g, '[key]').slice(0, 140);
+  const msg = String(e.message || '')
+    .replace(/\b(cs|pi|ch|evt|cus|pm)_[A-Za-z0-9_]{6,}/g, (m) => '…' + m.slice(-6)) // #44 L3
+    .replace(/(sk|rk|pk|whsec|re|sb_secret)_[A-Za-z0-9_]+/g, '[key]').slice(0, 140);
   return kind + (msg ? ': ' + msg : '');
 }

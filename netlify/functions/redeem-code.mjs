@@ -2,7 +2,7 @@
 // Turns a pass on for one more device. Used by the email button (/r/CODE)
 // and by "Have a code?" in Grown-ups. Codes are looked up by hash only.
 import { guard, envName } from './_lib/env.mjs';
-import { json, fail, readJson, clientIp, maskEmail } from './_lib/http.mjs';
+import { json, fail, readJson, clientIp, maskEmail, tail6 } from './_lib/http.mjs';
 import { rateHit, getPassBy, patchPass, addDevice, safeErr, DEVICE_RE, rest } from './_lib/db.mjs';
 import { sha256hex } from './_lib/http.mjs';
 import { FRIEND_BATCH } from './_lib/friend.mjs';
@@ -86,7 +86,7 @@ export const handler = async (event) => {
     }
     const payload = makeTokenPayload(pass, envName());
     const token = signToken(payload, process.env.PASS_SIGNING_PRIVATE_KEY);
-    console.log('redeem-code: pass ' + pass.id + ' on a device');
+    console.log('redeem-code: pass ' + tail6(pass.id) + ' on a device');
     return json(200, {
       code,
       kind: payload.k,

@@ -57,9 +57,11 @@ export const handler = async (event) => {
     console.error('contact: save failed (' + safeErr(e) + ')');
   }
   try {
+    // Release 1.1.1 #44 L6: the first line marks this as a contact form message, so a
+    // stranger's text never looks like it came from Mojialand itself.
     mailed = await sendEmail(SUPPORT_TO, {
       subject: 'Mojialand: contact form, ' + TOPICS[topic],
-      text: 'From: ' + email + '\nTopic: ' + TOPICS[topic] + '\n\n' + body + '\n\nReply to this email to answer.',
+      text: 'Sent through the Mojialand contact form\n\nFrom: ' + email + '\nTopic: ' + TOPICS[topic] + '\n\n' + body + '\n\nReply to this email to answer.',
     }, email);
   } catch (e) {
     console.error('contact: email failed (' + safeErr(e) + ')');

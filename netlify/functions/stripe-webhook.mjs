@@ -1,6 +1,6 @@
 // Stripe webhook. Verifies the signature on the raw body, handles each event once.
 import { guard } from './_lib/env.mjs';
-import { json, fail, header, rawBody, originFromUrl } from './_lib/http.mjs';
+import { json, fail, header, rawBody, originFromUrl, tail6 } from './_lib/http.mjs';
 import { claimEvent, releaseEvent, patchPass, safeErr } from './_lib/db.mjs';
 import { grantPass } from './_lib/grant.mjs';
 import { getStripe } from './_lib/stripe.mjs';
@@ -57,7 +57,7 @@ async function setStatusForCharge(charge, status) {
   } else {
     await patchPass('stripe_session_id=eq.' + enc(session.id), { status });
   }
-  console.log('stripe-webhook: ' + status + ' for session ' + session.id);
+  console.log('stripe-webhook: ' + status + ' for session ' + tail6(session.id));
 }
 
 export const handler = async (event) => {
@@ -79,7 +79,7 @@ export const handler = async (event) => {
       return json(200, { received: true, duplicate: true });
     }
   } catch {
-    console.error('stripe-webhook: could not record ' + evt.id);
+    console.error('stripe-webhook: could not record ' + tail6(evt.id));
     return fail(500, 'Try again.');
   }
 
@@ -88,23 +88,23 @@ export const handler = async (event) => {
       if (obj.payment_status === 'paid') {
         let result;
         try { result = await grantPass(obj); } catch (e) {
-          if (e && e.code === 'used') { console.log('stripe-webhook: checkout granted before, nothing new (' + evt.id + ')'); return json(200, { received: true, used: true }); }
+          if (e && e.code === 'used') { console.log('stripe-webhook: checkout granted before, nothing new (' + tail6(evt.id) + ')'); return json(200, { received: true, used: true }); }
           throw e;
         }
-        console.log('stripe-webhook: granted for session ' + obj.id + ' (' + evt.id + ')');
+        console.log('stripe-webhook: granted for session ' + tail6(obj.id) + ' (' + tail6(evt.id) + ')');
         await emailOnce(obj, result);
         const md = obj.metadata || {};
         if (md.camp) await campaignHit(md.camp, md.plan === 'life' || md.plan === 'up' ? 'forever' : 'pass48', {}, md.camp_days);
       }
     } else if (evt.type === 'charge.refunded') {
       if (obj.refunded) await setStatusForCharge(obj, 'refunded');
-      else console.log('stripe-webhook: partial refund ' + evt.id);
+      else console.log('stripe-webhook: partial refund ' + tail6(evt.id));
     } else if (evt.type === 'charge.dispute.created') {
       await setStatusForCharge({ payment_intent: obj.payment_intent }, 'disputed');
     }
     return json(200, { received: true });
   } catch (e) {
-    console.error('stripe-webhook: failed ' + evt.id + ' (' + safeErr(e) + ')');
+    console.error('stripe-webhook: failed ' + tail6(evt.id) + ' (' + safeErr(e) + ')');
     await releaseEvent(evt.id); // Stripe retries; grantPass is idempotent
     return fail(500, 'Try again.');
   }

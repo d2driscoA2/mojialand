@@ -81,3 +81,20 @@ export function maskEmail(email) {
   if (at < 1) return '';
   return e[0] + '•••' + e.slice(at);
 }
+
+// Release 1.1.1 #44 L3: logs carry only the last 6 characters of checkout,
+// pass and event IDs. A full checkout ID plus confirm-session returns a code.
+export function tail6(id) {
+  const v = String(id || '');
+  return v ? '…' + v.slice(-6) : '-';
+}
+
+// Release 1.1.1 #44 L5: admin requests must come from an admin page on the
+// same site. Staging shares displayedux.com with other client sites, so a
+// script on one of them could otherwise send admin requests from Danny's browser.
+export function sameOrigin(event) {
+  const want = originFromHost(header(event, 'host'));
+  const origin = String(header(event, 'origin') || '');
+  if (origin) return origin === want;
+  return String(header(event, 'sec-fetch-site') || '') === 'same-origin';
+}

@@ -3,7 +3,7 @@
 // POST {step:'out'} -> {ok}              clears it
 // GET  -> {signed_in}
 import { guard } from './_lib/env.mjs';
-import { json, fail, readJson, clientIp } from './_lib/http.mjs';
+import { json, fail, readJson, clientIp, sameOrigin } from './_lib/http.mjs';
 import { rateHit, safeErr } from './_lib/db.mjs';
 import { startLogin, finishLogin, isSignedIn, signOut, sessionCookie } from './_lib/admin.mjs';
 
@@ -18,6 +18,7 @@ export const handler = async (event) => {
   try {
     if (event.httpMethod === 'GET') return json(200, { signed_in: await isSignedIn(event) });
     if (event.httpMethod !== 'POST') return fail(405, 'Use POST.');
+    if (!sameOrigin(event)) return fail(403, 'Open the admin page on this site.');
     const input = readJson(event) || {};
     const ip = clientIp(event);
 
