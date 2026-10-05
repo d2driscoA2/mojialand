@@ -567,10 +567,14 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
     await page.goto(base + '/play/'); await page.waitForTimeout(900);
     check('safari: nothing goes to the server before Grown-ups opens', calls.length === 0);
     await gu(page);
-    check('safari: Grown-ups shows the 4-digit pairing number', (await page.textContent('#pwPairPin')) === '4821' && await page.isVisible('#pwPair') && await page.isHidden('#pwPairIn'));
+    check('safari: Grown-ups shows no number up front, one quiet link instead', await page.isHidden('#pwPair') && await page.isVisible('#pwPairShow') && calls.length === 0);
+    await page.click('#pwPairShow'); await page.waitForTimeout(400);
+    check('safari: tapping the link shows the 4-digit pairing number', (await page.textContent('#pwPairPin')) === '4821' && await page.isVisible('#pwPair') && await page.isHidden('#pwPairShow') && await page.isHidden('#pwPairIn'));
     check('safari: the offer sends the pass token and traits, never the code', calls.length === 1 && calls[0].action === 'offer' && calls[0].token === token && !('code' in calls[0]) && /\|/.test(calls[0].traits));
     await page.screenshot({ path: path.join(SHOTS, 'gu-pairing-number-390.png'), fullPage: true });
     await page.click('#s-gate [data-go="home"]'); await gu(page);
+    check('safari: the number hides again on the next visit', await page.isHidden('#pwPair') && await page.isVisible('#pwPairShow'));
+    await page.click('#pwPairShow'); await page.waitForTimeout(300);
     check('safari: the same number shows again, no new offer', calls.length === 1 && (await page.textContent('#pwPairPin')) === '4821');
     check('safari pairing: no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
     await ctx.close();
@@ -1399,7 +1403,7 @@ for (const [w, h, name] of [[375, 667, 'se'], [820, 1180, 'ipad']]) {
   await page.click('#s-gate [data-go="home"]'); await gu();
   check('reminder: shows once, not on the next visit', !/Your pass ends soon/.test(await page.textContent('#pwGuList')));
   await page.click('#pwHSbtn'); await page.waitForSelector('#pwOvHS:not(.hidden)'); await page.waitForTimeout(400);
-  check('how-to sheet: shows the pairing number in Safari with a pass on', await page.isVisible('#pwHSPair') && (await page.textContent('#pwHSPairPin')) === '4821');
+  check('how-to sheet: shows no pairing number', !/pairing/i.test(await page.textContent('#pwOvHS')));
   check('reminder and sheet: no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
   await ctx.close();
 }
