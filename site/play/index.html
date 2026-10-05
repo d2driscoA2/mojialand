@@ -493,12 +493,19 @@ textarea.pw-in{resize:none;min-height:88px}
 .pw-steps b{flex:none;width:34px;height:34px;border-radius:10px;background:var(--white);display:grid;place-items:center;font-size:18px;box-shadow:var(--shadow)}
 .pw-steps b img{width:26px;height:26px;border-radius:7px;display:block}
 /* all set (after payment) */
-.pw-ok{background:var(--white);align-items:center;text-align:center;justify-content:space-between;gap:18px;padding-top:max(26px,env(safe-area-inset-top,0px));padding-bottom:max(24px,env(safe-area-inset-bottom,0px));overflow-y:auto;overflow-x:hidden}
+.pw-ok{background:var(--white);align-items:center;text-align:center;justify-content:center;gap:18px;padding-top:max(26px,env(safe-area-inset-top,0px));padding-bottom:max(24px,env(safe-area-inset-bottom,0px));overflow-y:auto;overflow-x:hidden}
 .pw-okgroup{display:grid;gap:10px;justify-items:center;width:100%}
 .pw-okfriends{font-size:40px;line-height:1}
 .pw-ok h2{font-family:var(--display);font-weight:900;font-size:25px;line-height:1.15;margin:0;color:var(--ink);text-wrap:balance}
 .pw-ok #pwOkText{margin:0;color:var(--mute);font-size:14px;font-weight:700;max-width:30ch}
 .pw-okhs{align-items:center;text-align:left;width:100%;padding:14px}
+/* Release 1.1.1 #48: calmer All set. One big button, two quiet links, one plain friend line. */
+.pw-okgo{width:100%;max-width:340px;font-size:20px;padding:16px}
+.pw-oklinks{display:grid;gap:2px;justify-items:center}
+.pw-okfriend{margin:0;max-width:32ch;color:var(--mute);font-size:13px;font-weight:700;line-height:1.4}
+.pw-gunudge{background:#FFF0F6;border:2px dashed var(--pink);border-radius:20px;padding:10px 12px;font-size:14px;font-weight:800;color:var(--ink);text-align:center}
+.pw-hspair{font-size:14px;font-weight:800;color:var(--purple-d);margin:4px 0 0}
+.pw-hspair b{font-family:var(--display);font-size:22px;letter-spacing:4px;color:var(--purple)}
 /* Friend pass card (Release 1.1 #3): parent screens only (All set, Grown-ups behind the gate) */
 .pw-gift{width:100%;background:var(--white);border:2px dashed var(--pink);border-radius:24px;padding:16px;display:grid;gap:8px;text-align:center}
 .pw-gift h4{margin:0;font-family:var(--display);font-weight:900;font-size:19px;color:var(--pink)}
@@ -956,10 +963,12 @@ body.in-draw #app{max-width:none}
     <h2 id="pwOkTitle">You're all set for 48 hours</h2>
     <p id="pwOkText"></p>
   </div>
-  <div class="pw-hsbig pw-okhs" id="pwOkHS"><div class="pw-mini" id="pwOkMini" aria-hidden="true"></div><div><p class="pw-hst">Mojialand on your Home Screen!</p><p>Add Mojialand to your device. One tap to play, full screen. Your pass comes with it.</p><button class="pw-secondary" id="pwOkHow">Show me how</button></div></div>
-  <div class="pw-gift" id="pwOkGift" hidden></div>
-  <button class="pw-textbtn" id="pwOkShare"><span aria-hidden="true">📲</span> Send code to another device</button>
-  <div class="pw-next"><span class="pw-eyebrow">Next</span><button class="pw-primary" id="pwOkBack">▶ Hand it back to your kid</button></div>
+  <button class="pw-primary pw-okgo" id="pwOkBack">▶ Hand it back to your kid</button>
+  <div class="pw-oklinks">
+    <button class="pw-textbtn" id="pwOkHS" type="button"><span aria-hidden="true">📱</span> <span id="pwOkHSt">Put Mojialand on this phone's Home Screen</span></button>
+    <button class="pw-textbtn" id="pwOkShare" type="button"><span aria-hidden="true">📲</span> Use Mojialand on another device</button>
+  </div>
+  <p class="pw-okfriend" id="pwOkGift" hidden></p>
 </section>
 
 <!-- WELCOME SPLASH -->
@@ -994,6 +1003,7 @@ body.in-draw #app{max-width:none}
     <div><b aria-hidden="true"><img src="/logo/icon-180.png" alt=""></b>Tap Add. Mojialand sits with your apps.</div>
   </div>
   <p style="font-size:12px">Your pass comes along with it. Android and computers show one Install button instead.</p>
+  <p class="pw-hspair" id="pwHSPair" hidden>If the Home Screen app asks for a pairing number, type <b id="pwHSPairPin">····</b></p>
   <button class="pw-secondary" data-pw-close>Got it</button>
 </div></div>
 <div class="pw-ov hidden" id="pwOvCode" role="dialog" aria-label="Have a code?"><div class="pw-card">
@@ -2059,18 +2069,22 @@ const pay=(function(){
   function homeGrid(el,n){ const apps=['📷','🗓️','☀️','🎵','🗺️','💬','📚','🧮','🎨','⏰','📝','🛒'], bg=['#F7F7F7','#FFFFFF','#FFE08A','#FF8FB0','#9FE0B8','#7ED67E','#FFB36B','#8C8C8C','#FFD1E6','#1F1F1F','#FFF3B0','#8FD3FF']; let h='';
     for(let i=0;i<n;i++) h+= i===(n>9?5:4) ? '<i class="mj"><img src="/logo/icon-180.png" alt=""></i>' : '<i style="background:'+bg[i%12]+'">'+apps[i%12]+'</i>'; el.innerHTML=h; }
   homeGrid($('#pwMini'),9); homeGrid($('#pwMiniBig'),16);
-  function showHow(){ if(installEvt){ const ev=installEvt; installEvt=null; try{ ev.prompt(); const r=ev.userChoice; if(r&&r.then) r.then(()=>buildGU(),()=>{}); }catch(e){ $('#pwOvHS').classList.remove('hidden'); } return; } $('#pwOvHS').classList.remove('hidden'); }
+  function showHow(){ if(installEvt){ const ev=installEvt; installEvt=null; try{ ev.prompt(); const r=ev.userChoice; if(r&&r.then) r.then(()=>buildGU(),()=>{}); }catch(e){ $('#pwOvHS').classList.remove('hidden'); } return; } $('#pwOvHS').classList.remove('hidden'); paintHowPair(); }
+  /* #48: the how-to sheet also shows the pairing number (Safari, pass on), in case the Home Screen app asks for it */
+  async function paintHowPair(){ const el=$('#pwHSPair'); el.hidden=true; if(standalone()||!passOn(getPass())) return; const pin=await getPairing(); if(pin){ $('#pwHSPairPin').textContent=pin; el.hidden=false; } }
   $('#pwHSbtn').addEventListener('click',()=>{ ctx(); sfx.boop(); showHow(); });
 
   /* All set: shown once after /pass/done/ saves a verified pass */
-  homeGrid($('#pwOkMini'),9);
   function showAllset(){ const a=store.get('allset',null); try{ localStorage.removeItem('mojia.allset'); }catch(e){}
     const p=getPass(); if(!a||typeof a!=='object'||!passOn(p)||!(Date.now()-Number(a.at)<30*MIN)) return false;
     $('#pwOkTitle').textContent=a.plan==='redeem'?'Mojialand is on!':p.kind==='forever'?'Mojialand is yours for good':(a.plan==='add'?'Added 48 hours':"You're all set for 48 hours");
     const mail=a.plan==='redeem'?'':String(a.email_masked||p.email_masked||'');
     $('#pwOkText').textContent=(p.kind==='forever'?'Forever pass on.':'Pass on until '+fmtT(p.ends_at)+'.')+(mail?' Code emailed to '+mail+'.':'');
-    $('#pwOkHS').hidden=standalone(); $('#pwOkGift').hidden=true; go('allset'); showGiftOnAllset(); return true; }
-  $('#pwOkHow').addEventListener('click',()=>{ ctx(); sfx.boop(); showHow(); });
+    const touch=(navigator.maxTouchPoints||0)>0, ipad=/iPad/.test(navigator.userAgent)||(/Macintosh/.test(navigator.userAgent)&&touch);
+    $('#pwOkHS').hidden=standalone()||!(touch||installEvt); $('#pwOkHSt').textContent=!touch?'Install Mojialand on this computer':ipad?"Put Mojialand on this iPad's Home Screen":"Put Mojialand on this phone's Home Screen";
+    $('#pwOkShare').hidden=!p.code; $('#pwOkGift').hidden=true; okMail=!!mail; go('allset'); showGiftOnAllset(); return true; }
+  let okMail=false;
+  $('#pwOkHS').addEventListener('click',()=>{ ctx(); sfx.boop(); showHow(); });
   /* Send the pass to another device: the phone's share sheet (Messages, Mail, AirDrop). Falls back to a sheet with the link and code. */
   async function sharePass(){ const p=getPass(); if(!p||!p.code){ soon('Send code to another device'); return; }
     const link=location.origin+'/r/'+p.code.replace(/-/g,''); const text='Mojialand pass. Open this on your other device and tap Turn on Mojialand: '+link+' Or type the code '+p.code+' under Grown-ups, Have a code?';
@@ -2093,7 +2107,8 @@ const pay=(function(){
     el.querySelector('[data-gift="share"]').onclick=async()=>{ ctx(); sfx.boop(); if(navigator.share){ try{ await navigator.share({title:'48 free hours of Mojialand',text:GIFT_MSG,url:d.link}); return; }catch(e){ if(e&&e.name==='AbortError') return; } } try{ await navigator.clipboard.writeText(GIFT_MSG+' '+d.link); toast('Link copied'); }catch(e){ toast('Press and hold the link to copy'); } };
     el.querySelector('[data-gift="copy"]').onclick=async()=>{ ctx(); sfx.boop(); try{ await navigator.clipboard.writeText(GIFT_MSG+' '+d.link); toast('Link copied'); }catch(e){ toast('Press and hold the link to copy'); } };
     return true; }
-  async function showGiftOnAllset(){ const el=$('#pwOkGift'); paintGift(el,await loadGift()); }
+  async function showGiftOnAllset(){ const el=$('#pwOkGift'), d=await loadGift(); if(!d||d.state!=='ready'){ el.hidden=true; return; }
+    el.textContent='🎁 Your pass includes 48 free hours for a friend. Find the link in Grown-ups'+(okMail?' or your email.':'.'); el.hidden=false; }
   async function openGift(){ const el=$('#pwGuGift'); el.hidden=false; el.innerHTML='<p>One moment…</p>'; $('#pwOvGift').classList.remove('hidden'); const d=await loadGift(); if(!paintGift(el,d)){ el.hidden=false; el.innerHTML='<h4>🎁 Give a friend 48 free hours</h4><p>This pass has no friend pass to give. Friend passes come with each pass and work for 30 days.</p>'; } }
   $('#pwOkBack').addEventListener('click',()=>{ ctx(); sfx.boop(); go('home'); });
   $$('.pw-ov').forEach(ov=>ov.addEventListener('click',e=>{ if(e.target===ov||e.target.closest('[data-pw-close]')){ ov.classList.add('hidden'); } }));
@@ -2221,15 +2236,17 @@ const pay=(function(){
     else { const s=Math.ceil(freeLeft()/1000); h=passOffLine()+'<b>Free play</b><span>'+SETTINGS.first_visit_minutes+' minutes on the first visit, then '+SETTINGS.daily_minutes+' minutes a day. Resets each morning.</span><span>Left today: '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0')+'</span>'+(standalone()?'<span>Paid already? Open your pass email and tap the button, or tap Have a code? below.</span>':''); }
     if(/displayedux\.com$|netlify\.app$/.test(location.hostname)){ h+='<span style="opacity:.6">Staging check: '+(standalone()?'Home Screen app':'browser')+' · opened with pass in address: '+dbgRestore+' · address carries pass now: '+(/restore=/.test(location.search)?'yes':'no')+' · pairing: '+dbgClaim+'</span>'; }
     const el=$('#pwStatus'); if(el.innerHTML!==h) el.innerHTML=h; }
-  function buildGU(){ paintStatus(); checkPass(true); const p=getPass(), rows=[];
+  function buildGU(){ paintStatus(); checkPass(true); const p=getPass(), rows=[]; let nudge='';
     /* Give a friend shows only when the server says this pass has a friend pass (Release 1.1.1 #37: friend passes and support passes have none). */
     if(p){ const raw=store.get('pass',null), gc=raw&&giftCache&&giftCache.token===raw.token?giftCache:null;
       if(gc&&gc.data&&gc.data.state!=='expired') rows.push(['🎁 Give a friend 48 hours','›','gift']);
-      else if(!gc) loadGift().then(d=>{ if(d&&d.state!=='expired') buildGU(); }); }
+      else if(!gc) loadGift().then(d=>{ if(d&&d.state!=='expired') buildGU(); });
+      const left=p.kind==='48h'?p.ends_at-Date.now():0, nk=(p.code||'')+':'+p.ends_at;
+      if(gc&&gc.data&&gc.data.state==='ready'&&left>0&&left<=6*60*MIN&&store.get('giftNudge','')!==nk){ store.set('giftNudge',nk); nudge='<div class="pw-gunudge">🎁 Your pass ends soon. Know a family who would enjoy 48 free hours? Tap Give a friend below.</div>'; } }
     if(passOn(p)){ rows.push(['📲 Send code to another device','›','share']); if(p.kind==='48h') rows.push(['Add 48 hours',money(PRICES.add),'add'],['Upgrade to Forever',money(PRICES.up),'up']); }
     else rows.push(['Get a pass',money(PRICES.pass)+' or '+money(PRICES.life),'buy']);
     rows.push(['🖼️ Save drawings to Photos','›','photos'],['Have a code?','›','code'],['Contact us','›','help']);
-    $('#pwGuList').innerHTML=rows.map(r=>'<button class="pw-gurow'+(r[2]==='share'?' share':'')+'" data-a="'+r[2]+'"><span>'+r[0]+'</span><span>'+r[1]+'</span></button>').join('');
+    $('#pwGuList').innerHTML=nudge+rows.map(r=>'<button class="pw-gurow'+(r[2]==='share'?' share':'')+'" data-a="'+r[2]+'"><span>'+r[0]+'</span><span>'+r[1]+'</span></button>').join('');
     const on=standalone(), hb=$('#pwHS'); hb.classList.toggle('done',on); $('#pwHSt').textContent=on?'On your Home Screen':'Mojialand on your Home Screen!';
     $('#pwHSbody').textContent=on?'Mojialand sits next to your other apps on this device. Open it from the icon for full screen play.':'Add Mojialand to your Home Screen. Your kids find it next to your other apps, and it opens full screen.';
     $('#pwHSbtn').hidden=on;

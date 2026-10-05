@@ -234,7 +234,10 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   check('All set: hash and flag cleared', (await page.evaluate(() => location.hash)) === '' && (await page.evaluate(() => localStorage.getItem('mojia.allset'))) === null);
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('mojia.pass')));
   check('done: saved pass', saved.code === 'MOJI-TEST-CODE-2345' && saved.kind === '48h' && saved.ends_at === payload.e && saved.token === token, JSON.stringify(saved).slice(0, 120));
-  check('All set: Home Screen card, share link, next', await page.isVisible('#pwOkHS') && await page.isVisible('#pwOkShare') && await page.isVisible('.pw-next'));
+  check('All set: big Hand it back button, then two quiet links (Release 1.1.1 #48)', await page.isVisible('#pwOkBack') && await page.isVisible('#pwOkHS') && await page.isVisible('#pwOkShare')
+    && (await page.textContent('#pwOkHSt')) === "Put Mojialand on this phone's Home Screen" && /Use Mojialand on another device/.test(await page.textContent('#pwOkShare')));
+  check('All set: the big button comes first', await page.evaluate(() => { const ids = [...document.querySelectorAll('#s-allset button')].filter((b) => b.offsetParent).map((b) => b.id); return ids[0] === 'pwOkBack'; }));
+  check('All set: no friend card buttons and no Home Screen card', (await page.locator('#s-allset [data-gift]').count()) === 0 && (await page.locator('#s-allset .pw-hsbig').count()) === 0);
   const fits = await page.evaluate(() => { const s = document.querySelector('#s-allset'); return s.scrollHeight <= s.clientHeight + 1; });
   check('All set fits at 390x844 with no scrolling', fits);
   await page.screenshot({ path: path.join(SHOTS, 'allset-48h-390.png') });
@@ -1362,8 +1365,8 @@ for (const [w, h, name] of [[375, 667, 'se'], [820, 1180, 'ipad']]) {
   await page.route('**/.netlify/functions/friend-code', (r) => { fcalls.push(r.request().postDataJSON()); r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 'GIFT-ABCD-EFGH-JKMN', link: base + '/g/GIFTABCDEFGHJKMN', use_by: useBy, state: 'ready' }) }); });
   await page.goto(base + '/pass/done/?session_id=cs_test_gift');
   await page.waitForSelector('#s-allset:not(.hidden)', { timeout: 15000 });
-  await page.waitForSelector('#pwOkGift:not([hidden]) [data-gift="share"]');
-  check('friend pass: All set shows the card with Share and Copy link', /Give a friend 48 free hours/.test(await page.textContent('#pwOkGift')) && /\/g\/GIFTABCDEFGHJKMN/.test(await page.textContent('#pwOkGift')));
+  await page.waitForSelector('#pwOkGift:not([hidden])');
+  check('friend pass: All set shows one plain line, no buttons, no link (Release 1.1.1 #48)', (await page.textContent('#pwOkGift')) === '🎁 Your pass includes 48 free hours for a friend. Find the link in Grown-ups or your email.' && (await page.locator('#pwOkGift button, #pwOkGift a').count()) === 0);
   check('friend pass: asks the server with the pass token', fcalls.length === 1 && fcalls[0].token === token);
   await page.screenshot({ path: path.join(SHOTS, 'allset-friend-390.png'), fullPage: true });
   await page.click('#pwOkBack');
@@ -1378,6 +1381,26 @@ for (const [w, h, name] of [[375, 667, 'se'], [820, 1180, 'ipad']]) {
   check('friend pass: Grown-ups sheet shows the card', /use|30|Give a friend/.test(await page.textContent('#pwGuGift')));
   await page.screenshot({ path: path.join(SHOTS, 'gu-friend-390.png') });
   check('friend pass: no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
+  await ctx.close();
+}
+// Release 1.1.1 #48: one friend pass reminder in Grown-ups when a 48-hour pass has 6 hours left; how-to sheet shows the pairing number
+{
+  const { ctx, page } = await newPage();
+  const { token, payload } = tokenFor('48h', Date.now() + 5 * 3600e3);
+  await page.addInitScript(([tok, e]) => { if (!sessionStorage.getItem('s')) { sessionStorage.setItem('s', '1'); localStorage.setItem('mojia.pass', JSON.stringify({ code: 'MOJI-NUDG-PASS-2345', kind: '48h', ends_at: e, token: tok })); } }, [token, payload.e]);
+  await page.route('**/.netlify/functions/pass-check', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ state: 'on', kind: '48h', ends_at: payload.e, token }) }));
+  await page.route('**/.netlify/functions/friend-code', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 'GIFT-ABCD-EFGH-JKMN', link: base + '/g/GIFTABCDEFGHJKMN', use_by: new Date(Date.now() + 9 * 86400e3).toISOString(), state: 'ready' }) }));
+  await page.route('**/.netlify/functions/handoff', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ pin: '4821', expires_at: new Date(Date.now() + 30 * 60e3).toISOString() }) }));
+  const gu = async () => { if (await page.isVisible('#splash')) { await page.click('#splash'); await page.waitForTimeout(400); } await page.click('#lockBtn'); await page.waitForSelector('#s-ngate:not(.hidden)'); const ans = await page.getAttribute('#pwChoices', 'data-a'); await page.click('#pwChoices [data-n="' + ans + '"]'); await page.waitForSelector('#s-gate:not(.hidden)'); await page.waitForTimeout(600); };
+  await page.goto(base + '/play/'); await page.waitForTimeout(800);
+  await gu();
+  check('reminder: 5 hours left shows one friend pass reminder in Grown-ups', /Your pass ends soon\. Know a family/.test(await page.textContent('#pwGuList')) && await page.isVisible('.pw-gurow[data-a="gift"]'));
+  await page.screenshot({ path: path.join(SHOTS, 'gu-friend-reminder-390.png') });
+  await page.click('#s-gate [data-go="home"]'); await gu();
+  check('reminder: shows once, not on the next visit', !/Your pass ends soon/.test(await page.textContent('#pwGuList')));
+  await page.click('#pwHSbtn'); await page.waitForSelector('#pwOvHS:not(.hidden)'); await page.waitForTimeout(400);
+  check('how-to sheet: shows the pairing number in Safari with a pass on', await page.isVisible('#pwHSPair') && (await page.textContent('#pwHSPairPin')) === '4821');
+  check('reminder and sheet: no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
   await ctx.close();
 }
 // Release 1.1.1 #28 with #42: the game re-checks its saved pass, at most once an hour
