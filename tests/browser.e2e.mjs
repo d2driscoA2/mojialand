@@ -590,7 +590,9 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
     await page.goto(base + '/play/'); await page.waitForTimeout(900);
     check('home screen app: no claim on open; free play until a grown-up types the number', claims.length === 0 && (await page.evaluate(() => localStorage.getItem('mojia.pass'))) === null);
     await gu(page);
-    check('home screen app: Grown-ups asks for the pairing number', await page.isVisible('#pwPairIn') && await page.isHidden('#pwPair'));
+    check('home screen app: no box up front, one quiet link', await page.isVisible('#pwPairOpen') && await page.isHidden('#pwPairIn') && await page.isHidden('#pwPair'));
+    await page.click('#pwPairOpen');
+    check('home screen app: the link opens the pairing number box', await page.isVisible('#pwPairIn') && await page.isHidden('#pwPairOpen') && /tap "Home Screen app asking for a number\?"/.test(await page.textContent('.pw-pairq')));
     await page.fill('#pwPairCode', '12'); await page.click('#pwPairGo');
     check('home screen app: fewer than 4 numbers asks for 4', /4 numbers/.test(await page.textContent('#pwPairErr')) && claims.length === 0);
     await page.fill('#pwPairCode', '1111'); await page.click('#pwPairGo'); await page.waitForTimeout(400);
@@ -608,7 +610,7 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
     const { ctx, page } = await newPage();
     await page.addInitScript(() => { Object.defineProperty(navigator, 'standalone', { get: () => true }); });
     await page.route('**/.netlify/functions/handoff', (r) => r.fulfill({ status: st, contentType: 'application/json', body: JSON.stringify(body) }));
-    await page.goto(base + '/play/'); await gu(page);
+    await page.goto(base + '/play/'); await gu(page); await page.click('#pwPairOpen');
     await page.fill('#pwPairCode', '1234'); await page.click('#pwPairGo'); await page.waitForTimeout(400);
     check('home screen app ' + st + ': friendly next step, never a dead end', want.test(await page.textContent('#pwPairErr')) && await page.isVisible('.pw-gurow[data-a="code"]') && await page.isVisible('.pw-gurow[data-a="help"]'), await page.textContent('#pwPairErr'));
     await ctx.close();
@@ -1386,6 +1388,38 @@ for (const [w, h, name] of [[375, 667, 'se'], [820, 1180, 'ipad']]) {
   await page.screenshot({ path: path.join(SHOTS, 'gu-friend-390.png') });
   check('friend pass: no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
   await ctx.close();
+}
+// Release 1.1.1 #39: the website carries the pass into a Home Screen app added from it
+{
+  const { token, payload } = tokenFor('48h', Date.now() + 30 * 3600e3);
+  const iphone = { userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1' };
+  {
+    const { ctx, page } = await newPage(iphone);
+    await page.addInitScript(([tok, e]) => localStorage.setItem('mojia.pass', JSON.stringify({ code: 'MOJI-WEBS-PASS-2345', kind: '48h', ends_at: e, token: tok })), [token, payload.e]);
+    await page.goto(base + '/'); await page.waitForTimeout(500);
+    const q = new URL(page.url()).searchParams;
+    check('website in Safari: the address carries the saved pass', q.get('restore') === token && q.get('code') === 'MOJI-WEBS-PASS-2345');
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await newPage();
+    await page.addInitScript(([tok, e]) => localStorage.setItem('mojia.pass', JSON.stringify({ code: 'MOJI-WEBS-PASS-2345', kind: '48h', ends_at: e, token: tok })), [token, payload.e]);
+    await page.goto(base + '/'); await page.waitForTimeout(500);
+    check('website on non-Apple devices: the address stays clean', !/restore=/.test(page.url()));
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await newPage(iphone);
+    await page.addInitScript(() => { Object.defineProperty(navigator, 'standalone', { get: () => true }); });
+    await page.goto(base + '/?restore=' + encodeURIComponent(token) + '&code=MOJI-WEBS-PASS-2345'); await page.waitForTimeout(400);
+    const nav = page.waitForURL('**/play/**', { timeout: 8000 }).catch(() => null);
+    await page.evaluate(() => { const b = [...document.querySelectorAll('a,button')].find((x) => /try a game|play/i.test(x.textContent || '')); if (b) b.click(); });
+    await nav; await page.waitForTimeout(1200);
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('mojia.pass') || 'null'));
+    check('website Home Screen app: Play brings the pass into the game', !!saved && saved.token === token, page.url());
+    check('website: no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
+    await ctx.close();
+  }
 }
 // Release 1.1.1 #48: one friend pass reminder in Grown-ups when a 48-hour pass has 6 hours left; how-to sheet shows the pairing number
 {

@@ -690,6 +690,16 @@ var CONFIG = {
   try{ var cu=new URL(location.href), cq=cu.searchParams.get('c'); if(cq!=null){ cu.searchParams.delete('c'); history.replaceState(null,'',cu.pathname+cu.search+cu.hash); var cl=cq.toLowerCase(), co=null; try{ co=JSON.parse(localStorage.getItem('mojia.camp')||'null'); }catch(e){}
     if(/^[a-z0-9][a-z0-9-]{1,23}$/.test(cl)&&!(co&&co.l===cl&&Date.now()-co.t<7*864e5)){ try{ localStorage.setItem('mojia.camp',JSON.stringify({l:cl,t:Date.now()})); }catch(e){} var cb=JSON.stringify({e:'camp',c:cl}); if(!(navigator.sendBeacon&&navigator.sendBeacon('/api/ping',new Blob([cb],{type:'application/json'})))) fetch('/api/ping',{method:'POST',headers:{'Content-Type':'application/json'},body:cb,keepalive:true}).catch(function(){}); } } }catch(e){}
  var $=function(s,r){return (r||document).querySelector(s)}, $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
+ /* Release 1.1.1 #39: a Home Screen app added from this page brings the pass along, the same way the game does.
+    iPhone and iPad only: in Safari the address carries the saved pass; in the Home Screen app, Play hands it to the game, which checks the signature. */
+ try{
+  var mjTouch=/iPhone|iPad|iPod/.test(navigator.userAgent)||(/Macintosh/.test(navigator.userAgent)&&(navigator.maxTouchPoints||0)>1);
+  var mjApp=(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;
+  var mjQ=new URLSearchParams(location.search);
+  if(mjApp){ var mjT=mjQ.get('restore'); if(mjT){ CONFIG.gameUrl='/play/?restore='+encodeURIComponent(mjT)+(mjQ.get('code')?'&code='+encodeURIComponent(mjQ.get('code')):''); } }
+  else if(mjTouch){ var mjP=JSON.parse(localStorage.getItem('mojia.pass')||'null');
+   if(mjP&&typeof mjP.token==='string'&&(mjP.kind==='forever'||Number(mjP.ends_at)>Date.now())){ mjQ.set('restore',mjP.token); if(mjP.code) mjQ.set('code',String(mjP.code)); history.replaceState(null,'',location.pathname+'?'+mjQ.toString()+location.hash); } }
+ }catch(e){}
 
  /* Fill settings into the page */
  $$("#freeMinutes,.freeMin").forEach(function(e){e.textContent=CONFIG.freeMinutes});
