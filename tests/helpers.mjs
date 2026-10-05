@@ -101,18 +101,6 @@ export function fakeDb() {
       db.devices.push({ id: crypto.randomUUID(), pass_id: body.p_pass, device_id_hash: body.p_hash });
       return reply(200, 'ok');
     }
-    // Release 1.1.1 #39: same rules as pair_claim in supabase/release-1.1.1-39-pairing.sql
-    if (table === 'rpc/pair_claim') {
-      db.pairings = db.pairings.filter((r) => new Date(r.expires_at).getTime() >= Date.now() && (r.tries || 0) < 3);
-      const mine = db.pairings.filter((r) => r.key_hash === body.p_key);
-      if (!mine.length) return reply(200, 'none');
-      const hit = mine.find((r) => r.pin_hash === body.p_pin_hash);
-      if (hit) { db.pairings = db.pairings.filter((r) => r !== hit); return reply(200, hit.token); }
-      mine.forEach((r) => { r.tries = (r.tries || 0) + 1; });
-      const left = Math.max(0, Math.min(...mine.map((r) => 3 - r.tries)));
-      db.pairings = db.pairings.filter((r) => !(r.key_hash === body.p_key && r.tries >= 3));
-      return reply(200, 'bad:' + left);
-    }
     if (table === 'rpc/alert_add') { db.alerts.push(body); return reply(200, 1); }
     if (table === 'rpc/analytics_add') { db.analytics.push(body); return reply(204); }
     if (table === 'rpc/campaign_add') {

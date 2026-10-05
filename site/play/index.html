@@ -451,18 +451,6 @@ body.drawer-open .addbtn{display:none}
 .pw-hsbig.done{background:#DDF6E7;border-color:#2E9E62}
 .pw-hsbig.done .pw-hst{color:#1E7A48}
 .pw-hsbig .pw-primary{padding:10px;font-size:15px;margin-top:8px}
-.pw-pairshow{margin:6px auto 0;font-size:13px}
-.pw-pair{margin-top:10px;background:var(--white);border:2px dashed var(--purple);border-radius:20px;padding:10px 8px;display:grid;gap:2px;text-align:center}
-.pw-pair span{font-size:12px;font-weight:900;color:var(--purple-d);text-transform:uppercase;letter-spacing:1px}
-.pw-pair b{font-family:var(--display);font-weight:900;font-size:44px;line-height:1.1;letter-spacing:10px;color:var(--purple);padding-left:10px}
-.pw-pair small{font-size:12px;font-weight:700;color:var(--ink)}
-.pw-pairin{margin-top:10px;display:grid;gap:8px}
-.pw-pairin .pw-pairq{font-weight:900;color:var(--purple-d)}
-.pw-pairbox{font-family:var(--display);font-weight:900;font-size:36px;letter-spacing:12px;text-align:center;padding:8px 0 8px 12px;border:3px solid var(--purple);border-radius:18px;background:var(--white);color:var(--ink);width:100%;min-width:0;box-sizing:border-box}
-.pw-pairbox:focus{outline:3px solid var(--blue);outline-offset:2px}
-.pw-pairbox::placeholder{color:#D9CCF3;opacity:1}
-.pw-pairerr{min-height:1.2em;color:#B42318}
-.pw-pairerr.ok{color:#1E7A48}
 /* mini iPhone home screen */
 .pw-mini{flex:none;width:92px;height:118px;border-radius:18px 18px 0 0;border:5px solid var(--ink);border-bottom:0;background:linear-gradient(160deg,#9CC7F5,#C9B6F2);padding:14px 7px 0;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;align-content:start;position:relative;overflow:hidden}
 .pw-mini::before{content:"9:41";position:absolute;top:2px;left:8px;font:800 7px system-ui,sans-serif;color:#fff}
@@ -904,7 +892,7 @@ body.in-draw #app{max-width:none}
   <div class="bar"><button class="pill gear" data-go="home" aria-label="Back to home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7138D1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg></button><div class="gname">Grown-ups</div><div style="width:48px"></div></div>
   <div class="pw-status" id="pwStatus"></div>
   <div class="pw-gulist" id="pwGuList"></div>
-  <div class="pw-hsbig" id="pwHS"><div class="pw-mini" id="pwMini" aria-hidden="true"></div><div><p class="pw-hst" id="pwHSt">Mojialand on your Home Screen!</p><p id="pwHSbody">Add Mojialand to your Home Screen. Your kids find it next to your other apps, and it opens full screen.</p><button class="pw-primary" id="pwHSbtn">Show me how</button><button class="pw-textbtn pw-pairshow" id="pwPairShow" type="button" hidden>Home Screen app asking for a number?</button><div class="pw-pair" id="pwPair" hidden><span>Pairing number</span><b id="pwPairPin" aria-live="polite">····</b><small>Type this number in the Home Screen app, under Grown-ups.</small></div><button class="pw-textbtn pw-pairshow" id="pwPairOpen" type="button" hidden>Paid in Safari? Bring your pass here</button><div class="pw-pairin" id="pwPairIn" hidden><p class="pw-pairq">In Safari, open Mojialand, then Grown-ups, and tap "Home Screen app asking for a number?". Type the 4 numbers here.</p><input id="pwPairCode" class="pw-pairbox" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" aria-label="Pairing number" placeholder="0000"><button class="pw-primary" id="pwPairGo">Turn on my pass</button><p class="pw-pairerr" id="pwPairErr" role="status"></p></div></div></div>
+  <div class="pw-hsbig" id="pwHS"><div class="pw-mini" id="pwMini" aria-hidden="true"></div><div><p class="pw-hst" id="pwHSt">Mojialand on your Home Screen!</p><p id="pwHSbody">Add Mojialand to your Home Screen. Your kids find it next to your other apps, and it opens full screen.</p><button class="pw-primary" id="pwHSbtn">Show me how</button></div></div>
   <div class="banner"><span class="e">🔒</span><div>Grown-ups only<div style="font-size:12px;font-weight:700;color:var(--purple-d);opacity:.8">A number question keeps kids out. Tap Grown-ups on the home screen to get here.</div></div></div>
   <div class="row"><div><div class="l">Voice</div><div class="s">Speaks emoji names and how-to cards out loud. Off by default.</div></div><button class="sw" id="swVoice" role="switch" aria-checked="false" aria-label="Voice"></button></div>
   <div class="row"><div><div class="l">Sounds</div><div class="s">Boops, chimes, cheers</div></div><button class="sw" id="swSound" role="switch" aria-checked="true" aria-label="Sounds"></button></div>
@@ -2115,42 +2103,7 @@ const pay=(function(){
   /* iPhone opens the Home Screen app at the page address it was added from, so the address carries the pass while one is on. */
   function syncManifest(){ const p=store.get('pass',null); const on=p&&typeof p==='object'&&typeof p.token==='string'&&vcache.payload&&vcache.token===p.token;
     try{ const want=on?'?restore='+encodeURIComponent(p.token)+(p.code?'&code='+encodeURIComponent(String(p.code)):''):''; if(location.search!==want) history.replaceState(null,'',location.pathname+want+location.hash); }catch(e){} }
-  let dbgRestore='none', dbgClaim='not shown';
-  /* Home Screen handoff, third channel: Safari parks the pass on the server for 30 minutes; the Home Screen app claims it. */
-  const isStandalone=()=>{ try{ return window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true; }catch(e){ return false; } };
-  /* traits Safari and the Home Screen app share on one phone; no network address (it changes between the two) */
-  function deviceTraits(){ let tz=''; try{ tz=Intl.DateTimeFormat().resolvedOptions().timeZone||''; }catch(e){} const sc=window.screen||{}; return [sc.width||0,sc.height||0,window.devicePixelRatio||1,tz,navigator.language||'',navigator.hardwareConcurrency||0].join('|'); }
-  /* Release 1.1.1 #39: pairing number. Safari (pass on) asks the server for a 4-digit number and shows it in
-     Grown-ups. The Home Screen app asks the grown-up to type it. The server never hands out the pass code. */
-  async function getPairing(){ const raw=store.get('pass',null); if(!raw||typeof raw.token!=='string'||isStandalone()) return null;
-    const c=store.get('pair',null); if(c&&c.token===raw.token&&/^\d{4}$/.test(String(c.pin))&&Number(c.until)-Date.now()>5*MIN) return c.pin;
-    try{ const res=await fetch('/.netlify/functions/handoff',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'offer',token:raw.token,traits:deviceTraits()}),credentials:'same-origin',cache:'no-store'});
-      const d=res.status===200?await res.json():null; if(!d||!/^\d{4}$/.test(String(d.pin))) return null;
-      store.set('pair',{pin:d.pin,token:raw.token,until:Date.parse(d.expires_at)||Date.now()+30*MIN}); return d.pin; }catch(e){ return null; } }
-  /* #39 follow-up (Danny, October 5): the number is a backup. Safari shows one quiet link; the number appears only on a tap. */
-  function paintPair(){ $('#pwPair').hidden=true; $('#pwPairShow').hidden=isStandalone()||!passOn(getPass()); }
-  async function revealPair(){ const b=$('#pwPairShow'); b.disabled=true; const pin=await getPairing(); b.disabled=false;
-    if(!pin){ b.textContent='No number right now. Try again in a minute.'; return; }
-    $('#pwPairPin').textContent=pin; $('#pwPair').hidden=false; b.hidden=true; b.textContent='Home Screen app asking for a number?'; dbgClaim='number shown'; }
-  $('#pwPairShow').addEventListener('click',()=>{ ctx(); sfx.boop(); revealPair(); });
-  let pairing=false;
-  async function pairNow(){ const inp=$('#pwPairCode'), err=$('#pwPairErr'), pin=String(inp.value||'').replace(/\D/g,''); err.className='pw-pairerr';
-    if(pin.length!==4){ err.textContent='Type the 4 numbers from Safari.'; inp.focus(); return; }
-    if(pairing) return; pairing=true; $('#pwPairGo').disabled=true; err.textContent='One moment…';
-    const again='In Safari, open Mojialand, then Grown-ups, for a new number. Or type your pass code under Have a code?';
-    try{ const res=await fetch('/.netlify/functions/handoff',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'claim',pin:pin,device_id:deviceId(),traits:deviceTraits()}),credentials:'same-origin',cache:'no-store'});
-      let d={}; try{ d=await res.json(); }catch(e){}
-      if(res.status===200&&d&&typeof d.token==='string'&&await savePass({token:d.token,kind:d.kind,ends_at:d.ends_at})){ dbgClaim='paired'; err.className='pw-pairerr ok'; err.textContent='Your pass is on!'; inp.value=''; store.set('allset',{plan:'redeem',email_masked:'',at:Date.now()}); pairing=false; $('#pwPairGo').disabled=false; showAllset(); return; }
-      if(res.status===401&&d&&Number(d.left)>0){ err.textContent='That number did not match. '+(Number(d.left)===1?'1 try':Number(d.left)+' tries')+' left.'; inp.value=''; inp.focus(); }
-      else if(res.status===401||res.status===404){ err.textContent='That number stopped working. '+again; inp.value=''; }
-      else if(res.status===403) err.textContent=(d&&typeof d.error==='string'&&d.error.length<120?d.error:'This pass is not on any more.')+' Contact us below.';
-      else if(res.status===429) err.textContent='Too many tries. Please wait an hour, or type your pass code under Have a code?';
-      else err.textContent='That did not work. Please try again.';
-    }catch(e){ err.textContent='No connection. Please try again.'; }
-    pairing=false; $('#pwPairGo').disabled=false; }
-  $('#pwPairGo').addEventListener('click',()=>{ ctx(); sfx.boop(); pairNow(); });
-  $('#pwPairCode').addEventListener('keydown',e=>{ if(e.key==='Enter') pairNow(); });
-  $('#pwPairCode').addEventListener('input',e=>{ const v=e.target.value.replace(/\D/g,'').slice(0,4); if(e.target.value!==v) e.target.value=v; });
+  let dbgRestore='none';
   /* the Home Screen app opens /play/?restore=TOKEN&code=CODE the first time: save it, then clean the address */
   async function restoreFromUrl(){ let q; try{ q=new URLSearchParams(location.search); }catch(e){ return; } const tok=q.get('restore'); if(!tok) return;
     try{ history.replaceState(null,'',location.pathname+location.hash); }catch(e){}
@@ -2235,7 +2188,7 @@ const pay=(function(){
     else if(passOn(p)){ const m=Math.max(0,Math.ceil((p.ends_at-Date.now())/MIN)); h='<b>48-hour pass on</b><span>Ends '+fmtT(p.ends_at)+(m<=60?' ('+m+' min left)':'')+(p.code?' · Code '+p.code:'')+'</span>'; }
     else if(graceOn()){ const m=Math.max(1,Math.ceil((graceInfo().until-Date.now())/MIN)); h='<b>Your pass is on its way</b><span>Payment received. Free play for '+m+' more min while it arrives. Your code also comes by email.</span>'; }
     else { const s=Math.ceil(freeLeft()/1000); h=passOffLine()+'<b>Free play</b><span>'+SETTINGS.first_visit_minutes+' minutes on the first visit, then '+SETTINGS.daily_minutes+' minutes a day. Resets each morning.</span><span>Left today: '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0')+'</span>'+(standalone()?'<span>Paid already? Type the code from your email under Have a code? below.</span>':''); }
-    if(/displayedux\.com$|netlify\.app$/.test(location.hostname)){ h+='<span style="opacity:.6">Staging check: '+(standalone()?'Home Screen app':'browser')+' · opened with pass in address: '+dbgRestore+' · address carries pass now: '+(/restore=/.test(location.search)?'yes':'no')+' · pairing: '+dbgClaim+'</span>'; }
+    if(/displayedux\.com$|netlify\.app$/.test(location.hostname)){ h+='<span style="opacity:.6">Staging check: '+(standalone()?'Home Screen app':'browser')+' · opened with pass in address: '+dbgRestore+' · address carries pass now: '+(/restore=/.test(location.search)?'yes':'no')+'</span>'; }
     const el=$('#pwStatus'); if(el.innerHTML!==h) el.innerHTML=h; }
   function buildGU(){ paintStatus(); checkPass(true); const p=getPass(), rows=[]; let nudge='';
     /* Give a friend shows only when the server says this pass has a friend pass (Release 1.1.1 #37: friend passes and support passes have none). */
@@ -2251,9 +2204,7 @@ const pay=(function(){
     const on=standalone(), hb=$('#pwHS'); hb.classList.toggle('done',on); $('#pwHSt').textContent=on?'On your Home Screen':'Mojialand on your Home Screen!';
     $('#pwHSbody').textContent=on?'Mojialand sits next to your other apps on this device. Open it from the icon for full screen play.':'Add Mojialand to your Home Screen. Your kids find it next to your other apps, and it opens full screen.';
     $('#pwHSbtn').hidden=on;
-    /* #39: families with no pass see one quiet link, never a box. The box opens only on a tap. */
-    const needPair=on&&!passOn(getPass()); $('#pwPairOpen').hidden=!needPair||!$('#pwPairIn').hidden; if(!needPair){ $('#pwPairIn').hidden=true; $('#pwPairErr').textContent=''; } paintPair(); }
-  $('#pwPairOpen').addEventListener('click',()=>{ ctx(); sfx.boop(); $('#pwPairOpen').hidden=true; $('#pwPairIn').hidden=false; setTimeout(()=>$('#pwPairCode').focus(),60); });
+    }
   $('#pwGuList').addEventListener('click',e=>{ const b=e.target.closest('.pw-gurow'); if(!b) return; ctx(); sfx.boop(); const a=b.dataset.a;
     if(a==='add'||a==='up') openGate('plans','gate',a); else if(a==='buy') openGate('plans','gate','pass');
     else if(a==='share') sharePass(); else if(a==='gift') openGift(); else if(a==='photos') games.draw.openPhotos(); else if(a==='code') openCode(); else if(a==='help') openContact(); });

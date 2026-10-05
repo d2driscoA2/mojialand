@@ -16,7 +16,6 @@ import { handler as adminLogin } from '../netlify/functions/admin-login.mjs';
 import { handler as adminApi } from '../netlify/functions/admin-api.mjs';
 import { handler as redeemFn } from '../netlify/functions/redeem-code.mjs';
 import { handler as settingsFn } from '../netlify/functions/settings.mjs';
-import { handler as handoff } from '../netlify/functions/handoff.mjs';
 import { handler as friendFn } from '../netlify/functions/friend-code.mjs';
 import { handler as passCheck } from '../netlify/functions/pass-check.mjs';
 import { friendPass } from '../netlify/functions/_lib/friend.mjs';
@@ -654,64 +653,6 @@ test('settings: public read of play settings only', async () => {
   assert.equal(r.statusCode, 200);
   assert.deepEqual(JSON.parse(r.body), { daily_minutes: 3, daily_reset: '04:00' });
   assert.equal((await settingsFn(ev({}))).statusCode, 405);
-});
-
-test('handoff (Release 1.1.1 #39): pairing number; claim never returns the code; no plain code stored; 3 tries', async () => {
-  const { pass, code } = await grantPass(paidSession('cs_test_ho1', 'pass'));
-  const tok = signToken(makeTokenPayload(pass, 'staging'), process.env.PASS_SIGNING_PRIVATE_KEY);
-  const safari = { 'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1' };
-  const app = { 'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148', 'x-nf-client-connection-ip': '198.51.100.7' };
-  const traits = '393|852|3|America/Detroit|en-US|6';
-  const claim = (pin, extra = {}) => handoff(ev({ action: 'claim', device_id: 'c'.repeat(32), traits, pin, ...extra }, app));
-  assert.equal((await handoff(ev({ action: 'offer', token: 'nope', traits }, safari))).statusCode, 400);
-  assert.equal((await handoff(ev({ action: 'offer', token: signToken(makeTokenPayload(pass, 'live'), process.env.PASS_SIGNING_PRIVATE_KEY), traits }, safari))).statusCode, 400, 'live token on staging');
-  let r = await handoff(ev({ action: 'offer', token: tok, code, traits }, safari));
-  assert.equal(r.statusCode, 200);
-  const { pin } = JSON.parse(r.body); assert.match(pin, /^\d{4}$/);
-  const stored = JSON.stringify(db.pairings);
-  assert.equal(db.pairings.length, 1); assert.equal(db.handoffs.length, 0, 'old handoffs table not written');
-  assert.ok(!stored.includes(code) && !stored.includes(code.replace(/-/g, '')), 'no plain pass code stored');
-  assert.ok(!stored.includes('"' + pin + '"') && !stored.includes('Detroit'), 'number and traits stored only as hashes');
-  // no secret, no claim
-  assert.equal((await handoff(ev({ action: 'claim', device_id: 'c'.repeat(32), traits }, app))).statusCode, 400);
-  // another phone model with the right number gets nothing
-  assert.equal((await claim(pin, { traits: '430|932|3|America/Detroit|en-US|6' })).statusCode, 404);
-  // wrong numbers count down, the right number still works inside 3 tries
-  const wrong = (n) => String((Number(pin) + n) % 10000).padStart(4, '0');
-  r = await claim(wrong(1)); assert.equal(r.statusCode, 401); assert.equal(JSON.parse(r.body).left, 2);
-  r = await claim(pin); assert.equal(r.statusCode, 200);
-  const d = JSON.parse(r.body);
-  assert.deepEqual(Object.keys(d).sort(), ['ends_at', 'kind', 'token'], 'claim never returns the code');
-  assert.equal(verifyToken(d.token, KEYS.jwk).p, pass.id); assert.equal(d.kind, '48h');
-  assert.equal(db.devices.length, 1, 'device counts on claim');
-  assert.equal((await claim(pin)).statusCode, 404, 'claimed once');
-  // three wrong numbers end the pairing: a friendly 401 with 0 left, then 404
-  await handoff(ev({ action: 'offer', token: tok, traits }, safari));
-  const pin2 = db.pairings.length && JSON.parse((await handoff(ev({ action: 'offer', token: tok, traits }, safari))).body).pin;
-  db.pairings.shift();
-  const w = (n) => String((Number(pin2) + n) % 10000).padStart(4, '0');
-  assert.equal(JSON.parse((await claim(w(1))).body).left, 2);
-  assert.equal(JSON.parse((await claim(w(2))).body).left, 1);
-  r = await claim(w(3)); assert.equal(r.statusCode, 401); assert.equal(JSON.parse(r.body).left, 0);
-  assert.equal((await claim(pin2)).statusCode, 404, 'right number after 3 misses finds nothing');
-  // an ended or refunded pass does not pair
-  const pin3 = JSON.parse((await handoff(ev({ action: 'offer', token: tok, traits }, safari))).body).pin;
-  db.passes.find((x) => x.id === pass.id).status = 'refunded';
-  assert.equal((await claim(pin3)).statusCode, 403);
-});
-
-test('handoff (Release 1.1.1 #39): two families with the same phone each pair with their own number', async () => {
-  const a = (await grantPass(paidSession('cs_test_hoA', 'pass'))).pass, b = (await grantPass(paidSession('cs_test_hoB', 'life'))).pass;
-  const ua = { 'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148' };
-  const traits = '393|852|3|America/Detroit|en-US|6';
-  const tk = (p) => signToken(makeTokenPayload(p, 'staging'), process.env.PASS_SIGNING_PRIVATE_KEY);
-  const pa = JSON.parse((await handoff(ev({ action: 'offer', token: tk(a), traits }, ua))).body).pin;
-  const pb = JSON.parse((await handoff(ev({ action: 'offer', token: tk(b), traits }, ua))).body).pin;
-  if (pa === pb) return; // 1 in 10,000: same number, nothing to compare
-  const rb = JSON.parse((await handoff(ev({ action: 'claim', device_id: 'b'.repeat(32), traits, pin: pb }, ua))).body);
-  assert.equal(verifyToken(rb.token, KEYS.jwk).p, b.id, 'family B gets its own Forever pass');
-  const ra = JSON.parse((await handoff(ev({ action: 'claim', device_id: 'a'.repeat(32), traits, pin: pa }, ua))).body);
-  assert.equal(verifyToken(ra.token, KEYS.jwk).p, a.id, 'family A still gets its own pass');
 });
 
 // ---------------------------------------------------------------- analytics
