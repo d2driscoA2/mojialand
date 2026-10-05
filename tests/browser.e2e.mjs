@@ -1329,6 +1329,26 @@ for (const [w, h, name] of [[375, 667, 'se'], [820, 1180, 'ipad']]) {
   await ctx.close();
 }
 
+// Release 1.1.1 #48 on an iPad (landscape): All set names the iPad; home game cards fill their width (iPadOS 16 fix, October 5)
+{
+  const ipadUA = 'Mozilla/5.0 (iPad; CPU OS 16_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1';
+  const { ctx, page } = await newPage({ viewport: { width: 1080, height: 810 }, deviceScaleFactor: 1, userAgent: ipadUA });
+  const { token, payload } = tokenFor('48h', Date.now() + 48 * 3600e3);
+  await page.route('**/.netlify/functions/confirm-session', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 'MOJI-TEST-CODE-2345', kind: '48h', ends_at: payload.e, token, email_masked: 'p•••@example.com', plan: 'pass' }) }));
+  await page.route('**/.netlify/functions/friend-code', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 'GIFT-ABCD-EFGH-JKMN', link: base + '/g/GIFTABCDEFGHJKMN', use_by: new Date(Date.now() + 30 * 86400e3).toISOString(), state: 'ready' }) }));
+  await page.goto(base + '/pass/done/?session_id=cs_test_ipad');
+  await page.waitForSelector('#s-allset:not(.hidden)', { timeout: 15000 });
+  await page.waitForSelector('#pwOkGift:not([hidden])');
+  check('iPad All set: Home Screen link names the iPad', (await page.textContent('#pwOkHSt')) === "Put Mojialand on this iPad's Home Screen" && await page.isVisible('#pwOkHS'));
+  await page.screenshot({ path: path.join(SHOTS, 'allset-ipad-1080.png') });
+  await page.click('#pwOkBack');
+  await page.waitForSelector('#s-home:not(.hidden)');
+  await page.waitForTimeout(300);
+  check('iPad home: each game card preview and name row span the card width', await page.evaluate(() => [...document.querySelectorAll('.hcell')].every((c) => { const cw = c.clientWidth - 20; return ['.win', '.hrow'].every((s) => Math.abs(c.querySelector(s).getBoundingClientRect().width - cw) < 2); })));
+  await page.screenshot({ path: path.join(SHOTS, 'home-ipad-1080.png') });
+  await ctx.close();
+}
+
 // Release 1.1 #3: friend pass on All set and in Grown-ups; /g/ link page with a preview card
 {
   const { ctx, page } = await newPage();

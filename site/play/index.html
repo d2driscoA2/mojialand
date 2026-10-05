@@ -706,9 +706,10 @@ textarea.pw-in{resize:none;min-height:88px}
 .hgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .hcell{height:206px;padding:10px;border-radius:26px;box-shadow:0 8px 18px rgba(48,37,74,.14);display:flex;flex-direction:column;gap:10px}
 .hcell.white{background:#fff;box-shadow:0 0 0 2px var(--line),0 8px 18px rgba(48,37,74,.14)}
-.hcell .win{height:112px;border-radius:18px;background:rgba(255,255,255,.92);overflow:hidden;display:flex;align-items:center;justify-content:center}
+.hcell .win{width:100%;box-sizing:border-box;height:112px;border-radius:18px;background:rgba(255,255,255,.92);overflow:hidden;display:flex;align-items:center;justify-content:center}
 .hcell.white .win{background:var(--purple-l)}
-.hcell .hrow{display:flex;align-items:center;gap:8px;padding:0 2px}
+/* width:100%: iPadOS 16 Safari does not stretch flex children inside a button (Danny's iPad, October 5). */
+.hcell .hrow{width:100%;box-sizing:border-box;display:flex;align-items:center;gap:8px;padding:0 2px}
 .hcell .nm{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .hcell .nm b{font-size:21px;font-weight:900}
 .hcell .nm small{font-size:13px;font-weight:800}
