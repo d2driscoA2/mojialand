@@ -1,16 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!-- Release 1.1.1 #43: runs scripts/backup-live.sh every Sunday at 3:15 AM.
-     Install: copy to ~/Library/LaunchAgents/, then
-     launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.mojialand.backup.plist
+<!-- Release 1.1.1 #43: opens the Mojialand Backup app every Sunday at 3:15 AM.
+     The app runs ~/Library/Application Support/Mojialand/backup-live.sh.
+     Install with: zsh scripts/install-backup.sh (fills in __APP__).
      If the Mac sleeps at 3:15 AM, macOS runs the job when it wakes. -->
 <plist version="1.0">
 <dict>
   <key>Label</key><string>com.mojialand.backup</string>
   <key>ProgramArguments</key>
   <array>
-    <string>/bin/zsh</string>
-    <string>/Users/jamesdriscoll/Desktop/Claude/portfolio/claude-written/mojialand/scripts/backup-live.sh</string>
+    <string>/usr/bin/open</string>
+    <string>-W</string>
+    <string>-g</string>
+    <string>-a</string>
+    <string>__APP__</string>
   </array>
   <key>StartCalendarInterval</key>
   <dict><key>Weekday</key><integer>0</integer><key>Hour</key><integer>3</integer><key>Minute</key><integer>15</integer></dict>

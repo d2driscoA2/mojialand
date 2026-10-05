@@ -1,7 +1,9 @@
 #!/bin/zsh
 # Release 1.1.1 #43 (audit M5): weekly backup of the mojialand-live database.
-# Runs on Danny's Mac, every Sunday at 3:15 AM through launchd
-# (scripts/com.mojialand.backup.plist), or by hand:  zsh scripts/backup-live.sh
+# Runs on Danny's Mac every Sunday at 3:15 AM: launchd opens the Mojialand
+# Backup app, which runs a copy of this file from
+# ~/Library/Application Support/Mojialand (scripts/install-backup.sh sets this
+# up). By hand:  zsh scripts/backup-live.sh
 #
 # - Reads the database password from the Mac keychain (item "mojialand-live-db").
 #   The password never sits in this repo, in a file name, or in a chat.
