@@ -537,7 +537,7 @@ footer .fine.credit a{color:#fff;text-decoration:underline;text-underline-offset
       <h4>What we collect from children</h4>
       <p>Nothing. Kid screens have no text fields, no microphone, no camera, and no location. The game sends no requests to any outside company. Mojialand uses no outside analytics, no advertising, and no tracking cookies. We count plays, never players: see Play counts below.</p>
       <h4>What stays on the device</h4>
-      <p>The browser on your device saves game settings (sound, voice, how-to cards), the free play timer, a random device value, and your pass token. If you open Mojialand from one of our QR cards, the browser also keeps the name of that event, such as a library story time, for 7 days. This data stays in the browser's storage. Clearing your browser data removes the data. When you add Mojialand to your Home Screen, the pass token travels with it.</p>
+      <p>The browser on your device saves game settings (sound, voice, how-to cards), the free play timer, a random device value, and your pass token. If you open Mojialand from one of our QR cards, the browser also keeps the name of that event, such as a library story time, for 7 days. This data stays in the browser's storage. Clearing your browser data removes the data. On an iPhone or iPad, the page address carries your pass token, so a Home Screen app added from Safari opens with the pass on. Netlify, our hosting company, receives that address when the page loads. We save no copy of it.</p>
       <h4>What we collect from grown-ups</h4>
       <ul>
        <li>When you buy a pass: your email address and payment details, entered on Stripe's secure form.</li>
@@ -565,6 +565,7 @@ footer .fine.credit a{color:#fff;text-decoration:underline;text-underline-offset
        <li>Contact messages: deleted after 90 days.</li>
        <li>Gift and support codes never used: deleted 30 days after they expire.</li>
        <li>Play totals by hour, city and game: deleted after 400 days. Five-minute counts for the live view: deleted after 2 hours.</li>
+       <li>Weekly backups of our database go to private encrypted storage and are deleted after 12 weeks.</li>
        <li>Stripe keeps payment records as Stripe's own legal duties require.</li>
       </ul>
       <h4>Your choices</h4>
@@ -697,7 +698,7 @@ var CONFIG = {
   var mjQ=new URLSearchParams(location.search);
   if(mjApp){ var mjT=mjQ.get('restore'); if(mjT){ CONFIG.gameUrl='/play/?restore='+encodeURIComponent(mjT)+(mjQ.get('code')?'&code='+encodeURIComponent(mjQ.get('code')):''); } }
   else if(mjTouch){ var mjP=JSON.parse(localStorage.getItem('mojia.pass')||'null');
-   if(mjP&&typeof mjP.token==='string'&&(mjP.kind==='forever'||Number(mjP.ends_at)>Date.now())){ mjQ.set('restore',mjP.token); if(mjP.code) mjQ.set('code',String(mjP.code)); history.replaceState(null,'',location.pathname+'?'+mjQ.toString()+location.hash); } }
+   if(mjP&&typeof mjP.token==='string'&&(mjP.kind==='forever'||Number(mjP.ends_at)>Date.now())){ mjQ.set('restore',mjP.token); mjQ.delete('code'); /* token only, never the pass code (Security review R1) */ history.replaceState(null,'',location.pathname+'?'+mjQ.toString()+location.hash); } }
  }catch(e){}
 
  /* Fill settings into the page */

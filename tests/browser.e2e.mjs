@@ -503,7 +503,7 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   check('manifest link on a non-iPhone is the install file with start_url', (await page.getAttribute('link[rel="manifest"]', 'href')) === '/manifest-install.webmanifest');
   await page.evaluate(([tok, e]) => localStorage.setItem('mojia.pass', JSON.stringify({ code: 'MOJI-HAND-OFFF-2345', kind: '48h', ends_at: e, token: tok })), [token, payload.e]);
   await page.reload(); await page.waitForTimeout(800);
-  check('page address carries the pass', new URL(page.url()).search === '?restore=' + encodeURIComponent(token) + '&code=MOJI-HAND-OFFF-2345', page.url());
+  check('page address carries the pass token only, never the pass code (Security R1)', new URL(page.url()).search === '?restore=' + encodeURIComponent(token) && !/MOJI/.test(page.url()), page.url());
   check('body is fixed so the app never scrolls under the status bar', (await page.evaluate(() => getComputedStyle(document.body).position)) === 'fixed');
   await ctx.close();
 }
@@ -513,7 +513,7 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await page.goto(base + '/play/?restore=' + encodeURIComponent(token) + '&code=MOJI-HAND-OFFF-2345');
   await page.waitForFunction(() => { const c = document.querySelector('#s-home [data-chip]'); return c && /h left/.test(c.textContent); }, null, { timeout: 8000 });
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('mojia.pass')));
-  check('restore: pass saved from the address', saved && saved.token === token && saved.code === 'MOJI-HAND-OFFF-2345');
+  check('restore: older Home Screen apps with &code still restore the pass and code', saved && saved.token === token && saved.code === 'MOJI-HAND-OFFF-2345');
   check('restore: address keeps the pass for Home Screen adds', new URL(page.url()).search.startsWith('?restore='));
   const badTok = tamper(token);
   await page.evaluate(() => localStorage.clear());
@@ -1386,7 +1386,7 @@ for (const [w, h, name] of [[375, 667, 'se'], [820, 1180, 'ipad']]) {
     await page.addInitScript(([tok, e]) => localStorage.setItem('mojia.pass', JSON.stringify({ code: 'MOJI-WEBS-PASS-2345', kind: '48h', ends_at: e, token: tok })), [token, payload.e]);
     await page.goto(base + '/'); await page.waitForTimeout(500);
     const q = new URL(page.url()).searchParams;
-    check('website in Safari: the address carries the saved pass', q.get('restore') === token && q.get('code') === 'MOJI-WEBS-PASS-2345');
+    check('website in Safari: the address carries the pass token only, never the pass code (Security R1)', q.get('restore') === token && q.get('code') === null && !/MOJI/.test(page.url()));
     await ctx.close();
   }
   {
