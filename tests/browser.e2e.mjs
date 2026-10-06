@@ -1462,7 +1462,7 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   await page.click('#splash'); await page.waitForTimeout(300);
   const homeCols = await page.evaluate(() => getComputedStyle(document.querySelector('#hgrid')).gridTemplateColumns.split(' ').length);
   const hv = await page.evaluate(() => { const vh = innerHeight, ok = (e) => { const r = e.getBoundingClientRect(); return r.bottom <= vh + 1 && r.top >= 0 && r.width > 0; }; return { games: [...document.querySelectorAll('#hfeat .htile, #hgrid .htile')].map(ok), tray: [...document.querySelectorAll('#tray .tile')].map(ok), app: Math.round(document.querySelector('#app').getBoundingClientRect().width), scroll: document.querySelector('#s-home').scrollHeight - document.querySelector('#s-home').clientHeight }; });
-  check('sideways iPad: home fills the width; all 5 games and every emoji show without scrolling', hv.app === 921 && hv.games.length === 5 && hv.games.every(Boolean) && hv.tray.length >= 12 && hv.tray.every(Boolean) && hv.scroll <= 1, JSON.stringify(hv));
+  check('sideways iPad: home fills the width; all 7 games and every emoji show without scrolling', hv.app === 921 && hv.games.length === 7 && hv.games.every(Boolean) && hv.tray.length >= 12 && hv.tray.every(Boolean) && hv.scroll <= 1, JSON.stringify(hv));
   await page.screenshot({ path: path.join(SHOTS, 'ipad-side-home.png') });
   const widths = {};
   for (const g of ['pattern', 'bounce', 'match', 'parade', 'draw']) {
@@ -1487,9 +1487,10 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
 }
 
 // 12. Home: big stamp canvas first, featured card peeks at the bottom edge, games scroll below
+// (Release 1.3: Share Party and Feelings Faces already played here, so Draw is featured; 12c covers the new games.)
 {
   const { ctx, page } = await newPage();
-  await page.addInitScript(() => { localStorage.setItem('mojia.demos', 'false'); localStorage.setItem('mojia.welcomed', 'true'); });
+  await page.addInitScript(() => { localStorage.setItem('mojia.demos', 'false'); localStorage.setItem('mojia.welcomed', 'true'); if (!localStorage.getItem('mojia.played')) localStorage.setItem('mojia.played', JSON.stringify({ share: 1, feelings: 1 })); });
   await page.goto(base + '/play/');
   await page.click('#splash'); await page.waitForTimeout(400);
   const lay = await page.evaluate(() => { const c = document.querySelector('#canvas').getBoundingClientRect(), f = document.querySelector('#hfeat .hfeat').getBoundingClientRect(), sc = document.querySelector('#s-home'); return { canvas: Math.round(c.height), featTop: Math.round(f.top), vh: innerHeight, scrolls: sc.scrollHeight > sc.clientHeight + 100 }; });
@@ -1498,7 +1499,7 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   check('home: games below the fold scroll', lay.scrolls);
   check('home: original header kept (centered logo, tagline, timer chip, gear over Grown-ups)', await page.isVisible('.homehead .tagline') && await page.isVisible('#lockBtn .gl') && await page.isVisible('.homehead [data-chip]') && await page.evaluate(() => { const r = document.querySelector('.homehead .wordmark').getBoundingClientRect(); return Math.abs(r.left + r.width / 2 - innerWidth / 2) < 12; }));
   check('home: new Draw game is featured with a New! tag', (await page.getAttribute('#hfeat .hfeat', 'data-go')) === 'draw' && /New!/.test(await page.textContent('#hfeat')));
-  check('home: grid shows the other four games once each', (await page.evaluate(() => [...document.querySelectorAll('#hgrid .hcell')].map((b) => b.dataset.go).join(','))) === 'pattern,bounce,match,parade');
+  check('home: grid shows the other six games once each', (await page.evaluate(() => [...document.querySelectorAll('#hgrid .hcell')].map((b) => b.dataset.go).join(','))) === 'pattern,bounce,match,parade,share,feelings');
   const box = await page.locator('#canvas').boundingBox();
   await page.mouse.click(box.x + 120, box.y + 200);
   check('home: tapping the canvas still stamps', (await page.locator('#canvas .stamp').count()) === 1);
@@ -1530,6 +1531,130 @@ for (const [w, h, name] of [[375, 667, 'se'], [820, 1180, 'ipad']]) {
   const lay = await page.evaluate(() => ({ canvas: document.querySelector('#canvas').getBoundingClientRect().height, featTop: document.querySelector('#hfeat .hfeat').getBoundingClientRect().top, vh: innerHeight }));
   check('home ' + name + ': canvas big, featured card peeks', lay.canvas >= 240 && lay.featTop < lay.vh && lay.featTop > lay.vh - 170, JSON.stringify(lay));
   await page.screenshot({ path: path.join(SHOTS, 'home-' + name + '.png') });
+  await ctx.close();
+}
+
+// 12c. Release 1.3: Share Party and Feelings Faces. New tiles, silent play (no device voice), saved progress, layouts.
+{
+  const { ctx, page } = await newPage();
+  await page.addInitScript(() => {
+    localStorage.setItem('mojia.demos', 'false'); localStorage.setItem('mojia.welcomed', 'true'); localStorage.setItem('mojia.voice', 'true');
+    window.__spoke = []; try { speechSynthesis.speak = (u) => { window.__spoke.push(u && u.text); }; } catch (e) {}
+  });
+  await page.goto(base + '/play/'); await page.click('#splash'); await page.waitForTimeout(400);
+  await page.evaluate(() => { window.__spoke = []; });
+  check('1.3 home: Share Party is featured with New! on a fresh device', (await page.getAttribute('#hfeat .hfeat', 'data-go')) === 'share' && /New!/.test(await page.textContent('#hfeat')));
+  check('1.3 home: grid holds the other six games once each', (await page.evaluate(() => [...document.querySelectorAll('#hgrid .hcell')].map((b) => b.dataset.go).join(','))) === 'pattern,bounce,match,parade,feelings,draw');
+  await page.click('#hfeat .hfeat'); await page.waitForSelector('#s-share:not(.hidden)'); await page.waitForTimeout(400);
+  check('1.3 share: level map shows 9 levels', (await page.locator('#sharestage .sh-lv').count()) === 9);
+  check('1.3 share: timer chip shows in the game bar', await page.isVisible('#s-share [data-chip]'));
+  check('1.3 share: no say-it button (no voice)', (await page.locator('#s-share .sh-again, #s-share #msay').count()) === 0);
+  await page.screenshot({ path: path.join(SHOTS, 'share-map-390.png') });
+  await page.click('#sharestage .sh-lv[data-lv="0"]'); await page.waitForTimeout(1200);
+  check('1.3 share: pointing hand shows the first cut on level 1', await page.evaluate(() => document.querySelector('#sharestage .sh-point').classList.contains('show')));
+  await page.screenshot({ path: path.join(SHOTS, 'share-cut-390.png') });
+  const fb = await page.locator('#sharestage .sh-food').boundingBox();
+  await page.mouse.move(fb.x + fb.width * 0.15, fb.y + fb.height * 0.5); await page.mouse.down();
+  await page.mouse.move(fb.x + fb.width * 0.85, fb.y + fb.height * 0.5, { steps: 12 }); await page.mouse.up();
+  await page.waitForTimeout(900);
+  check('1.3 share: one swipe on the dotted line cuts the pizza in 2', (await page.locator('#sharestage .sh-item.piece').count()) === 2);
+  const sr = await page.locator('#sharestage').boundingBox();
+  for (let i = 0; i < 2; i++) {
+    const v = await page.evaluate((k) => { const p = [...document.querySelectorAll('#sharestage .sh-item.piece')].filter((e) => e.dataset.loc === '-1')[0]; return p ? [Number(p.dataset.vx), Number(p.dataset.vy)] : null; }, i);
+    if (!v) break;
+    await page.mouse.click(sr.x + v[0], sr.y + v[1]); await page.waitForTimeout(150);
+    await page.click('#sharestage .sh-plate[data-i="' + i + '"]'); await page.waitForTimeout(500);
+  }
+  await page.waitForTimeout(5200);
+  check('1.3 share: a fair share finishes puzzle 1 and opens puzzle 2', await page.evaluate(() => { const d = [...document.querySelectorAll('#sharestage .sh-dots i')]; return d[0].className === 'on' && d[1].className === 'cur'; }));
+  await page.click('#s-share [data-go="home"]'); await page.waitForTimeout(300);
+  check('1.3 home: after Share Party, Feelings Faces is featured with New!', (await page.getAttribute('#hfeat .hfeat', 'data-go')) === 'feelings' && /New!/.test(await page.textContent('#hfeat')));
+  await page.evaluate(() => localStorage.setItem('mojia.shareStars', JSON.stringify([0, 1, 99, 'x'])));
+  await page.click('#hgrid [data-go="share"]'); await page.waitForSelector('#s-share:not(.hidden)'); await page.waitForTimeout(300);
+  check('1.3 share: stars saved on the device show on the map (bad values ignored)', (await page.locator('#sharestage .sh-lv.done').count()) === 2);
+  await page.click('#s-share [data-go="home"]'); await page.waitForTimeout(300);
+
+  await page.click('#hfeat .hfeat'); await page.waitForSelector('#s-feelings:not(.hidden)');
+  check('1.3 feelings: picture strip has 3 panels, first lit', await page.evaluate(() => document.querySelectorAll('#feelingsstage .panel').length === 3 && document.querySelector('#feelingsstage .panel[data-b="1"]').classList.contains('on')));
+  await page.waitForTimeout(3300);
+  check('1.3 feelings: the event lights panel 2 and the spotlight', await page.evaluate(() => document.querySelector('#feelingsstage .panel[data-b="2"]').classList.contains('on') && document.querySelector('#feelingsstage svg').classList.contains('spoton')));
+  await page.screenshot({ path: path.join(SHOTS, 'feelings-event-390.png') });
+  await page.waitForSelector('#feelingsstage .pick', { timeout: 9000 }); await page.waitForTimeout(600);
+  check('1.3 feelings: 3 face choices after the story, panel 3 lit', (await page.locator('#feelingsstage .pick').count()) === 3 && await page.evaluate(() => document.querySelector('#feelingsstage .panel[data-b="3"]').classList.contains('on')));
+  const wrong = await page.evaluate(() => { const b = [...document.querySelectorAll('#feelingsstage .pick')].find((x) => x.dataset.feel !== 'sad'); return b ? b.dataset.feel : null; });
+  await page.click('#feelingsstage .pick[data-feel="' + wrong + '"]'); await page.waitForTimeout(400);
+  check('1.3 feelings: a wrong face keeps all choices (no penalty)', (await page.locator('#feelingsstage .pick:not(.gone)').count()) === 3);
+  await page.click('#feelingsstage .pick[data-feel="sad"]'); await page.waitForTimeout(500);
+  check('1.3 feelings: the right face fills panel 3 and the bubble', await page.evaluate(() => /😢/.test(document.querySelector('#feelingsstage .panel[data-b="3"]').textContent) && document.querySelector('#feelingsstage .bub').classList.contains('has')));
+  await page.screenshot({ path: path.join(SHOTS, 'feelings-right-390.png') });
+  await page.waitForSelector('#feelingsstage .ffhelp', { timeout: 6000 });
+  await page.click('#feelingsstage .ffhelp');
+  await page.waitForSelector('#feelingsstage .nextbtn', { timeout: 8000 });
+  check('1.3 feelings: helping finishes the scene and saves it on the device', (await page.evaluate(() => localStorage.getItem('mojia.feelRound'))) === '1');
+  await page.click('#s-feelings [data-go="home"]'); await page.waitForTimeout(300);
+  await page.click('#hgrid [data-go="feelings"]'); await page.waitForSelector('#s-feelings:not(.hidden)'); await page.waitForTimeout(300);
+  check('1.3 feelings: reopening starts on scene 2', await page.evaluate(() => [...document.querySelectorAll('#feelingsstage .ffdot')].findIndex((d) => d.classList.contains('now')) === 1));
+  await page.click('#s-feelings [data-go="home"]'); await page.waitForTimeout(2500);
+  check('1.3: leaving mid-story stops the game (stage empty)', await page.evaluate(() => document.querySelector('#feelingsstage').children.length === 0 && document.querySelector('#sharestage').children.length === 0));
+  { const spoke = await page.evaluate(() => window.__spoke); check('1.3: no device voice in either game, even with Voice on', spoke.length === 0, JSON.stringify(spoke)); }
+  check('1.3: no network requests from the new games', !page.reqs.some((u) => !u.startsWith(base) && !/fonts\.g/.test(u)), page.reqs.filter((u) => !u.startsWith(base)).join(' '));
+  check('1.3: no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
+  await ctx.close();
+}
+// 12d. Release 1.3 how-to cards: no Watch how button for games without a demo
+{
+  const { ctx, page } = await newPage();
+  await page.addInitScript(() => { localStorage.setItem('mojia.welcomed', 'true'); localStorage.removeItem('mojia.demos'); localStorage.removeItem('mojia.demoDone'); });
+  await page.goto(base + '/play/'); await page.click('#splash'); await page.waitForTimeout(400);
+  for (const g of ['share', 'feelings']) {
+    await page.evaluate((id) => document.querySelector('[data-go="' + id + '"]').click(), g);
+    await page.waitForSelector('#glass:not(.hidden)', { timeout: 3000 });
+    check('1.3 how-to card: ' + g + ' has 3 steps, Play, and no Watch how', (await page.locator('#gcard .gstep').count()) === 3 && await page.isVisible('#gGo') && (await page.locator('#gWatch').count()) === 0);
+    await page.click('#gGo'); await page.waitForTimeout(200);
+    await page.click('#s-' + g + ' [data-go="home"]'); await page.waitForTimeout(300);
+  }
+  check('1.3 how-to cards: no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
+  await ctx.close();
+}
+// 12e. Release 1.3 layouts: phone, upright iPad, sideways iPad, reduced motion
+for (const [w, h, name, rm] of [[390, 844, '390', false], [375, 667, 'se', true], [820, 1180, 'ipad', false], [1180, 820, 'ipad-side', false]]) {
+  const { ctx, page } = await newPage({ viewport: { width: w, height: h }, reducedMotion: rm ? 'reduce' : 'no-preference' });
+  await page.addInitScript(() => { localStorage.setItem('mojia.demos', 'false'); localStorage.setItem('mojia.welcomed', 'true'); });
+  await page.goto(base + '/play/'); await page.click('#splash'); await page.waitForTimeout(400);
+  await page.evaluate(() => document.querySelector('[data-go="share"]').click()); await page.waitForTimeout(500);
+  const sm = await page.evaluate(() => { const st = document.querySelector('#sharestage').getBoundingClientRect(); const lv = [...document.querySelectorAll('#sharestage .sh-lv')].map((b) => b.getBoundingClientRect()); return { inside: lv.every((r) => r.left >= st.left - 1 && r.right <= st.right + 1 && r.top >= st.top - 1 && r.bottom <= st.bottom + 1), small: lv.filter((r) => r.width < 56).length, hscroll: document.documentElement.scrollWidth > innerWidth }; });
+  check('1.3 layout ' + name + ': Share Party level badges fit, 56 px or bigger, no sideways scroll', sm.inside && sm.small === 0 && !sm.hscroll, JSON.stringify(sm));
+  await page.screenshot({ path: path.join(SHOTS, 'share-map-' + name + '.png') });
+  await page.click('#sharestage .sh-lv[data-lv="3"]'); await page.waitForTimeout(900);
+  await page.screenshot({ path: path.join(SHOTS, 'share-break-' + name + '.png') });
+  await page.click('#s-share [data-go="home"]'); await page.waitForTimeout(300);
+  await page.evaluate(() => document.querySelector('[data-go="feelings"]').click());
+  await page.waitForSelector('#feelingsstage .pick', { timeout: 12000 }); await page.waitForTimeout(800);
+  const fm = await page.evaluate(() => { const st = document.querySelector('#feelingsstage').getBoundingClientRect(); const els = [...document.querySelectorAll('#feelingsstage .pick, #feelingsstage .panel, #feelingsstage .scn')].map((e) => e.getBoundingClientRect()); return { inside: els.every((r) => r.top >= st.top - 1 && r.bottom <= st.bottom + 1 && r.left >= st.left - 1 && r.right <= st.right + 1), small: [...document.querySelectorAll('#feelingsstage .pick, #feelingsstage .replay')].filter((e) => e.getBoundingClientRect().width < 44).length, hscroll: document.documentElement.scrollWidth > innerWidth }; });
+  check('1.3 layout ' + name + ': Feelings Faces scene, strip, and faces fit; tap targets 44 px or bigger', fm.inside && fm.small === 0 && !fm.hscroll, JSON.stringify(fm));
+  await page.screenshot({ path: path.join(SHOTS, 'feelings-pick-' + name + '.png') });
+  await page.click('#s-feelings [data-go="home"]'); await page.waitForTimeout(300);
+  await page.screenshot({ path: path.join(SHOTS, 'home-games-' + name + '.png'), fullPage: false });
+  check('1.3 layout ' + name + ': no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
+  await ctx.close();
+}
+// 12f. Feelings Faces finale: 20 friends in 2 rows that do not overlap
+{
+  const { ctx, page } = await newPage();
+  await page.addInitScript(() => { localStorage.setItem('mojia.demos', 'false'); localStorage.setItem('mojia.welcomed', 'true'); localStorage.setItem('mojia.feelRound', '19'); });
+  await page.goto(base + '/play/'); await page.click('#splash'); await page.waitForTimeout(400);
+  await page.evaluate(() => document.querySelector('[data-go="feelings"]').click());
+  await page.waitForSelector('#feelingsstage .pick', { timeout: 12000 });
+  const ok = await page.evaluate(() => document.querySelector('#feelingsstage .pick[data-feel="lonely"]') !== null);
+  check('1.3 feelings: scene 20 is Octopus (lonely)', ok);
+  await page.click('#feelingsstage .pick[data-feel="lonely"]');
+  await page.waitForSelector('#feelingsstage .ffhelp', { timeout: 6000 }); await page.click('#feelingsstage .ffhelp');
+  await page.waitForSelector('#feelingsstage .nextbtn', { timeout: 8000 }); await page.click('#feelingsstage .nextbtn');
+  await page.waitForSelector('#feelingsstage .again', { timeout: 4000 }); await page.waitForTimeout(800);
+  const fin = await page.evaluate(() => { const t = [...document.querySelectorAll('#feelingsstage .hopper text')].map((e) => e.getBoundingClientRect()); let overlap = 0; for (let i = 0; i < t.length; i++) for (let j = i + 1; j < t.length; j++) { const a = t[i], b = t[j]; const ox = Math.min(a.right, b.right) - Math.max(a.left, b.left), oy = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top); if (ox > a.width * 0.2 && oy > a.height * 0.2) overlap++; } const sc = document.querySelector('#feelingsstage .scn').getBoundingClientRect(); const cut = t.filter((r) => r.left < sc.left - 1 || r.right > sc.right + 1).length; return { n: t.length, overlap, cut, saved: localStorage.getItem('mojia.feelRound') }; });
+  check('1.3 feelings finale: 20 friends, none overlapping or cut off, progress resets to scene 1', fin.n === 20 && fin.overlap === 0 && fin.cut === 0 && fin.saved === '0', JSON.stringify(fin));
+  await page.screenshot({ path: path.join(SHOTS, 'feelings-finale-390.png') });
+  check('1.3 feelings finale: no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
   await ctx.close();
 }
 
