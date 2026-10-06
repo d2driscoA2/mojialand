@@ -429,6 +429,31 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   await ctx.close();
 }
 
+// Release 1.2 #11: sports, fruit and vegetable emoji in every picker; balls lead Bounce
+{
+  const { ctx, page } = await newPage();
+  await page.addInitScript(() => { localStorage.setItem('mojia.demos', 'false'); localStorage.setItem('mojia.welcomed', 'true'); });
+  await page.goto(base + '/play/');
+  await page.click('#splash'); await page.waitForTimeout(400);
+  await page.evaluate(() => document.querySelector('#s-home [data-go="bounce"]').click()); await page.waitForTimeout(400);
+  const tray = await page.evaluate(() => [...document.querySelectorAll('#vtray .tile')].slice(0, 11).map((t) => t.textContent));
+  check('#11 Bounce: balls lead the tray, soccer ball picked first', tray.slice(0, 4).join('') === '⚽🏀🏈⚾' && (await page.evaluate(() => document.querySelector('#vtray .tile.on').textContent)) === '⚽', tray.join(''));
+  await page.evaluate(() => document.querySelector('#s-bounce [data-go="home"]').click()); await page.waitForTimeout(300);
+  await page.evaluate(() => document.querySelector('#s-home [data-go="parade"]').click()); await page.waitForTimeout(400);
+  await page.click('#addBtn'); await page.waitForSelector('#drawer:not(.hidden)');
+  const tabs = await page.evaluate(() => [...document.querySelectorAll('#dtabs .dtab')].map((t) => t.textContent.replace(/\p{Extended_Pictographic}|\uFE0F/gu, '').trim()));
+  check('#11 picker: Balls, Sports, Fruits and Veggies tabs join the library', ['Balls', 'Sports', 'Fruits', 'Veggies'].every((n) => tabs.includes(n)), tabs.join(','));
+  await page.evaluate(() => { const t = [...document.querySelectorAll('#dtabs .dtab')].find((x) => /Veggies/.test(x.textContent)); t.scrollIntoView(); t.click(); });
+  await page.waitForTimeout(200);
+  const pk = await page.evaluate(() => { const tabsEl = document.querySelector('#dtabs'), grid = document.querySelector('#dgrid'), first = grid.querySelector('.tile'); return { first: first.textContent, scrolls: tabsEl.scrollWidth > tabsEl.clientWidth, tabsBottom: tabsEl.getBoundingClientRect().bottom, gridTop: grid.getBoundingClientRect().top, tileTop: first.getBoundingClientRect().top }; });
+  check('#11 picker: the tab row scrolls sideways and covers no emoji; Veggies opens on the carrot', pk.first === '🥕' && pk.scrolls && pk.tabsBottom <= pk.tileTop + 1, JSON.stringify(pk));
+  await page.screenshot({ path: path.join(SHOTS, 'picker-veggies-390.png') });
+  const lib = await page.evaluate(() => [...document.querySelectorAll('#dtabs .dtab')].length);
+  check('#11 picker: 10 categories', lib === 10, String(lib));
+  check('#11 no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
+  await ctx.close();
+}
+
 // 7f. Have a code? and Contact us inside the game (behind the grown-up gate)
 {
   const { ctx, page } = await newPage();
@@ -619,7 +644,7 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   }
 }
 
-// 9e. Pattern: a badge after each place, like Match
+// 9e. Pattern (Release 1.2 #35): 6 games per level, basket fruit each game, friend on game 3, bronze after level 1
 {
   const { ctx, page } = await newPage();
   await page.addInitScript(() => { localStorage.setItem('mojia.demos', 'false'); localStorage.setItem('mojia.welcomed', 'true'); });
@@ -628,23 +653,54 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   await page.click('[data-go="pattern"]');
   await page.waitForSelector('#s-pattern:not(.hidden)');
   await page.waitForTimeout(800);
-  check('pattern: the next dot pulses', (await page.locator('#pdots i.next').count()) === 1 && (await page.locator('#pdots i.on').count()) === 0);
-  check('pattern: 8 dots per level', (await page.locator('#pdots i').count()) === 8);
-  for (let i = 0; i < 8; i++) {
+  check('#35 pattern: World 1 level 1 is AB with 2 choices', (await page.locator('#pchoices .choice').count()) === 2 && (await page.textContent('#plevel')) === 'World 1 · Level 1' && (await page.locator('#prow .pc').count()) === 5);
+  check('#35 pattern: 6 dots per level, the next one pulses', (await page.locator('#pdots i').count()) === 6 && (await page.locator('#pdots i.next').count()) === 1 && (await page.locator('#pdots i.on').count()) === 0);
+  check('#35 pattern: empty basket to start', (await page.textContent('#pbasket .bn')) === '0');
+  await page.click('#pchoices .choice[data-ok="0"]'); await page.waitForTimeout(300);
+  check('#35 pattern: a wrong pick changes nothing', (await page.textContent('#pbasket .bn')) === '0' && (await page.evaluate(() => localStorage.getItem('mojia.patGame'))) === '0');
+  for (let i = 0; i < 6; i++) {
     await page.waitForSelector('#pchoices .choice[data-ok="1"]');
     await page.click('#pchoices .choice[data-ok="1"]');
     await page.waitForTimeout(300);
-    if (i === 0) check('pattern: first right answer lights one dot', (await page.locator('#pdots i.on').count()) === 1);
-    if (i === 2) check('pattern: 3 right answers do not end the level', (await page.locator('#pdots.full').count()) === 0 && await page.isHidden('#preward'));
-    if (i === 3) { check('pattern: halfway sends a friend running across', (await page.locator('#s-pattern .prun').count()) === 1 && (await page.locator('#pdots i.on').count()) === 4); await page.screenshot({ path: path.join(SHOTS, 'pattern-halfway-390.png') }); }
-    if (i === 7) { await page.waitForTimeout(400); check('pattern: eighth dot sets off the party and confetti', await page.locator('#pdots.full').count() === 1 && (await page.locator('#s-pattern .confetti').count()) > 0); await page.screenshot({ path: path.join(SHOTS, 'pattern-dots-full-390.png') }); }
-    await page.waitForTimeout(1000);
+    if (i === 0) { await page.waitForTimeout(900); check('#35 pattern: each game drops a fruit or veggie into the basket', (await page.textContent('#pbasket .bn')) === '1' && (await page.locator('#pdots i.on').count()) === 1); }
+    if (i === 2) { check('#35 pattern: game 3 sends a friend running across', (await page.locator('#s-pattern .prun').count()) === 1 && (await page.locator('#pdots i.on').count()) === 3 && await page.isHidden('#preward')); await page.screenshot({ path: path.join(SHOTS, 'pattern-halfway-390.png') }); }
+    if (i === 5) { await page.waitForTimeout(400); check('#35 pattern: sixth dot sets off the party', await page.locator('#pdots.full').count() === 1 && (await page.locator('#s-pattern .confetti').count()) > 0); }
+    if (i < 5) await page.waitForTimeout(1000);
   }
   await page.waitForSelector('#preward:not(.hidden)', { timeout: 5000 });
   const txt = await page.textContent('#preward');
-  check('pattern: star badge and bronze medal after the first place', /star badge/.test(txt) && /bronze medal/.test(txt) && (await page.locator('#preward .pbadges span.got').count()) === 1 && (await page.locator('#preward .pmedals span.got').count()) === 1, txt.slice(0, 80));
-  check('pattern: progress stays on the device', (await page.evaluate(() => localStorage.getItem('mojia.patStreak'))) === '8');
+  check('#35 pattern: level 1 gives the bronze medal and shows the basket', /bronze medal/.test(txt) && (await page.locator('#preward .pmedals span.got').count()) === 1 && /🧺/.test(txt), txt.slice(0, 80));
   await page.screenshot({ path: path.join(SHOTS, 'pattern-reward-390.png') });
+  check('#35 pattern: progress stays on the device', (await page.evaluate(() => localStorage.getItem('mojia.patGame'))) === '6');
+  await page.waitForSelector('#preward.hidden', { state: 'attached', timeout: 6000 });
+  check('#35 pattern: level 2 is AAB, still 2 choices', (await page.textContent('#plevel')) === 'World 1 · Level 2' && (await page.locator('#pchoices .choice').count()) === 2);
+  await page.reload(); await page.click('#splash'); await page.click('[data-go="pattern"]'); await page.waitForTimeout(800);
+  check('#35 pattern: progress survives a reopen', (await page.textContent('#plevel')) === 'World 1 · Level 2' && (await page.textContent('#pbasket .bn')) === '6');
+  await ctx.close();
+}
+{
+  // An old saved streak maps onto the new levels; level 6 gives the crown and the world badge; world 4 has a gap in the middle
+  const { ctx, page } = await newPage();
+  await page.addInitScript(() => { if (sessionStorage.getItem('s')) return; sessionStorage.setItem('s', '1'); localStorage.setItem('mojia.demos', 'false'); localStorage.setItem('mojia.welcomed', 'true'); localStorage.setItem('mojia.patStreak', '20'); });
+  await page.goto(base + '/play/');
+  await page.click('#splash'); await page.click('[data-go="pattern"]'); await page.waitForTimeout(800);
+  check('#35 pattern: old streak 20 maps to 15 games (World 1 level 3, game 4)', (await page.evaluate(() => localStorage.getItem('mojia.patGame'))) === '15' && (await page.textContent('#plevel')) === 'World 1 · Level 3' && (await page.locator('#pdots i.on').count()) === 3);
+  await page.evaluate(() => localStorage.setItem('mojia.patGame', '35'));
+  await page.reload(); await page.click('#splash'); await page.click('[data-go="pattern"]'); await page.waitForTimeout(800);
+  await page.click('#pchoices .choice[data-ok="1"]');
+  await page.waitForSelector('#preward:not(.hidden)', { timeout: 5000 });
+  const t6 = await page.textContent('#preward');
+  check('#35 pattern: level 6 gives the crown plus the unicorn badge, then a new world', /crown/.test(t6) && /unicorn badge/.test(t6) && /New world next/.test(t6) && (await page.locator('#preward .pworld span.got').count()) === 1, t6.slice(0, 120));
+  await page.screenshot({ path: path.join(SHOTS, 'pattern-world-390.png') });
+  await page.waitForSelector('#preward.hidden', { state: 'attached', timeout: 6000 });
+  check('#35 pattern: World 2 starts with an empty basket and 3 choices', (await page.textContent('#plevel')) === 'World 2 · Level 1' && (await page.textContent('#pbasket .bn')) === '0' && (await page.locator('#pchoices .choice').count()) === 3);
+  await page.evaluate(() => localStorage.setItem('mojia.patGame', String(36 * 3)));
+  await page.reload(); await page.click('#splash'); await page.click('[data-go="pattern"]'); await page.waitForTimeout(800);
+  const g = await page.evaluate(() => { const cells = [...document.querySelectorAll('#prow .pc')]; const i = cells.findIndex((c) => c.id === 'pslot'); return { i, n: cells.length }; });
+  check('#35 pattern: World 4 puts the gap in the middle with 4 choices', g.i > 0 && g.i < g.n - 1 && (await page.locator('#pchoices .choice').count()) === 4, JSON.stringify(g));
+  await page.click('#pchoices .choice[data-ok="1"]'); await page.waitForTimeout(400);
+  check('#35 pattern: the right answer fills the middle gap', (await page.textContent('#pslot')).length > 0);
+  check('#35 pattern: no errors', page.errors.length === 0, page.errors.join(' | '));
   await ctx.close();
 }
 
