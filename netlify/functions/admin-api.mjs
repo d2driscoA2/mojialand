@@ -1,14 +1,16 @@
 // POST {action, ...} for the admin page. Every call needs the session cookie.
 import { guard } from './_lib/env.mjs';
-import { json, fail, readJson, header, originFromHost, sameOrigin } from './_lib/http.mjs';
+import { json, fail, readJson, header, originFromHost, sameOrigin, maskEmail } from './_lib/http.mjs';
 import { rest, patchPass, safeErr } from './_lib/db.mjs';
 import { isSignedIn } from './_lib/admin.mjs';
 import { randomCode, codeHash, codeLast4, deriveCode, codeNoDashes } from './_lib/codes.mjs';
-import { buildEmail, sendEmail } from './_lib/email.mjs';
+import { buildEmail, sendEmail, adminShareText } from './_lib/email.mjs';
 import { friendPass } from './_lib/friend.mjs';
 import { getStripe } from './_lib/stripe.mjs';
 import { pushReady, readSubscription, MODES, alertMode, pushAll, sendPush, summaryText, michiganDay } from './_lib/push.mjs';
 import { liveView, historyView, campaignsView, createCampaign, setCampaignActive } from './_lib/analytics-admin.mjs';
+import { LABEL_RE } from './_lib/analytics.mjs';
+import { FRIEND_BATCH } from './_lib/friend.mjs';
 
 const REQUIRED = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY', 'RESTORE_CODE_PEPPER', 'STRIPE_SECRET_KEY'];
 const HOUR = 3600e3;
@@ -37,6 +39,49 @@ async function paidCode(id) {
   if (p.source !== 'stripe' || !p.stripe_session_id) throw new Error('only paid passes can show their code. For a gift or manual code, make a new code');
   return { p, code: deriveCode(process.env.RESTORE_CODE_PEPPER, p.stripe_session_id) };
 }
+// Release 1.2 #27: tell the family after Add 48 hours or Make Forever.
+// Paid passes with an email get the branded pass email (code rebuilt from the
+// Stripe session). Passes with no email (gift, manual) return a message to share.
+// An email problem never undoes the change.
+async function tellFamily(p, plan, event, skip) {
+  if (skip) return { email: 'skipped' };
+  if (!p.email || p.source !== 'stripe' || !p.stripe_session_id) return { email: 'none', share: adminShareText(plan, p) };
+  try {
+    const code = deriveCode(process.env.RESTORE_CODE_PEPPER, p.stripe_session_id);
+    const ok = await sendEmail(p.email, buildEmail({ plan, pass: p, code, origin: originFromHost(header(event, 'host')), byAdmin: true }));
+    if (ok === false) return { email: 'off', share: adminShareText(plan, p) };
+    return { email: 'sent', to: maskEmail(p.email) };
+  } catch {
+    console.error('admin-api: pass change email failed');
+    return { email: 'failed', share: adminShareText(plan, p) };
+  }
+}
+// Release 1.2 #2: gift codes by event and school. A batch label is a campaign
+// label (lowercase letters, numbers, dashes), so QR opens and passes bought
+// after a card count toward the same event. Counts cards, never people.
+function cleanBatch(v) {
+  const b = String(v || '').trim().toLowerCase();
+  if (!b) return null;
+  if (!LABEL_RE.test(b)) throw new Error('use 2 to 24 lowercase letters, numbers or dashes for the batch label, like in-fair-oct');
+  return b;
+}
+async function ensureCampaign(label) {
+  const { data } = await rest('GET', 'campaigns?label=eq.' + enc(label) + '&select=label&limit=1');
+  if (Array.isArray(data) && data.length) return;
+  await rest('POST', 'campaigns', { body: { label, name: label }, prefer: 'return=minimal' });
+}
+const PASS_TABS = { all: '', active: '&status=eq.active', paid: '&source=eq.stripe', gifts: '&source=in.(gift,support)' };
+const PASS_SORTS = { made: 'created_at.desc', on: 'starts_at.desc.nullslast', ends: 'ends_at.asc.nullslast' };
+async function allRows(path) {
+  const out = [];
+  for (let off = 0; off < 20000; off += 1000) {
+    const { data } = await rest('GET', path + '&limit=1000&offset=' + off);
+    const rows = Array.isArray(data) ? data : [];
+    out.push(...rows);
+    if (rows.length < 1000) break;
+  }
+  return out;
+}
 const EMAIL_RE = /^[^\s@<>(),;:"]{1,64}@[A-Za-z0-9.-]{1,253}\.[A-Za-z]{2,24}$/;
 
 const actions = {
@@ -56,34 +101,88 @@ const actions = {
     await patchPass('id=eq.' + enc(id), { note: ((p.note ? p.note + ' · ' : '') + 'code emailed from admin ' + new Date().toISOString().slice(0, 10)).slice(0, 500) });
     return { pass: await passWithDevices(id), sent: true };
   },
-  async 'passes.list'({ q }) {
+  // Release 1.2 #2: tabs (all, active, paid, gifts), sort, search on every tab,
+  // and one batch's codes for the Campaigns and schools tab.
+  async 'passes.list'({ q, tab, sort, batch }) {
     const s = String(q || '').trim();
-    let filter = '';
+    let filter = PASS_TABS[tab] || '';
     if (s) {
       const safe = s.replace(/[%*,()]/g, '');
-      if (/^[A-Za-z0-9]{4}$/.test(safe)) filter = '&code_last4=eq.' + enc(safe.toUpperCase());
-      else if (s.startsWith('cs_')) filter = '&stripe_session_id=eq.' + enc(s);
-      else filter = '&email=ilike.' + enc('*' + safe + '*');
+      if (/^[A-Za-z0-9]{4}$/.test(safe)) filter += '&code_last4=eq.' + enc(safe.toUpperCase());
+      else if (s.startsWith('cs_')) filter += '&stripe_session_id=eq.' + enc(s);
+      else if (safe) filter += '&or=' + enc('(email.ilike.*' + safe + '*,batch.ilike.*' + safe + '*,note.ilike.*' + safe + '*)');
     }
-    const { data } = await rest('GET', 'passes?select=' + PASS_FIELDS + filter + '&order=created_at.desc&limit=50');
+    if (batch) filter += '&batch=eq.' + enc(cleanBatch(batch));
+    const order = PASS_SORTS[sort] || PASS_SORTS.made;
+    const { data } = await rest('GET', 'passes?select=' + PASS_FIELDS + filter + '&order=' + order + '&limit=100');
     return { passes: Array.isArray(data) ? data : [] };
+  },
+  // One row per batch: codes made, codes used, percent used, days from making
+  // to use, passes bought after (campaign counts). Never names or devices.
+  async 'passes.batches'({ q }) {
+    const rows = await allRows('passes?batch=neq.' + FRIEND_BATCH + '&select=batch,status,created_at,starts_at&order=created_at.asc');
+    const camps = (await campaignsView()).campaigns || [];
+    const cBy = new Map(camps.map((c) => [c.label, c]));
+    const by = new Map();
+    for (const p of rows) {
+      if (!p.batch) continue;
+      const b = by.get(p.batch) || { label: p.batch, codes: 0, used: 0, daysSum: 0, daysN: 0, made: p.created_at };
+      b.codes++;
+      if (p.status !== 'unused') {
+        b.used++;
+        if (p.starts_at && p.created_at) { b.daysSum += Math.max(0, (new Date(p.starts_at) - new Date(p.created_at)) / DAY); b.daysN++; }
+      }
+      by.set(p.batch, b);
+    }
+    const s = String(q || '').trim().toLowerCase();
+    const list = [...by.values()].map((b) => {
+      const c = cBy.get(b.label);
+      return {
+        label: b.label, name: c ? c.name : '', note: c ? c.note : '', made: b.made,
+        codes: b.codes, cards: Math.ceil(b.codes / 3), used: b.used,
+        pct: b.codes ? Math.round((b.used / b.codes) * 100) : 0,
+        avgDays: b.daysN ? Math.round((b.daysSum / b.daysN) * 10) / 10 : null,
+        bought: c ? (c.pass48 || 0) + (c.forever || 0) : null,
+      };
+    }).filter((b) => !s || b.label.includes(s) || String(b.name).toLowerCase().includes(s))
+      .sort((x, y) => String(y.made).localeCompare(String(x.made)));
+    return { batches: list };
+  },
+  async 'campaigns.note'({ label, note }) {
+    const lb = cleanBatch(label);
+    if (!lb) throw new Error('bad label');
+    await ensureCampaign(lb);
+    await rest('PATCH', 'campaigns?label=eq.' + enc(lb), { body: { note: String(note || '').trim().slice(0, 500) || null }, prefer: 'return=minimal' });
+    return { ok: true };
+  },
+  // The last 5 batch labels used, offered as taps when making codes.
+  async 'codes.labels'() {
+    const { data } = await rest('GET', 'passes?batch=neq.' + FRIEND_BATCH + '&select=batch&order=created_at.desc&limit=500');
+    const seen = [];
+    for (const r of Array.isArray(data) ? data : []) if (r.batch && !seen.includes(r.batch)) { seen.push(r.batch); if (seen.length === 5) break; }
+    return { labels: seen };
   },
   async 'passes.get'({ id }) {
     if (!UUID.test(String(id || ''))) throw new Error('bad id');
     return { pass: await passWithDevices(id) };
   },
-  async 'passes.add48'({ id }) {
+  async 'passes.add48'({ id, skip_email }, event) {
     if (!UUID.test(String(id || ''))) throw new Error('bad id');
     const p = await passWithDevices(id);
     if (!p || p.kind === 'forever') throw new Error('not a 48-hour pass');
     const base = Math.max(Date.now(), p.ends_at ? new Date(p.ends_at).getTime() : 0);
     await patchPass('id=eq.' + enc(id), { ends_at: new Date(base + 48 * HOUR).toISOString(), status: 'active', starts_at: p.starts_at || new Date().toISOString() });
-    return { pass: await passWithDevices(id) };
+    const pass = await passWithDevices(id);
+    return { pass, tell: await tellFamily(pass, 'add', event, skip_email === true) };
   },
-  async 'passes.forever'({ id }) {
+  async 'passes.forever'({ id, skip_email }, event) {
     if (!UUID.test(String(id || ''))) throw new Error('bad id');
+    const p = await passWithDevices(id);
+    if (!p) throw new Error('pass not found');
+    if (p.kind === 'forever') throw new Error('this pass is Forever already');
     await patchPass('id=eq.' + enc(id), { kind: 'forever', ends_at: null, status: 'active', starts_at: new Date().toISOString() });
-    return { pass: await passWithDevices(id) };
+    const pass = await passWithDevices(id);
+    return { pass, tell: await tellFamily(pass, 'up', event, skip_email === true) };
   },
   async 'passes.end'({ id }) {
     if (!UUID.test(String(id || ''))) throw new Error('bad id');
@@ -119,7 +218,9 @@ const actions = {
   },
 
   // ---- gift and support codes. One code = one family's pass. The code is shown once and never stored.
-  async 'codes.create'({ kind, source, days_valid, note }) {
+  async 'codes.create'({ kind, source, days_valid, note, batch }, _event, opts = {}) {
+    const lb = cleanBatch(batch);
+    if (lb && !opts.ensured) await ensureCampaign(lb);
     const k = kind === 'forever' ? 'forever' : '48h';
     const src = source === 'support' ? 'support' : 'gift';
     const days = Math.min(365, Math.max(1, parseInt(days_valid, 10) || 90));
@@ -135,6 +236,7 @@ const actions = {
       use_by: new Date(Date.now() + days * DAY).toISOString(),
       note: String(note || '').slice(0, 500) || null,
       device_limit: 5,
+      batch: lb,
     };
     const { data } = await rest('POST', 'passes', { body: row, prefer: 'return=representation' });
     const pass = Array.isArray(data) && data[0];
@@ -142,10 +244,12 @@ const actions = {
   },
 
   // Many codes at once, for printed cards. Up to 30 per call (function time limit); the page loops for more.
-  async 'codes.batch'({ kind, source, days_valid, note, count }) {
+  async 'codes.batch'({ kind, source, days_valid, note, count, batch }) {
     const n = Math.min(30, Math.max(1, parseInt(count, 10) || 1));
+    const lb = cleanBatch(batch);
+    if (lb) await ensureCampaign(lb);
     const out = [];
-    for (let i = 0; i < n; i++) out.push(await actions['codes.create']({ kind, source, days_valid, note }));
+    for (let i = 0; i < n; i++) out.push(await actions['codes.create']({ kind, source, days_valid, note, batch: lb }, null, { ensured: true }));
     return { codes: out.map((c) => ({ code: c.code, id: c.pass && c.pass.id })) };
   },
 

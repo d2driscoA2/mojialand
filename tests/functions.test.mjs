@@ -588,6 +588,86 @@ test('admin-login (Release 1.1.1 #38): 21 failures across networks lock sign-in 
   assert.equal((await adminLogin(ev({ step: 'verify', id: id2, code: codeFromEmail() }, ip(205)))).statusCode, 200, 'works again after the hour');
 });
 
+test('#2 gift codes by batch: labels, campaigns, tabs, sort, batch rows, notes', async () => {
+  const cookie = await adminSignIn();
+  const A = (action, extra) => adminApi(withCookie({ action, ...extra }, cookie)).then((r) => [r.statusCode, JSON.parse(r.body)]);
+  let [st, d] = await A('codes.create', { kind: '48h', source: 'gift', days_valid: 30, batch: 'IN Fair' });
+  assert.equal(st, 400, 'labels follow the campaign format');
+  [st, d] = await A('codes.batch', { kind: '48h', source: 'gift', days_valid: 30, note: 'fair table', count: 6, batch: 'In-Fair-Oct' });
+  assert.equal(st, 200); assert.equal(d.codes.length, 6);
+  assert.equal(db.passes.filter((p) => p.batch === 'in-fair-oct').length, 6, 'stored lowercase on every code');
+  assert.equal(db.campaigns.filter((c) => c.label === 'in-fair-oct').length, 1, 'the batch label becomes a campaign once');
+  const codes = d.codes.map((c) => c.code);
+  [st, d] = await A('codes.create', { kind: '48h', source: 'gift', days_valid: 30, batch: 'lincoln-elem' });
+  assert.equal(d.pass.batch, 'lincoln-elem');
+  [st, d] = await A('codes.labels');
+  assert.deepEqual([...d.labels].sort(), ['in-fair-oct', 'lincoln-elem']); assert.ok(db.calls.at(-1).includes('order=created_at.desc'));
+  // two codes turn on
+  await redeemFn(ev({ code: codes[0], device_id: 'c'.repeat(32) }));
+  await redeemFn(ev({ code: codes[1], device_id: 'd'.repeat(32) }));
+  db.rpcData.campaign_stats = { campaigns: [{ label: 'in-fair-oct', name: 'in-fair-oct', note: null, active: true, created_at: new Date().toISOString() }], days: [{ l: 'in-fair-oct', d: '2026-10-06', e: 'pass48', n: 1, ds: 0 }, { l: 'in-fair-oct', d: '2026-10-06', e: 'forever', n: 1, ds: 0 }], places: [] };
+  [st, d] = await A('passes.batches', {});
+  assert.equal(st, 200);
+  const fair = d.batches.find((b) => b.label === 'in-fair-oct');
+  assert.equal(fair.codes, 6); assert.equal(fair.cards, 2); assert.equal(fair.used, 2); assert.equal(fair.pct, 33); assert.equal(fair.bought, 2);
+  assert.ok(typeof fair.avgDays === 'number');
+  assert.ok(!JSON.stringify(d).match(/device|email|code_hash/), 'batch rows carry counts only');
+  [st, d] = await A('passes.batches', { q: 'lincoln' });
+  assert.deepEqual(d.batches.map((b) => b.label), ['lincoln-elem']);
+  [st, d] = await A('campaigns.note', { label: 'in-fair-oct', note: 'Busy table, 40 families' });
+  assert.equal(db.campaigns.find((c) => c.label === 'in-fair-oct').note, 'Busy table, 40 families');
+  [st, d] = await A('campaigns.note', { label: 'lincoln-elem', note: 'Principal handed out' });
+  assert.equal(db.campaigns.find((c) => c.label === 'lincoln-elem').note, 'Principal handed out');
+  // tabs, search and batch drill-down
+  await grantPass(paidSession('cs_test_tab1', 'pass'));
+  [st, d] = await A('passes.list', { tab: 'gifts' });
+  assert.ok(d.passes.length >= 7 && d.passes.every((p) => p.source === 'gift' || p.source === 'support'));
+  [st, d] = await A('passes.list', { tab: 'paid' });
+  assert.ok(d.passes.length >= 1 && d.passes.every((p) => p.source === 'stripe'));
+  [st, d] = await A('passes.list', { tab: 'active', sort: 'on' });
+  assert.ok(d.passes.every((p) => p.status === 'active'));
+  assert.ok(db.calls.at(-1).includes('order=starts_at.desc.nullslast'), 'Recently turned on sorts by start');
+  [st, d] = await A('passes.list', { tab: 'all', sort: 'ends' });
+  assert.ok(db.calls.at(-1).includes('order=ends_at.asc.nullslast'));
+  [st, d] = await A('passes.list', { q: 'fair-oct' });
+  assert.equal(d.passes.length, 6, 'search finds a campaign by label');
+  [st, d] = await A('passes.list', { batch: 'in-fair-oct', tab: 'gifts' });
+  assert.equal(d.passes.length, 6);
+});
+
+test('#27 admin Add 48 hours and Make Forever email the family; skip; gift passes get a share message', async () => {
+  const cookie = await adminSignIn();
+  const A = (action, extra) => adminApi(withCookie({ action, ...extra }, cookie)).then((r) => [r.statusCode, JSON.parse(r.body)]);
+  const { pass, code } = await grantPass(paidSession('cs_test_tell1', 'pass'));
+  const n0 = db.emails.length;
+  let [st, d] = await A('passes.add48', { id: pass.id });
+  assert.equal(st, 200); assert.equal(d.tell.email, 'sent'); assert.equal(d.tell.to, 'p•••@example.com');
+  let m = db.emails.at(-1);
+  assert.equal(db.emails.length, n0 + 1);
+  assert.deepEqual(m.to, ['parent@example.com']); assert.equal(m.subject, 'Mojialand: 48 hours added');
+  assert.ok(m.text.includes(code) && m.html.includes('Turn on Mojialand'));
+  assert.ok(m.text.includes('Phones and tablets with Mojialand on show the change the next time Mojialand opens.'));
+  assert.ok(!/paid on/.test(m.text), 'admin change never says "the device you paid on"');
+  assert.ok(!/\u2014/.test(m.html + m.text), 'no em dashes');
+  [st, d] = await A('passes.add48', { id: pass.id, skip_email: true });
+  assert.equal(d.tell.email, 'skipped'); assert.equal(db.emails.length, n0 + 1, 'skip sends nothing');
+  [st, d] = await A('passes.forever', { id: pass.id });
+  assert.equal(d.pass.kind, 'forever'); assert.equal(d.tell.email, 'sent');
+  m = db.emails.at(-1);
+  assert.equal(m.subject, 'Mojialand: you have Forever'); assert.ok(m.text.includes('Your Forever pass never ends.'));
+  [st, d] = await A('passes.forever', { id: pass.id });
+  assert.equal(st, 400, 'Forever twice is refused');
+  // gift pass: no email on file, share text instead, no email sent
+  [st, d] = await A('codes.create', { kind: '48h', source: 'gift', days_valid: 30, note: 'school' });
+  const gid = d.pass.id; const n1 = db.emails.length;
+  [st, d] = await A('passes.add48', { id: gid });
+  assert.equal(d.tell.email, 'none'); assert.match(d.tell.share, /^Good news: we added 48 hours to your Mojialand pass\. It now runs until /);
+  [st, d] = await A('passes.forever', { id: gid });
+  assert.equal(d.tell.email, 'none'); assert.match(d.tell.share, /Forever now/);
+  assert.equal(db.emails.length, n1);
+  assert.ok(!JSON.stringify(db.passes).includes(code), 'code never stored');
+});
+
 test('admin-api: needs the cookie; passes, codes, support, settings', async () => {
   assert.equal((await adminApi(ev({ action: 'passes.list' }))).statusCode, 401);
   const cookie = await adminSignIn();

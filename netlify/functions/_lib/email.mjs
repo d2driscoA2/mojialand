@@ -10,9 +10,21 @@ export function fmtDetroit(iso) {
   });
 }
 
+// Release 1.2 #27: wording for passes changed by hand in admin (Add 48 hours,
+// Make Forever). Kept in one place: Release 1.4 (#32, 30-day pass) changes it here.
+export const ADMIN_CHANGE = {
+  how: 'New phone or tablet? Open this email there and tap the button.',
+  already: 'Phones and tablets with Mojialand on show the change the next time Mojialand opens.',
+};
+// Message for a pass with no email on file (gift and manual codes): the admin shares it.
+export function adminShareText(plan, pass) {
+  if (plan === 'up') return 'Good news: your Mojialand pass is Forever now. Open Mojialand on each phone or tablet and Forever shows up.';
+  return 'Good news: we added 48 hours to your Mojialand pass. It now runs until ' + fmtDetroit(pass.ends_at) + '. Open Mojialand on each phone or tablet and the new time shows up.';
+}
+
 // Builds {subject, text, html}. The button carries the code and turns the
 // pass on for the device that taps it. The code also shows for typing by hand.
-export function buildEmail({ plan, pass, code, origin, friend }) {
+export function buildEmail({ plan, pass, code, origin, friend, byAdmin }) {
   const forever = pass.kind === 'forever';
   const subject = {
     pass: 'Mojialand: your 48-hour pass',
@@ -29,10 +41,10 @@ export function buildEmail({ plan, pass, code, origin, friend }) {
   const when = !forever && pass.ends_at ? 'Your pass is on until ' + fmtDetroit(pass.ends_at) + '.' : 'Your Forever pass never ends.';
   const link = code ? origin + '/r/' + codeNoDashes(code) : null;
   const fresh = plan === 'pass' || plan === 'life';
-  const how = fresh
+  const how = byAdmin ? ADMIN_CHANGE.how : fresh
     ? 'Open this email on each phone or tablet where you want Mojialand, then tap the button.'
     : 'Open this email on your other phones and tablets, then tap the button to update them.';
-  const already = fresh
+  const already = byAdmin ? ADMIN_CHANGE.already : fresh
     ? 'The device you paid on is on already. One pass works on up to 5 devices.'
     : 'The device you paid on is updated already.';
   const byHand = 'Or type the code in Mojialand: open Grown-ups, then tap Have a code?';

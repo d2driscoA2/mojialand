@@ -45,7 +45,10 @@ export function fakeDb() {
     const f = [];
     for (const part of qs.split('&')) {
       const [k, v] = part.split('=');
-      if (!v || ['select', 'limit', 'on_conflict'].includes(k)) continue;
+      if (!v || ['select', 'limit', 'on_conflict', 'offset'].includes(k)) continue;
+      if (v.startsWith('in.(')) { const set = decodeURIComponent(v.slice(4, -1)).split(','); f.push((r) => set.includes(String(r[k]))); continue; }
+      if (k === 'or') { const parts = decodeURIComponent(v).replace(/^\(|\)$/g, '').split(',').map((x) => { const [col, op, ...rest] = x.split('.'); return { col, op, val: rest.join('.').replace(/\*/g, '').toLowerCase() }; });
+        f.push((r) => parts.some((pt) => pt.op === 'ilike' && String(r[pt.col] || '').toLowerCase().includes(pt.val))); continue; }
       if (v.startsWith('neq.')) { f.push((r) => String(r[k]) !== decodeURIComponent(v.slice(4))); continue; }
       if (v.startsWith('ilike.')) { const needle = decodeURIComponent(v.slice(6)).replace(/\*/g, '').toLowerCase(); f.push((r) => String(r[k] || '').toLowerCase().includes(needle)); continue; }
       if (k === 'order') continue;
@@ -130,7 +133,7 @@ export function fakeDb() {
         if (!prefer.includes('ignore-duplicates')) return reply(409, { message: 'duplicate' });
         return reply(prefer.includes('return=representation') ? 200 : 201, prefer.includes('return=representation') ? [] : undefined);
       }
-      const row = table === 'passes' ? { id: crypto.randomUUID(), emailed_at: null, note: null, ...body }
+      const row = table === 'passes' ? { id: crypto.randomUUID(), emailed_at: null, note: null, created_at: new Date().toISOString(), ...body }
         : table === 'admin_codes' ? { tries: 0, used: false, ...body }
         : table === 'support_messages' ? { id: crypto.randomUUID(), status: 'open', created_at: new Date().toISOString(), ...body } : { ...body };
       rows.push(row);

@@ -675,8 +675,9 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   });
   const pass = { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', code_last4: 'AB12', prefix: 'MOJI', kind: '48h', source: 'stripe', email: 'parent@example.com', stripe_session_id: 'cs_test_x1', amount_cents: 150, created_at: new Date().toISOString(), ends_at: new Date(Date.now() + 3600e3).toISOString(), device_limit: 5, status: 'active', note: null, devices: 2 };
   const AN = await analyticsSamples();
+  const tellBodies = []; const bodiesBy = {};
   await page.route('**/.netlify/functions/admin-api', (r) => {
-    const b = r.request().postDataJSON(); calls.push(b.action);
+    const b = r.request().postDataJSON(); calls.push(b.action); if (/^passes\.(add48|forever)$/.test(b.action)) tellBodies.push(b); bodiesBy[b.action] = b;
     if (signedIn && /^(analytics|campaigns)\./.test(b.action)) {
       if (b.action === 'campaigns.create' && !/^[a-z0-9][a-z0-9-]{1,23}$/.test(b.label || '')) return r.fulfill({ status: 400, contentType: 'application/json', body: '{"error":"Use 2 to 24 lowercase letters, numbers or dashes for the label."}' });
       const made = b.action === 'campaigns.create' ? { campaigns: [{ ...AN.campaigns.campaigns[0], label: b.label, name: b.name, open: 0, play: 0, gift: 0, pass48: 0, forever: 0, cities: [], rolls: {}, daily: [{ d: AN.campaigns.campaigns[0].daily.at(-1).d, n: 0 }], avgDays: null }, ...AN.campaigns.campaigns] } : null;
@@ -684,7 +685,10 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
       return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(o) });
     }
     if (!signedIn) return r.fulfill({ status: 401, contentType: 'application/json', body: '{"error":"Please sign in."}' });
-    const out = { 'passes.list': { passes: [pass] }, 'passes.note': { pass: { ...pass, note: b.note } }, 'passes.add48': { pass: { ...pass, ends_at: new Date(Date.now() + 49 * 3600e3).toISOString() } },
+    const out = { 'passes.list': { passes: [pass] }, 'passes.note': { pass: { ...pass, note: b.note } }, 'passes.add48': { pass: { ...pass, ends_at: new Date(Date.now() + 49 * 3600e3).toISOString() }, tell: b.skip_email ? { email: 'skipped' } : { email: 'sent', to: 'p•••@example.com' } },
+      'passes.batches': { batches: [{ label: 'in-fair-oct', name: 'in-fair-oct', note: 'Busy table', made: new Date().toISOString(), codes: 30, cards: 10, used: 12, pct: 40, avgDays: 2.5, bought: 3 }] },
+      'codes.labels': { labels: ['in-fair-oct', 'lincoln-elem'] }, 'campaigns.note': { ok: true },
+      'passes.forever': { pass: { ...pass, kind: 'forever', ends_at: null, email: null, source: 'gift', stripe_session_id: null }, tell: { email: 'none', share: 'Good news: your Mojialand pass is Forever now. Open Mojialand on each phone or tablet and Forever shows up.' } },
       'codes.create': { code: 'GIFT-ABCD-EFGH-JKMN', pass: {} }, 'passes.code': { code: 'MOJI-ABCD-EFGH-JKMN', link: 'https://mojialand.com/r/MOJIABCDEFGHJKMN' }, 'passes.email': b.to === 'real.parent@example.com' ? { pass, sent: true } : null, 'passes.refund': { pass: { ...pass, status: 'refunded' } }, 'codes.batch': { codes: Array.from({ length: b.count }, (_, i) => ({ code: 'GIFT-B' + String(i).padStart(3, '0') + '-EFGH-JKMN', id: 'id' + i })) }, 'support.list': { messages: [{ id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', email: 'mom@example.com', topic: 'pass', message: 'Code not working\n\nCode ending AB12: pass ...', created_at: new Date().toISOString(), status: 'open' }] },
       'support.set': { ok: true }, 'settings.get': { settings: [{ key: 'daily_minutes', value: 3, help: 'Free play each day.' }, { key: 'daily_reset', value: '04:00', help: 'Reset time.' }] }, 'settings.set': { ok: true }, 'alerts.get': { ready: true, publicKey: 'BAAA', mode: 'each', phones: [], today: 'No new players, no gift codes used.' }, 'alerts.mode': { ok: true, mode: b.mode } }[b.action];
     r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(out || { error: 'Unknown action.' }) });
@@ -710,22 +714,72 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   await page.click('#pList [data-act="passes.email"]');
   await page.waitForFunction(() => /Code email sent to real\.parent@example\.com/.test(document.querySelector('#pErr').textContent));
   check('admin: Email code sends to the typed address', calls.includes('passes.email'));
+  // Release 1.2 #27: Add 48 hours asks first, emails unless Skip email is checked
+  await page.click('#pList [data-act="passes.add48"]');
+  await page.waitForSelector('#pList .tellbox');
+  check('#27 admin: Add 48 hours asks first and names the masked email; nothing sent yet', /p•••@example\.com/.test(await page.textContent('#pList .tellbox')) && !(await page.isChecked('#pList .skipmail')) && tellBodies.length === 0);
+  await page.screenshot({ path: path.join(SHOTS, 'admin-tell-ask.png') });
+  await page.click('#pList [data-tell="passes.add48"]');
+  await page.waitForFunction(() => /Email sent to p•••@example\.com/.test(document.querySelector('#pList').textContent));
+  check('#27 admin: confirm sends with skip_email false and shows the confirm line', tellBodies.length === 1 && tellBodies[0].skip_email === false);
+  await page.click('#pList [data-act="passes.add48"]');
+  await page.check('#pList .tellbox .skipmail');
+  await page.click('#pList [data-tell="passes.add48"]');
+  await page.waitForFunction(() => /No email sent/.test(document.querySelector('#pList').textContent));
+  check('#27 admin: Skip email sends skip_email true', tellBodies.length === 2 && tellBodies[1].skip_email === true);
+  await page.click('#pList [data-act="passes.add48"]'); await page.click('#pList [data-tell="cancel"]');
+  check('#27 admin: Cancel closes the ask without a call', tellBodies.length === 2 && (await page.locator('#pList .tellbox').count()) === 0);
+  // Release 1.2 #2: Passes tabs, sort, Campaigns and schools; iPhone width keeps cards inside their border
+  await page.setViewportSize({ width: 390, height: 844 });
+  const over = await page.evaluate(() => [...document.querySelectorAll('#pList .item')].some((i) => i.scrollWidth > i.clientWidth + 1 || i.getBoundingClientRect().right > document.querySelector('#pList').getBoundingClientRect().right + 1));
+  check('#2 admin: pass cards fit inside their border at 390 px', !over);
+  await page.screenshot({ path: path.join(SHOTS, 'admin-passes-390.png'), fullPage: true });
+  await page.setViewportSize({ width: 1024, height: 900 });
+  await page.click('#pTabs [data-ptab="active"]');
+  await page.waitForFunction(() => document.querySelector('#pList .item'));
+  check('#2 admin: Active tab asks for active passes, most recently turned on first', bodiesBy['passes.list'].tab === 'active' && bodiesBy['passes.list'].sort === 'on' && (await page.inputValue('#pSort')) === 'on');
+  await page.click('#pTabs [data-ptab="gifts"]'); await page.waitForTimeout(150);
+  check('#2 admin: Gifts tab', bodiesBy['passes.list'].tab === 'gifts');
+  await page.selectOption('#pSort', 'ends'); await page.waitForTimeout(150);
+  check('#2 admin: sort menu sends Ends soonest', bodiesBy['passes.list'].sort === 'ends');
+  await page.click('#pTabs [data-ptab="camps"]');
+  await page.waitForSelector('#pList [data-label="in-fair-oct"]');
+  check('#2 admin: Campaigns and schools shows one row per batch with counts', /30 codes · 10 cards · 12 used · 2.5 days from making to use · 3 passes bought after/.test(await page.textContent('#pList')) && /40% used/.test(await page.textContent('#pList')) && await page.isHidden('#pSortL'));
+  await page.screenshot({ path: path.join(SHOTS, 'admin-campaigns.png') });
+  await page.click('#pList [data-batch="view"]');
+  await page.waitForSelector('#pBatchHead:not([hidden])');
+  check('#2 admin: tapping a batch lists its codes', bodiesBy['passes.list'].batch === 'in-fair-oct' && /Codes in in-fair-oct/.test(await page.textContent('#pBatchHead')));
+  await page.click('#pBack'); await page.waitForSelector('#pList [data-label]');
+  await page.click('#pList [data-batch="note"]'); await page.waitForTimeout(200);
+  check('#2 admin: batch note saves', bodiesBy['campaigns.note'] && bodiesBy['campaigns.note'].label === 'in-fair-oct' && bodiesBy['campaigns.note'].note === 'note from test');
+  await page.click('#pTabs [data-ptab="all"]'); await page.waitForSelector('#pList .item[data-id]');
   check('admin: search hint names Hide My Email', /Hide My Email/.test(await page.getAttribute('#pq', 'placeholder')));
   check('admin: Refund button on a Stripe pass', await page.isVisible('#pList [data-act="passes.refund"]'));
   await page.click('#pList [data-act="passes.refund"]');
   await page.waitForFunction(() => /refunded/.test(document.querySelector('#pList .pill').textContent));
   check('admin: refund marks the pass refunded and hides the button', (await page.locator('#pList [data-act="passes.refund"]').count()) === 0);
+  await page.click('#pList [data-act="passes.forever"]');
+  await page.click('#pList [data-tell="passes.forever"]');
+  await page.waitForSelector('#pList .tellbox .msg');
+  check('#27 admin: no email on file shows the message with Share and Copy', /Forever now/.test(await page.textContent('#pList .tellbox .msg')) && await page.isVisible('#pList [data-sharemsg]') && await page.isVisible('#pList .tellbox [data-copy]'));
+  await page.screenshot({ path: path.join(SHOTS, 'admin-tell-share.png') });
   await page.screenshot({ path: path.join(SHOTS, 'admin-passes.png') });
   await page.click('[data-tab="codes"]');
+  await page.waitForSelector('#cLabels [data-label="lincoln-elem"]');
+  await page.click('#cLabels [data-label="lincoln-elem"]');
+  check('#2 admin: last labels offered as taps fill the batch label', (await page.inputValue('#cBatch')) === 'lincoln-elem');
+  await page.fill('#cBatch', '');
   await page.click('#cGo');
   await page.waitForSelector('#cOut:not([hidden])');
   check('admin: gift code shown once with a /r/ link', (await page.textContent('#cCode')) === 'GIFT-ABCD-EFGH-JKMN' && (await page.getAttribute('#cLink', 'href')).endsWith('/r/GIFTABCDEFGHJKMN'));
   check('admin: share row with Text and Email links carrying the code', /GIFT-ABCD-EFGH-JKMN/.test(decodeURIComponent(await page.getAttribute('#cSms', 'href'))) && /r\/GIFTABCDEFGHJKMN/.test(decodeURIComponent(await page.getAttribute('#cMail', 'href'))) && await page.isVisible('#cShare [data-share="share"]'));
+  await page.fill('#cBatch', 'lincoln-elem');
   await page.fill('#bCards', '4'); await page.click('#bGo');
   await page.waitForSelector('#bOut:not([hidden])');
   check('admin: cards batch makes 3 codes per card', (await page.locator('#bList > div').count()) === 12 && /12 codes made, 4 cards/.test(await page.textContent('#bOk')));
   const sheet = await page.evaluate(() => ({ cards: document.querySelectorAll('#sheet .bc').length, qrs: [...document.querySelectorAll('#sheet .q img')].filter((i) => i.src.startsWith('data:image/')).length, codes: document.querySelectorAll('#sheet .q code').length }));
   check('admin: print sheet has 4 cards, 12 QR codes, 12 codes', sheet.cards === 4 && sheet.qrs === 12 && sheet.codes === 12, JSON.stringify(sheet));
+  check('#2 admin: cards carry the batch label in small print and in the batch call', bodiesBy['codes.batch'].batch === 'lincoln-elem' && (await page.locator('#sheet .blabel').count()) === 4 && /lincoln-elem/.test(await page.textContent('#sheet .blabel')));
   await page.emulateMedia({ media: 'print' });
   await page.screenshot({ path: path.join(SHOTS, 'admin-cards-print.png'), fullPage: true });
   await page.emulateMedia({ media: null });

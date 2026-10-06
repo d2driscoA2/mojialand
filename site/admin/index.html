@@ -50,13 +50,23 @@ textarea{resize:vertical;min-height:80px}
 .ok:empty{display:none}
 .codein{font:900 22px/1.2 ui-monospace,Menlo,Consolas,monospace;letter-spacing:4px;text-align:center}
 .codebox{font:900 22px/1.2 ui-monospace,Menlo,Consolas,monospace;letter-spacing:1px;background:#F3ECFC;color:var(--deep);border-radius:16px;padding:14px 8px;text-align:center;user-select:all;-webkit-user-select:all;margin:10px 0}
-.list{display:grid;gap:10px}
+.list{display:grid;gap:10px;grid-template-columns:minmax(0,1fr)}
+.list>*{min-width:0}
+.item .meta,.item .top b{overflow-wrap:anywhere}
+.ptabs{margin:4px 0 12px}.ptabs button{min-height:40px;padding:8px 14px;font-size:13px}
+.labels{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.labels button{min-height:36px;padding:4px 12px;font-size:13px}
+.bhead{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0 0}
 .item{border:2px solid var(--line);border-radius:16px;padding:12px 14px;display:grid;gap:6px}
 .item .top{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
 .item .top b{font-size:15px}
 .item .meta{font-size:13px;color:var(--soft);font-weight:700}
 .item .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
 .item .acts button{min-height:40px;padding:7px 12px;font-size:13px}
+.item .tellbox{display:grid;gap:8px;background:#F3ECFC;border-radius:14px;padding:12px;color:var(--ink)}
+.item .tellbox label{display:flex;gap:8px;align-items:center;font-size:14px}
+.item .tellbox input[type=checkbox]{width:22px;height:22px;accent-color:var(--purple)}
+.item .tellbox .msg{background:#fff;border-radius:10px;padding:10px;font-weight:700;color:var(--ink)}
+.item .tellbox .acts{margin-top:0}
 .pill{display:inline-block;font-size:12px;font-weight:900;border-radius:999px;padding:3px 9px;background:var(--line);color:var(--deep)}
 .pill.active{background:#DDF6E7;color:#1E7A4A}.pill.ended,.pill.refunded,.pill.disputed{background:#FDE7EA;color:var(--red)}.pill.unused{background:#FFF1C9;color:#7A5A00}
 .msg{white-space:pre-wrap;font-weight:700;font-size:14px;color:var(--ink)}
@@ -82,6 +92,7 @@ textarea{resize:vertical;min-height:80px}
   .bc .l img{width:1in;height:auto;display:block}
   .bc .l b{font:900 9.5pt/1.15 Nunito,sans-serif;color:#7138D1}
   .bc .l small{font:700 6.5pt/1.25 Nunito,sans-serif;color:#6B6180}
+  .bc .l .blabel{font:800 6pt/1.1 Nunito,sans-serif;font-style:normal;color:#9A8FB0;letter-spacing:.3px}
   .bc .r{display:grid;gap:0.04in}
   .bc .q{display:grid;grid-template-columns:0.5in 1fr;gap:0.06in;align-items:center}
   .bc .q img,.bc .q canvas{width:0.5in;height:0.5in;display:block}
@@ -124,8 +135,16 @@ textarea{resize:vertical;min-height:80px}
 
   <section class="card" data-panel="passes">
     <h2>Passes</h2>
-    <p>Search by email, the last 4 characters of a code, or a Stripe session id. Empty search shows the latest 50.</p>
-    <div class="row"><label>Search<input id="pq" placeholder="Email, Hide My Email, last 4 (AB12), or cs_ session"></label><button class="primary" id="pGo" type="button">Search</button></div>
+    <div class="tabs ptabs" role="tablist" id="pTabs">
+      <button role="tab" data-ptab="all" aria-selected="true">All</button>
+      <button role="tab" data-ptab="active" aria-selected="false">Active</button>
+      <button role="tab" data-ptab="paid" aria-selected="false">Paid</button>
+      <button role="tab" data-ptab="gifts" aria-selected="false">Gifts</button>
+      <button role="tab" data-ptab="camps" aria-selected="false">Campaigns and schools</button>
+    </div>
+    <p id="pHint">Search by email, the last 4 characters of a code, a Stripe session id, or a batch label. Empty search shows the latest 100.</p>
+    <div class="row"><label>Search<input id="pq" placeholder="Email, Hide My Email, last 4 (AB12), or cs_ session"></label><label id="pSortL" style="flex:0 1 200px">Sort<select id="pSort"><option value="made">Newest made</option><option value="on">Recently turned on</option><option value="ends">Ends soonest</option></select></label><button class="primary" id="pGo" type="button">Search</button></div>
+    <div class="bhead" id="pBatchHead" hidden><button class="secondary" type="button" id="pBack">All campaigns</button><b id="pBatchName"></b></div>
     <p class="err" id="pErr"></p>
     <div class="list" id="pList" style="margin-top:14px"></div>
   </section>
@@ -139,6 +158,9 @@ textarea{resize:vertical;min-height:80px}
       <label>Use within (days)<input id="cDays" type="number" min="1" max="365" value="90"></label>
     </div>
     <label style="margin-top:10px">Note (who it is for)<input id="cNote" maxlength="500" placeholder="Grandma's iPad, contact form Sep 27"></label>
+    <label style="margin-top:10px">Batch label (event or school, optional)<input id="cBatch" maxlength="24" autocapitalize="none" spellcheck="false" placeholder="in-fair-oct"></label>
+    <div class="labels" id="cLabels" aria-label="Recent batch labels"></div>
+    <p style="margin-top:6px">Lowercase letters, numbers and dashes. Codes with a label count under Passes, Campaigns and schools. Used for single codes and printed cards.</p>
     <div class="row" style="margin-top:12px"><button class="primary" id="cGo" type="button">Make a code</button></div>
     <p class="err" id="cErr"></p>
     <div id="cOut" hidden>
@@ -247,24 +269,66 @@ $('tabs').addEventListener('click',e=>{ const b=e.target.closest('[data-tab]'); 
   document.querySelectorAll('#tabs [data-tab]').forEach(x=>x.setAttribute('aria-selected',String(x===b)));
   document.querySelectorAll('[data-panel]').forEach(p=>{ p.hidden=p.dataset.panel!==t; });
   if(window.MojiAnalytics){ if(t==='analytics') window.MojiAnalytics.show(); else window.MojiAnalytics.hide(); }
-  if(t==='passes') loadPasses(); else if(t==='support') loadSupport(); else if(t==='settings'){ loadSettings(); loadAlerts(); } else if(t==='services') renderServices(); });
+  if(t==='passes') loadPasses(); else if(t==='codes') loadLabels(); else if(t==='support') loadSupport(); else if(t==='settings'){ loadSettings(); loadAlerts(); } else if(t==='services') renderServices(); });
 
 /* ---- passes */
+const maskMail=e=>{ const s=String(e||''), at=s.lastIndexOf('@'); return at<1?'':s[0]+'•••'+s.slice(at); };
+/* Release 1.2 #27: Add 48 hours and Make Forever ask first, then tell the family.
+   Paid passes with an email get the pass email unless Skip email is checked.
+   Passes with no email get a message to share. */
+function tellAsk(item,act){ item.querySelectorAll('.tellbox').forEach(x=>x.remove()); const box=document.createElement('div'); box.className='tellbox';
+  const what=act==='passes.add48'?'Add 48 hours to this pass?':'Make this pass Forever?', m=item.dataset.mail;
+  box.innerHTML='<b>'+what+'</b>'+(m?'<span>We email '+esc(m)+' with the change and the Turn on Mojialand button.</span><label><input type="checkbox" class="skipmail"> Skip email</label>':'<span>No email on file. You get a message to share after.</span>')
+    +'<div class="acts"><button class="primary" type="button" data-tell="'+esc(act)+'">'+(act==='passes.add48'?'Add 48 hours':'Make Forever')+'</button><button class="secondary" type="button" data-tell="cancel">Cancel</button></div>';
+  item.insertBefore(box,item.querySelector('.acts')); }
+function tellResult(item,t){ if(!t) return; const box=document.createElement('div'); box.className='tellbox'; box.setAttribute('role','status');
+  if(t.email==='sent') box.innerHTML='<b>Email sent to '+esc(t.to)+'.</b>';
+  else if(t.email==='skipped') box.innerHTML='<b>Done. No email sent.</b>';
+  else { const head=t.email==='none'?'No email on file. Share this message with the family:':'The email did not go out. Share this message instead:';
+    box.innerHTML='<b>'+head+'</b><div class="msg">'+esc(t.share||'')+'</div><div class="acts"><button class="secondary" type="button" data-sharemsg>Share</button><button class="secondary" type="button" data-copy="'+esc(t.share||'')+'">Copy message</button></div>'; box.dataset.msg=t.share||''; }
+  item.insertBefore(box,item.querySelector('.acts')); }
 function passItem(p){ const st=p.status; const ends=p.kind==='forever'?'Forever':(p.ends_at?'Ends '+fmt(p.ends_at):'Not started');
-  return '<div class="item" data-id="'+esc(p.id)+'"><div class="top"><b>'+esc(p.prefix)+'-…'+esc(p.code_last4)+' · '+(p.kind==='forever'?'Forever':'48h')+'</b><span class="pill '+esc(st)+'">'+esc(st)+'</span></div>'
+  const mail=!!(p.email&&p.source==='stripe'&&p.stripe_session_id);
+  return '<div class="item" data-id="'+esc(p.id)+'"'+(mail?' data-mail="'+esc(maskMail(p.email))+'"':'')+'><div class="top"><b>'+esc(p.prefix)+'-…'+esc(p.code_last4)+' · '+(p.kind==='forever'?'Forever':'48h')+'</b><span class="pill '+esc(st)+'">'+esc(st)+'</span></div>'
     +'<div class="meta">'+esc(p.email||'(no email)')+' · '+esc(p.source)+(p.amount_cents?' · '+money(p.amount_cents):'')+' · made '+fmt(p.created_at)+'</div>'
     +'<div class="meta">'+esc(ends)+(p.use_by&&st==='unused'?' · use by '+fmt(p.use_by):'')+(typeof p.devices==='number'?' · '+p.devices+' of '+p.device_limit+' devices':'')+(p.stripe_session_id?' · '+esc(p.stripe_session_id):'')+'</div>'
     +(p.note?'<div class="meta">Note: '+esc(p.note)+'</div>':'')
     +'<div class="acts">'+(p.kind!=='forever'?'<button class="secondary" data-act="passes.add48">Add 48 hours</button><button class="secondary" data-act="passes.forever">Make Forever</button>':'')
     +(p.source==='stripe'&&p.stripe_session_id?'<button class="secondary" data-act="passes.code">Show code</button><button class="secondary" data-act="passes.email">Email code</button>':'')+'<button class="secondary" data-act="passes.devices_reset">Reset devices</button><button class="secondary" data-act="note">Note</button>'
     +(st==='active'?'<button class="danger" data-act="passes.end">End pass</button>':'')+(p.source==='stripe'&&p.stripe_session_id&&st!=='refunded'?'<button class="danger" data-act="passes.refund">Refund</button>':'')+'</div></div>'; }
+/* Release 1.2 #2: tabs, sort, Campaigns and schools. Counts cards, never people. */
+let pTab='all', pBatch='';
+function batchItem(b){ const n=v=>v==null?'–':v;
+  return '<div class="item" data-label="'+esc(b.label)+'"><div class="top"><b>'+esc(b.label)+(b.name&&b.name!==b.label?' · '+esc(b.name):'')+'</b><span class="pill active">'+b.pct+'% used</span></div>'
+    +'<div class="meta">'+b.codes+' codes · '+b.cards+' cards · '+b.used+' used · '+(b.avgDays==null?'no uses yet':b.avgDays+' days from making to use')+' · '+n(b.bought)+' passes bought after</div>'
+    +'<div class="meta">Made '+fmt(b.made)+'</div>'+(b.note?'<div class="meta">Note: '+esc(b.note)+'</div>':'')
+    +'<div class="acts"><button class="secondary" type="button" data-batch="view">View codes</button><button class="secondary" type="button" data-batch="note">Note</button></div></div>'; }
 async function loadPasses(){ $('pErr').textContent=''; $('pList').innerHTML='<p>Loading…</p>';
-  try{ const d=await api('passes.list',{q:$('pq').value}); $('pList').innerHTML=d.passes.length?d.passes.map(passItem).join(''):'<p>No passes found.</p>'; }
+  const camps=pTab==='camps'&&!pBatch; $('pSortL').hidden=camps; $('pBatchHead').hidden=!pBatch;
+  $('pq').placeholder=camps?'Campaign or school label':'Email, Hide My Email, last 4 (AB12), cs_ session, or batch label';
+  try{
+    if(camps){ const d=await api('passes.batches',{q:$('pq').value}); $('pList').innerHTML=d.batches.length?d.batches.map(batchItem).join(''):'<p>No batches yet. Add a batch label when you make gift codes.</p>'; return; }
+    const d=await api('passes.list',{q:pBatch?'':$('pq').value,tab:pBatch?'all':pTab,sort:$('pSort').value,batch:pBatch||undefined}); $('pList').innerHTML=d.passes.length?d.passes.map(passItem).join(''):'<p>No passes found.</p>'; }
   catch(e){ $('pList').innerHTML=''; $('pErr').textContent=e.message; } }
+$('pTabs').addEventListener('click',e=>{ const b=e.target.closest('[data-ptab]'); if(!b) return; pTab=b.dataset.ptab; pBatch='';
+  document.querySelectorAll('#pTabs [data-ptab]').forEach(x=>x.setAttribute('aria-selected',String(x===b)));
+  $('pSort').value=pTab==='active'?'on':'made'; loadPasses(); });
+$('pSort').addEventListener('change',loadPasses);
+$('pBack').addEventListener('click',()=>{ pBatch=''; loadPasses(); });
 $('pGo').addEventListener('click',loadPasses);
 $('pq').addEventListener('keydown',e=>{ if(e.key==='Enter') loadPasses(); });
 $('pList').addEventListener('click',async e=>{ const cp=e.target.closest('[data-copy]'); if(cp){ try{ await navigator.clipboard.writeText(cp.dataset.copy); cp.textContent='Copied'; }catch(_){ const r=document.createRange(); const v=cp.parentElement.querySelector('.codeval'); if(v){ r.selectNodeContents(v); const sel=getSelection(); sel.removeAllRanges(); sel.addRange(r); } } return; }
+  const bb=e.target.closest('[data-batch]'); if(bb){ const label=bb.closest('.item').dataset.label;
+    if(bb.dataset.batch==='view'){ pBatch=label; $('pBatchName').textContent='Codes in '+label+' (last 4 only)'; loadPasses(); return; }
+    const cur=(bb.closest('.item').querySelector('.meta:last-of-type')||{}).textContent||''; const n=prompt('How did '+label+' go?',/^Note: /.test(cur)?cur.slice(6):''); if(n===null) return;
+    try{ await api('campaigns.note',{label:label,note:n}); loadPasses(); }catch(err){ $('pErr').textContent=err.message; } return; }
+  const sm=e.target.closest('[data-sharemsg]'); if(sm){ const t=sm.closest('.tellbox').dataset.msg; if(navigator.share){ try{ await navigator.share({text:t}); }catch(_){} } else { try{ await navigator.clipboard.writeText(t); sm.textContent='Copied'; }catch(_){} } return; }
+  const tb=e.target.closest('[data-tell]'); if(tb){ const item=tb.closest('.item'), box=tb.closest('.tellbox'); if(tb.dataset.tell==='cancel'){ box.remove(); return; }
+    tb.disabled=true; $('pErr').textContent='';
+    try{ const d=await api(tb.dataset.tell,{id:item.dataset.id,skip_email:!!(box.querySelector('.skipmail')||{}).checked}); const wrap=document.createElement('div'); wrap.innerHTML=passItem(d.pass); const fresh=wrap.firstChild; item.replaceWith(fresh); tellResult(fresh,d.tell); }
+    catch(err){ $('pErr').textContent=err.message; tb.disabled=false; } return; }
   const b=e.target.closest('[data-act]'); if(!b) return; const item=b.closest('.item'), id=item.dataset.id, act=b.dataset.act; $('pErr').textContent='';
+  if(act==='passes.add48'||act==='passes.forever'){ tellAsk(item,act); return; }
   let extra={id:id};
   if(act==='note'){ const cur=(item.querySelector('.meta:last-of-type')||{}).textContent||''; const n=prompt('Note for this pass:',/^Note: /.test(cur)?cur.slice(6):''); if(n===null) return; extra.note=n; }
   else if(act==='passes.end'&&!confirm('End this pass now?')) return;
@@ -280,13 +344,18 @@ $('pList').addEventListener('click',async e=>{ const cp=e.target.closest('[data-
 
 /* ---- codes */
 $('cGo').addEventListener('click',async()=>{ const b=$('cGo'); b.disabled=true; $('cErr').textContent=''; $('cOut').hidden=true;
-  try{ const d=await api('codes.create',{kind:$('cKind').value,source:$('cSource').value,days_valid:$('cDays').value,note:$('cNote').value});
-    $('cCode').textContent=d.code; const link=linkFor(d.code); $('cLink').textContent=link; $('cLink').href=link; setShareLinks(d.code); $('cOk').textContent=''; $('cOut').hidden=false; $('cNote').value=''; }
+  try{ const lb=curLabel(); const d=await api('codes.create',{kind:$('cKind').value,source:$('cSource').value,days_valid:$('cDays').value,note:$('cNote').value,batch:lb});
+    lastLabel=lb; loadLabels(); $('cCode').textContent=d.code; const link=linkFor(d.code); $('cLink').textContent=link; $('cLink').href=link; setShareLinks(d.code); $('cOk').textContent=''; $('cOut').hidden=false; $('cNote').value=''; }
   catch(e){ $('cErr').textContent=e.message; }
   b.disabled=false; });
 
 /* ---- share a code */
-const linkFor=c=>location.origin+'/r/'+c.replace(/-/g,'');
+let lastLabel='';
+const curLabel=()=>$('cBatch').value.trim().toLowerCase();
+/* A batch label rides in the link as the campaign (?c=label), so a later pass bought on that device counts toward the event. */
+const linkFor=(c,lb)=>location.origin+'/r/'+c.replace(/-/g,'')+((lb===undefined?lastLabel:lb)?'?c='+encodeURIComponent(lb===undefined?lastLabel:lb):'');
+async function loadLabels(){ try{ const d=await api('codes.labels',{}); $('cLabels').innerHTML=d.labels.map(l=>'<button class="secondary" type="button" data-label="'+esc(l)+'">'+esc(l)+'</button>').join(''); }catch(e){} }
+$('cLabels').addEventListener('click',e=>{ const b=e.target.closest('[data-label]'); if(b) $('cBatch').value=b.dataset.label; });
 const msgFor=c=>'A Mojialand gift: a free '+($('cKind').value==='forever'?'Forever':'48-hour')+' pass for your family. Tap to turn it on: '+linkFor(c)+' Or open Mojialand, tap Grown-ups, then Have a code? and type '+c;
 async function copy(t){ try{ await navigator.clipboard.writeText(t); return true; }catch(e){ return false; } }
 $('cShare').addEventListener('click',async e=>{ const b=e.target.closest('[data-share]'); if(!b) return; const c=$('cCode').textContent; $('cOk').textContent='';
@@ -296,20 +365,21 @@ $('cShare').addEventListener('click',async e=>{ const b=e.target.closest('[data-
 function setShareLinks(c){ $('cSms').href='sms:?&body='+encodeURIComponent(msgFor(c)); $('cMail').href='mailto:?subject='+encodeURIComponent('A Mojialand gift pass')+'&body='+encodeURIComponent(msgFor(c)); }
 
 /* ---- printable cards */
-let batch=[];
+let batch=[], bLabel='';
 function qrImg(url){ try{ const q=qrcode(0,'M'); q.addData(url); q.make(); return q.createDataURL(4,0); }catch(e){ return ''; } }
-function buildSheet(codes,kind){ const cards=[]; for(let i=0;i<codes.length;i+=3) cards.push(codes.slice(i,i+3));
+function buildSheet(codes,kind,lb){ const cards=[]; for(let i=0;i<codes.length;i+=3) cards.push(codes.slice(i,i+3));
   const host=location.hostname==='mojialand.com'?'mojialand.com':location.host;
-  $('sheet').innerHTML=cards.map(cs=>'<div class="bc"><div class="l"><img src="/logo/logo-3d-1000.webp" alt="Mojialand"><b>'+(kind==='forever'?'Free Forever passes':'3 free 48-hour passes')+'</b><small>Emoji games for kids 3 and up. No ads, nothing collected from your child. One code per family, up to 5 devices. Scan a code, or type it at '+esc(host)+' under Grown-ups.</small></div><div class="r">'
-    +cs.map(c=>'<div class="q"><img src="'+qrImg(linkFor(c))+'" alt=""><div><code>'+esc(c)+'</code><i>'+esc(host)+'/r/'+esc(c.replace(/-/g,''))+'</i></div></div>').join('')+'</div></div>').join(''); }
+  $('sheet').innerHTML=cards.map(cs=>'<div class="bc"><div class="l"><img src="/logo/logo-3d-1000.webp" alt="Mojialand"><b>'+(kind==='forever'?'Free Forever passes':'3 free 48-hour passes')+'</b><small>Emoji games for kids 3 and up. No ads, nothing collected from your child. One code per family, up to 5 devices. Scan a code, or type it at '+esc(host)+' under Grown-ups.</small>'+(lb?'<em class="blabel">'+esc(lb)+'</em>':'')+'</div><div class="r">'
+    +cs.map(c=>'<div class="q"><img src="'+qrImg(linkFor(c,lb||''))+'" alt=""><div><code>'+esc(c)+'</code><i>'+esc(host)+'/r/'+esc(c.replace(/-/g,''))+'</i></div></div>').join('')+'</div></div>').join(''); }
 $('bGo').addEventListener('click',async()=>{ const b=$('bGo'); const cards=Math.min(100,Math.max(1,parseInt($('bCards').value,10)||1)); const want=cards*3; b.disabled=true; $('bErr').textContent=''; $('bOut').hidden=true; batch=[];
-  try{ while(batch.length<want){ const d=await api('codes.batch',{kind:$('cKind').value,source:$('cSource').value,days_valid:$('cDays').value,note:$('bNote').value,count:Math.min(30,want-batch.length)}); batch=batch.concat(d.codes.map(x=>x.code)); b.textContent='Making… '+batch.length+' of '+want; }
+  const lb=curLabel(); bLabel=lb;
+  try{ while(batch.length<want){ const d=await api('codes.batch',{kind:$('cKind').value,source:$('cSource').value,days_valid:$('cDays').value,note:$('bNote').value,count:Math.min(30,want-batch.length),batch:lb}); batch=batch.concat(d.codes.map(x=>x.code)); b.textContent='Making… '+batch.length+' of '+want; }
     $('bOk').textContent=batch.length+' codes made, '+cards+' cards. Print now; the codes never show again.';
     $('bList').innerHTML=batch.map(c=>'<div><span>'+esc(c)+'</span><span class="acts"><button class="secondary" type="button" data-c="'+esc(c)+'">Copy link</button></span></div>').join('');
-    buildSheet(batch,$('cKind').value); $('bOut').hidden=false; }
-  catch(e){ $('bErr').textContent=e.message+(batch.length?' ('+batch.length+' codes were made before the error; they are listed below.)':''); if(batch.length){ $('bList').innerHTML=batch.map(c=>'<div><span>'+esc(c)+'</span></div>').join(''); buildSheet(batch,$('cKind').value); $('bOut').hidden=false; } }
+    buildSheet(batch,$('cKind').value,lb); $('bOut').hidden=false; loadLabels(); }
+  catch(e){ $('bErr').textContent=e.message+(batch.length?' ('+batch.length+' codes were made before the error; they are listed below.)':''); if(batch.length){ $('bList').innerHTML=batch.map(c=>'<div><span>'+esc(c)+'</span></div>').join(''); buildSheet(batch,$('cKind').value,lb); $('bOut').hidden=false; } }
   b.disabled=false; b.textContent='Make cards'; });
-$('bList').addEventListener('click',async e=>{ const b=e.target.closest('[data-c]'); if(!b) return; b.textContent=(await copy(linkFor(b.dataset.c)))?'Copied':'Copy failed'; setTimeout(()=>{ b.textContent='Copy link'; },1200); });
+$('bList').addEventListener('click',async e=>{ const b=e.target.closest('[data-c]'); if(!b) return; b.textContent=(await copy(linkFor(b.dataset.c,bLabel)))?'Copied':'Copy failed'; setTimeout(()=>{ b.textContent='Copy link'; },1200); });
 $('bCopy').addEventListener('click',async()=>{ $('bOk').textContent=(await copy(batch.join('\n')))?'All codes copied.':'Copy failed.'; });
 $('bPrint').addEventListener('click',()=>{ window.print(); });
 
