@@ -422,7 +422,7 @@ footer .fine.credit a{color:#fff;text-decoration:underline;text-underline-offset
   <div class="wrap">
    <p class="eyebrow">For grown-ups</p>
    <h2 style="margin-top:10px;font-size:clamp(34px,4.4vw,52px)">Keep Mojialand ad-free</h2>
-   <p class="lede" style="margin-top:12px">Every device gets <span id="freeMinutes">15</span> free minutes on the first visit, then 3 minutes a day. Pick a pass when your child wants more.</p>
+   <p class="lede" style="margin-top:12px">Each device gets <span id="freeMinutes">15</span> free minutes on the first visit, then 3 minutes a day. Pick a pass when your child wants more.</p>
    <div class="pass-grid">
     <div class="pass-card">
      <h3>Pick a pass</h3>
@@ -431,23 +431,23 @@ footer .fine.credit a{color:#fff;text-decoration:underline;text-underline-offset
       <button class="opt" type="button" role="radio" aria-checked="true" data-pass="day" id="opt-day">
        <span class="name">48-hour pass</span>
        <span class="price" style="display:block">$1.50</span>
-       <span class="note">Every device. Never renews.</span>
+       <span class="note">Up to 5 devices. Never renews.</span>
       </button>
       <button class="opt" type="button" role="radio" aria-checked="false" data-pass="forever" id="opt-forever">
        <span class="tag">Best value</span>
        <span class="name">Forever</span>
        <span class="price" style="display:block">$14.99</span>
-       <span class="note">Every device. Yours for good.</span>
+       <span class="note">Up to 5 devices. Yours for good.</span>
       </button>
      </div>
      <div class="devices">
-      <p class="dev-head" id="devHead">One $1.50 pass works on every device.</p>
+      <p class="dev-head" id="devHead">One $1.50 pass works on up to 5 devices.</p>
       <ol class="dev-steps">
        <li><span class="ic" aria-hidden="true"><svg width="22" height="30" viewBox="0 0 18 28"><rect x="1.5" y="1.5" width="15" height="25" rx="4" fill="none" stroke="currentColor" stroke-width="3"/></svg></span><span><b>Pay once</b> on any phone, tablet, or computer.</span></li>
        <li><span class="ic" aria-hidden="true"><svg width="30" height="24" viewBox="0 0 30 24"><rect x="1.5" y="1.5" width="27" height="21" rx="4" fill="none" stroke="currentColor" stroke-width="3"/><path d="M3 4l12 9 12-9" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/></svg></span><span><b>Get a code</b> in your email.</span></li>
        <li><span class="ic" aria-hidden="true"><svg width="36" height="28" viewBox="0 0 36 28"><rect x="5.5" y="3.5" width="25" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="3"/><path d="M1 24h34" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></span><span><b>Type the code</b> on every other device. Done.</span></li>
       </ol>
-      <p class="dev-foot" id="devLine">Every device shares the same 48 hours.</p>
+      <p class="dev-foot" id="devLine">Up to 5 devices share the same 48 hours.</p>
      </div>
      <ul class="checks">
       <li>Nothing collected from your child. No ads, no tracking, no account.</li>
@@ -470,7 +470,7 @@ footer .fine.credit a{color:#fff;text-decoration:underline;text-underline-offset
       <div><strong>Who am I paying?</strong><span>Mojialand, made by a family in Michigan. No company behind us, no investors.</span></div>
       <div><strong>Where does the money go?</strong><span>New games and hosting. No investors, no ad partners.</span></div>
       <div><strong>What happens after I pay?</strong><span>You get a device code by email. Enter the code in Mojialand on each phone or tablet.</span></div>
-      <div><strong>Does a 48-hour pass restart on a new device?</strong><span>No. Every device ends at the same moment.</span></div>
+      <div><strong>Does a 48-hour pass restart on a new device?</strong><span>No. All devices on the pass end at the same moment.</span></div>
      </div>
     </aside>
    </div>
@@ -587,7 +587,7 @@ footer .fine.credit a{color:#fff;text-decoration:underline;text-underline-offset
       <ul>
        <li>48-hour pass, $1.50: unlocks unlimited play for 48 hours from purchase. Never renews.</li>
        <li>Forever pass, $14.99: unlocks unlimited play for as long as Mojialand runs.</li>
-       <li>Each pass works on up to <span id="devLimit">5</span> devices. Tap the button in your pass email on each device, or type the pass code. A 48-hour pass ends at the same moment on every device.</li>
+       <li>Each pass works on up to <span id="devLimit">5</span> devices. Tap the button in your pass email on each device, or type the pass code. A 48-hour pass ends at the same moment on all of them.</li>
        <li>Add 48 hours to a running pass for $1.50. Move to Forever for $13.49 while a 48-hour pass runs, or within 7 days after it ends.</li>
        <li>Every pass is a one-time charge. No subscription, no automatic renewal.</li>
       </ul>
@@ -735,8 +735,8 @@ var CONFIG = {
   pass=p;
   $$(".opt").forEach(function(o){o.setAttribute("aria-checked",o.dataset.pass===p?"true":"false")});
   $("#payBtn").textContent="Pay "+prices[p];
-  $("#devHead").textContent="One "+prices[p]+" pass works on every device.";
-  $("#devLine").textContent=p==="day"?"Every device shares the same 48 hours.":"Every device keeps the pass for good.";
+  $("#devHead").textContent="One "+prices[p]+" pass works on up to 5 devices.";
+  $("#devLine").textContent=p==="day"?"Up to 5 devices share the same 48 hours.":"Up to 5 devices keep the pass for good.";
   $("#payStatus").hidden=true;
  }
  $$(".opt").forEach(function(o){o.onclick=function(){setPass(o.dataset.pass)}});

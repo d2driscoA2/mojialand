@@ -5,7 +5,7 @@
 import { guard, envName } from './_lib/env.mjs';
 import { json, fail, readJson, clientIp, maskEmail, tail6 } from './_lib/http.mjs';
 import { rateHit, addDevice, safeErr, DEVICE_RE } from './_lib/db.mjs';
-import { grantPass } from './_lib/grant.mjs';
+import { grantPass, isPaid } from './_lib/grant.mjs';
 import { getStripe } from './_lib/stripe.mjs';
 import { makeTokenPayload, signToken } from './_lib/token.mjs';
 
@@ -45,7 +45,7 @@ export const handler = async (event) => {
     if (session.metadata && session.metadata.env && session.metadata.env !== envName()) {
       return fail(400, 'That payment link is not valid.');
     }
-    if (session.payment_status !== 'paid') return json(402, { status: 'pending' });
+    if (!isPaid(session)) return json(402, { status: 'pending' });
     if (Number(session.created) && Date.now() - Number(session.created) * 1000 > CHECKOUT_DAYS * 86400e3) return fail(410, OLD_MSG);
 
     let granted;

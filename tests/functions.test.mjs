@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 import { KEYS, setEnv, fakeDb, fakeStripe, paidSession, ev } from './helpers.mjs';
 import { ALPHABET, deriveCode, normalizeCode, codeHash, codeLast4, randomCode } from '../netlify/functions/_lib/codes.mjs';
 import { makeTokenPayload, signToken, verifyToken } from '../netlify/functions/_lib/token.mjs';
-import { grantPass } from '../netlify/functions/_lib/grant.mjs';
+import { grantPass, isPaid } from '../netlify/functions/_lib/grant.mjs';
 import { setStripe } from '../netlify/functions/_lib/stripe.mjs';
 import { originFromHost, maskEmail } from '../netlify/functions/_lib/http.mjs';
 import { handler as createCheckout } from '../netlify/functions/create-checkout.mjs';
@@ -211,6 +211,25 @@ test('confirm-session: pending, paid, bad ids', async () => {
   stripe.sessions.set('cs_test_livex1', { ...paidSession('cs_test_livex1', 'pass'), metadata: { plan: 'pass', env: 'live' } });
   assert.equal((await confirmSession(ev({ session_id: 'cs_test_livex1', device_id: DEV('e') }))).statusCode, 400);
   assert.equal(maskEmail('abc'), '');
+});
+
+test('#46 free promo checkout (no_payment_required) grants with amount 0', async () => {
+  const free = (id) => ({ ...paidSession(id, 'pass'), payment_status: 'no_payment_required', amount_total: 0 });
+  assert.equal(isPaid(free('cs_test_free0')), true);
+  assert.equal(isPaid({ ...free('cs_test_free0'), status: 'open' }), false, 'open free checkout is not paid');
+  assert.equal(isPaid({ ...paidSession('cs_test_x', 'pass'), payment_status: 'unpaid' }), false);
+  stripe.sessions.set('cs_test_free1', free('cs_test_free1'));
+  const r = await confirmSession(ev({ session_id: 'cs_test_free1', device_id: DEV('f') }));
+  assert.equal(r.statusCode, 200);
+  assert.equal(JSON.parse(r.body).kind, '48h');
+  assert.equal(db.passes[0].amount_cents, 0);
+  const s2 = free('cs_test_free2');
+  stripe.sessions.set(s2.id, s2);
+  const w = await webhook(signed({ id: 'evt_free2', type: 'checkout.session.completed', data: { object: s2 } }));
+  assert.equal(w.statusCode, 200);
+  assert.equal(db.passes.filter((p) => p.source === 'stripe').length, 2);
+  stripe.sessions.set('cs_test_free3', { ...free('cs_test_free3'), status: 'open' });
+  assert.equal((await confirmSession(ev({ session_id: 'cs_test_free3', device_id: DEV('f') }))).statusCode, 402);
 });
 
 function signed(evt, secret = process.env.STRIPE_WEBHOOK_SECRET) {

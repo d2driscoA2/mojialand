@@ -933,7 +933,7 @@ body.in-draw #app{max-width:none}
   <ul class="pw-trust">
     <li><span>🛡️</span><span><b>Nothing collected from your child.</b> Ever. No names, no photos, no voice.</span></li>
     <li><span>🚫</span><span><b>No ads, no tracking, no chat.</b> No strangers, no pop-ups, nothing to click away to.</span></li>
-    <li><span>📱</span><span id="pwDevLine"><b>One pass, all your devices.</b> Up to 5 phones and tablets in your family.</span></li>
+    <li><span>📱</span><span id="pwDevLine"><b>One pass, up to 5 devices.</b> Phones and tablets in your family.</span></li>
   </ul>
   <p class="pw-why">Made by a Michigan family. Your pass keeps ads out. <button class="pw-link" id="pwWhyBtn" aria-expanded="false" aria-controls="pwWhyMore">Why we charge</button></p>
   <p class="pw-more" id="pwWhyMore" hidden>Many free kids apps pay their bills with ads and data about your child. We won't. Parents who pay keep Mojialand this way for every family.</p>
@@ -2026,7 +2026,7 @@ const pay=(function(){
   function card(key,title,small,tag,strike){ return '<button class="pw-plan" aria-pressed="'+(plan===key)+'" data-plan="'+key+'"><b>'+title+(tag?'<span class="pw-tag">best value</span>':'')+'</b><span class="price">'+(strike||promo?'<s>'+money(strike?PRICES.life:PRICES[key])+'</s>':'')+money(priceOf(key))+'</span><small>'+small+'</small></button>'; }
   function buildPlans(){ const p=getPass(); let html='', keys;
     const dsc=$('#pwDiscount'); if(promo){ dsc.textContent=promo.code+' applied: '+(promo.percent_off?promo.percent_off+'% off':'$'+(promo.amount_off/100).toFixed(2)+' off'); dsc.hidden=false; } else dsc.hidden=true;
-    $('#pwDevLine').innerHTML='<b>One pass, all your devices.</b> Up to '+SETTINGS.devices_per_code+' phones and tablets in your family.';
+    $('#pwDevLine').innerHTML='<b>One pass, up to '+SETTINGS.devices_per_code+' devices.</b> Phones and tablets in your family.';
     $('#pwWhyMore').hidden=true; $('#pwWhyBtn').setAttribute('aria-expanded','false');
     if(passOn(p)&&p.kind==='forever'){ $('#pwPlansTitle').textContent='You have Forever'; $('#pwPlansSub').textContent='Nothing to buy. Enjoy.'; $('#pwCards').innerHTML=''; $('#pwPay').hidden=true; return; }
     $('#pwPay').hidden=false;

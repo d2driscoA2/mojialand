@@ -132,6 +132,13 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   check('one inline script: ' + rel, n === 1, String(n));
 }
 
+// Release 1.2 #18: device wording says up to 5, never "every device" or "all your devices"
+for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/done/index.html', 'r/index.html']) {
+  const t = fs.readFileSync(path.join(site, rel), 'utf8');
+  check('#18 no "every device" wording: ' + rel, !/every device|all your devices/i.test(t));
+}
+check('#18 website pass card says up to 5 devices', /Up to 5 devices share the same 48 hours\./.test(fs.readFileSync(path.join(site, 'index.html'), 'utf8')));
+
 // 1. WebCrypto verifies node-signed tokens
 {
   const { ctx, page } = await newPage();
@@ -368,6 +375,12 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   const hist = [];
   page.on('framenavigated', (f) => { if (f === page.mainFrame()) hist.push(f.url()); });
   await page.goto(base + '/r/MOJIABCDEFGHJKMN');
+  await page.waitForSelector('#rReady:not([hidden])');
+  await page.waitForTimeout(800);
+  check('#33 /r/: nothing redeems before a tap', body === null && await page.isVisible('#rTap'));
+  check('#33 /r/: code out of the address bar before the tap', new URL(page.url()).pathname === '/r/');
+  await page.screenshot({ path: path.join(SHOTS, 'r-ready-390.png') });
+  await page.click('#rTap');
   await page.waitForSelector('#s-allset:not(.hidden)', { timeout: 15000 });
   check('/r/: sends normalized code and device id', body && body.code === 'MOJI-ABCD-EFGH-JKMN' && /^[0-9a-f]{32}$/.test(body.device_id), JSON.stringify(body));
   check('/r/: All set says "Mojialand is on!"', (await page.textContent('#pwOkTitle')) === 'Mojialand is on!');
@@ -382,6 +395,7 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   const { ctx, page } = await newPage();
   await page.route('**/.netlify/functions/redeem-code', (r) => r.fulfill({ status: 409, contentType: 'application/json', body: '{"error":"This code is on 5 devices already. Contact us to move it to a new device."}' }));
   await page.goto(base + '/r/MOJIABCDEFGHJKMN');
+  await page.click('#rTap');
   await page.waitForSelector('#rStop:not([hidden])');
   check('/r/: code gone from the address bar', new URL(page.url()).pathname === '/r/');
   check('/r/ 409: device limit message and contact', /5 devices/.test(await page.textContent('#rStopText')) && await page.isVisible('#rStop [data-contact]'));
@@ -392,6 +406,26 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   await page.click('#rGo');
   check('/r/ no code: form with format hint', /MOJI-XXXX/.test(await page.textContent('#rErr')));
   await page.screenshot({ path: path.join(SHOTS, 'r-form-390.png') });
+  await ctx.close();
+}
+
+// Release 1.2 #33: gift links wait for a tap; a stale or mismatched /g/ tap never counts
+{
+  const { ctx, page } = await newPage();
+  const bodies = [];
+  await page.route('**/.netlify/functions/redeem-code', (r) => { bodies.push(r.request().postDataJSON()); r.fulfill({ status: 409, contentType: 'application/json', body: '{"error":"x"}' }); });
+  await page.goto(base + '/r/');
+  await page.evaluate(() => sessionStorage.setItem('mojia.tap', JSON.stringify({ c: 'GIFTZZZZZZZZZZZZ', t: Date.now() })));
+  await page.goto(base + '/r/GIFTABCDEFGHJKMN');
+  await page.waitForSelector('#rReady:not([hidden])'); await page.waitForTimeout(800);
+  check('#33 /r/ gift link waits; tap flag for a different code ignored', bodies.length === 0);
+  await page.evaluate(() => sessionStorage.setItem('mojia.tap', JSON.stringify({ c: 'GIFTABCDEFGHJKMN', t: Date.now() - 600000 })));
+  await page.goto(base + '/r/GIFTABCDEFGHJKMN');
+  await page.waitForSelector('#rReady:not([hidden])'); await page.waitForTimeout(800);
+  check('#33 /r/ old tap flag (10 minutes) ignored', bodies.length === 0);
+  await page.click('#rTap'); await page.waitForSelector('#rStop:not([hidden])');
+  check('#33 /r/ gift code redeems after the tap', bodies.length === 1 && bodies[0].code === 'GIFT-ABCD-EFGH-JKMN', JSON.stringify(bodies));
+  check('#33 /r/ no CSP violations', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
   await ctx.close();
 }
 
@@ -1519,11 +1553,15 @@ for (const [st, title] of [[403, 'This pass is on 5 devices'], [410, 'This link 
 }
 {
   const { ctx, page } = await newPage();
+  const gBodies = [];
+  await page.route('**/.netlify/functions/redeem-code', (r) => { gBodies.push(r.request().postDataJSON()); r.fulfill({ status: 409, contentType: 'application/json', body: '{"error":"x"}' }); });
   await page.goto(base + '/g/GIFTABCDEFGHJKMN?c=fair'); await page.waitForTimeout(1500);
   check('/g/ waits for a tap (link previews never turn the pass on)', /\/g\/GIFTABCDEFGHJKMN/.test(page.url()) && !page.reqs.some((u) => u.includes('/r/GIFT')));
   const hop = page.waitForRequest((q) => /\/r\/GIFTABCDEFGHJKMN\?c=fair$/.test(q.url()), { timeout: 5000 });
   await page.click('#go');
   check('/g/ tap opens /r/ with the code and campaign', !!(await hop.catch(() => null)));
+  await page.waitForSelector('#rStop:not([hidden])', { timeout: 8000 }).catch(() => null);
+  check('#33 /g/ tap counts: /r/ redeems the gift code without a second tap', gBodies.length >= 1 && gBodies[0].code === 'GIFT-ABCD-EFGH-JKMN', JSON.stringify(gBodies));
   const html = fs.readFileSync(path.join(site, 'g', 'index.html'), 'utf8');
   check('/g/ has the preview card tags', /og:image" content="https:\/\/[a-z.]+\/img\/friend-pass-card\.jpg"/.test(html) && /og:title" content="48 free hours of Mojialand"/.test(html) && fs.existsSync(path.join(site, 'img', 'friend-pass-card.jpg')));
   check('/g/ no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));

@@ -30,8 +30,17 @@ function sameCode(pass, pepper) {
   return pass.source === 'stripe' && pass.stripe_session_id ? deriveCode(pepper, pass.stripe_session_id) : null;
 }
 
+// Release 1.2 #46: Stripe reports no_payment_required, not paid, when a 100%
+// off promotion code makes the checkout free. A complete free checkout counts
+// as paid. The pass row keeps amount 0.
+export function isPaid(session) {
+  if (!session) return false;
+  if (session.payment_status === 'paid') return true;
+  return session.payment_status === 'no_payment_required' && session.status === 'complete';
+}
+
 export async function grantPass(session) {
-  if (!session || session.payment_status !== 'paid') throw new GrantError('not paid');
+  if (!isPaid(session)) throw new GrantError('not paid');
   const plan = session.metadata && session.metadata.plan;
   const pepper = process.env.RESTORE_CODE_PEPPER;
 

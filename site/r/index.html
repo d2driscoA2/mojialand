@@ -56,6 +56,13 @@ textarea{resize:vertical;min-height:96px}
   <p>This takes a few seconds.</p>
   <div class="bar" aria-hidden="true"><i></i></div>
 </main>
+<main class="card" id="rReady" hidden>
+  <div class="friends" aria-hidden="true"><span>🦄</span><span>🦈</span><span>🐶</span><span>😀</span><span>🍕</span></div>
+  <h1>Your code is ready</h1>
+  <p id="rReadyText">Tap the button to turn on Mojialand on this phone or tablet.</p>
+  <button class="primary" type="button" id="rTap">Turn on Mojialand</button>
+  <a class="textbtn" href="/play/">Back to Mojialand</a>
+</main>
 <main class="card" id="rForm" hidden>
   <div class="friends" aria-hidden="true">🔑</div>
   <h1>Have a code?</h1>
@@ -124,7 +131,7 @@ function read(k){ try{ return JSON.parse(localStorage.getItem('mojia.'+k)||'null
 function write(k,v){ localStorage.setItem('mojia.'+k,JSON.stringify(v)); }
 function deviceId(){ let id=read('device'); if(typeof id==='string'&&/^[0-9a-f]{32}$/.test(id)) return id;
   try{ const b=new Uint8Array(16); crypto.getRandomValues(b); id=[...b].map(x=>x.toString(16).padStart(2,'0')).join(''); write('device',id); return id; }catch(e){ return ''; } }
-function show(id){ ['rWork','rForm','rStop','rSave'].forEach(x=>{ $(x).hidden=x!==id; }); }
+function show(id){ ['rWork','rReady','rForm','rStop','rSave'].forEach(x=>{ $(x).hidden=x!==id; }); }
 /* MOJIABCDEFGHJKMN or MOJI-ABCD-EFGH-JKMN -> MOJI-ABCD-EFGH-JKMN */
 function norm(v){ const s=String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,''); const m=/^(MOJI|GIFT)([A-Z2-9]{8,16})$/.exec(s); if(!m||m[2].length%4) return ''; return m[1]+'-'+m[2].match(/.{4}/g).join('-'); }
 const rank=p=>p.k==='forever'?Infinity:p.e;
@@ -167,7 +174,11 @@ $('rCode').addEventListener('keydown',e=>{ if(e.key==='Enter') $('rGo').click();
 /* The code rides in the link from the email. Take it out of the address bar and history right away. */
 let fromLink=''; try{ fromLink=norm(decodeURIComponent(location.pathname.replace(/^\/r\/?/,''))); }catch(e){}
 try{ history.replaceState(null,'','/r/'); }catch(e){}
-if(fromLink) redeem(fromLink); else show('rForm');
+/* Release 1.2 #33: a link preview (Messages, chat apps) opens the page without a person.
+   Nothing redeems until a tap. A tap on the /g/ friend card a moment ago counts as that tap. */
+function tappedOnG(code){ try{ const t=JSON.parse(sessionStorage.getItem('mojia.tap')||'null'); sessionStorage.removeItem('mojia.tap'); return !!(t&&typeof t.c==='string'&&norm(t.c)===code&&Date.now()-t.t>=0&&Date.now()-t.t<120000); }catch(e){ return false; } }
+$('rTap').addEventListener('click',()=>{ if(fromLink) redeem(fromLink); else show('rForm'); });
+if(fromLink){ if(tappedOnG(fromLink)) redeem(fromLink); else show('rReady'); } else show('rForm');
 
 /* Contact form: stays in Mojialand, no email app. */
 let lastFocus=null;

@@ -2,7 +2,7 @@
 import { guard } from './_lib/env.mjs';
 import { json, fail, header, rawBody, originFromUrl, tail6 } from './_lib/http.mjs';
 import { claimEvent, releaseEvent, patchPass, safeErr } from './_lib/db.mjs';
-import { grantPass } from './_lib/grant.mjs';
+import { grantPass, isPaid } from './_lib/grant.mjs';
 import { getStripe } from './_lib/stripe.mjs';
 import { buildEmail, sendEmail } from './_lib/email.mjs';
 import { campaignHit } from './_lib/analytics.mjs';
@@ -85,7 +85,7 @@ export const handler = async (event) => {
 
   try {
     if (evt.type === 'checkout.session.completed' || evt.type === 'checkout.session.async_payment_succeeded') {
-      if (obj.payment_status === 'paid') {
+      if (isPaid(obj)) {
         let result;
         try { result = await grantPass(obj); } catch (e) {
           if (e && e.code === 'used') { console.log('stripe-webhook: checkout granted before, nothing new (' + tail6(evt.id) + ')'); return json(200, { received: true, used: true }); }

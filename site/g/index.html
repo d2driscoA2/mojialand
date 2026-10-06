@@ -36,7 +36,9 @@ a:focus-visible{outline:3px solid #4DBCEC;outline-offset:2px}
 <a id="go" href="/r/">Turn on my free 48 hours</a>
 <p class="s">Works once, on a device new to Mojialand.</p>
 <script>
-(function(){ var c=(location.pathname.split('/')[2]||'').replace(/[^A-Za-z0-9]/g,'').slice(0,20); document.getElementById('go').href='/r/'+c+location.search; })();
+(function(){ var c=(location.pathname.split('/')[2]||'').replace(/[^A-Za-z0-9]/g,'').slice(0,20), go=document.getElementById('go'); go.href='/r/'+c+location.search;
+  /* Release 1.2 #33: this tap is the person's tap, so /r/ turns the pass on without asking twice. */
+  go.addEventListener('click',function(){ try{ sessionStorage.setItem('mojia.tap',JSON.stringify({c:c,t:Date.now()})); }catch(e){} }); })();
 </script>
 </body>
 </html>
