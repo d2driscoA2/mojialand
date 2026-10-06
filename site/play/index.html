@@ -1189,7 +1189,7 @@ function confetti(host,x,y,n){ const cols=['#FF6FAE','#4CC9F0','#FFC83D','#8AE23
 
 /* ---------- play counts: game, city (added by the server), nothing about the child ---------- */
 const PS=(function(){
-  const GIDS=['pattern','bounce','match','parade','draw'], LRE=/^[a-z0-9][a-z0-9-]{1,23}$/, WEEK=7*864e5;
+  const GIDS=['pattern','bounce','match','parade','draw','share','feelings'], LRE=/^[a-z0-9][a-z0-9-]{1,23}$/, WEEK=7*864e5;
   const mode=()=>{ try{ return (matchMedia('(display-mode: standalone)').matches||navigator.standalone===true)?'app':'web'; }catch(e){ return 'web'; } };
   const slot=()=>Math.floor(Date.now()/300000);
   function send(o){ try{ const s=JSON.stringify(o); if(navigator.sendBeacon&&navigator.sendBeacon('/api/ping',new Blob([s],{type:'application/json'}))) return; fetch('/api/ping',{method:'POST',headers:{'Content-Type':'application/json'},body:s,keepalive:true,credentials:'same-origin'}).catch(()=>{}); }catch(e){} }

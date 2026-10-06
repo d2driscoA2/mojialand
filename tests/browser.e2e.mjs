@@ -16,7 +16,7 @@ import { liveView, historyView, campaignsView, lastDays } from '../netlify/funct
 // Admin analytics sample data, shaped by the real server code from fake database rows.
 async function analyticsSamples() {
   process.env.SUPABASE_URL = 'https://db.example.test'; process.env.SUPABASE_SERVICE_KEY = 'k';
-  const SLOT = 300e3, asOf = Math.floor(Date.now() / SLOT) * SLOT - SLOT, G = ['pattern', 'bounce', 'match', 'parade', 'draw'];
+  const SLOT = 300e3, asOf = Math.floor(Date.now() / SLOT) * SLOT - SLOT, G = ['pattern', 'bounce', 'match', 'parade', 'draw', 'share', 'feelings'];
   const PL = [['MI', 'Troy', 9], ['MI', 'Royal Oak', 7], ['MI', 'Ann Arbor', 8], ['MI', 'Detroit', 6], ['MI', 'Novi', 4], ['MI', 'Grand Rapids', 4], ['OH', 'Columbus', 3], ['OH', 'Toledo', 2], ['IN', 'Indianapolis', 3], ['IL', 'Chicago', 3], ['TX', 'Austin', 1], ['CA', 'Los Angeles', 1], ['NY', 'New York', 2], ['KS', 'Salina', 0.3], ['MI', 'Birmingham', 1.1], ['MI', 'Southfield', 1.1], ['MI', 'Farmington Hills', 1.1], ['MI', 'Rochester Hills', 1.1]];
   const live = [], days = [], hours = [];
   let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
@@ -875,7 +875,7 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   await page.waitForTimeout(300);
   check('analytics: live counter and map bubbles', Number((await page.textContent('#anTotal')).replace(/,/g, '')) === AN.live.total && (await page.locator('#anLiveMap .anBub').count()) === AN.live.cities.length + AN.live.counties.length && AN.live.cities.length > 0, AN.live.total + ' / ' + AN.live.cities.length + ' + ' + AN.live.counties.length);
   check('analytics: small places show as +N on the state, never by name', !JSON.stringify(AN).includes('Salina') && (await page.locator('#anLiveMap .anRoll').count()) >= 1);
-  check('analytics: live boards filled', (await page.locator('#anBusy .anRow').count()) >= 1 && (await page.locator('#anGames .anRow').count()) === 5 && (await page.locator('#anFeed .it').count()) >= 1);
+  check('analytics: live boards filled', (await page.locator('#anBusy .anRow').count()) >= 1 && (await page.locator('#anGames .anRow').count()) === 7 && (await page.locator('#anFeed .it').count()) >= 1);
   await page.focus('#anLiveMap .anBub');
   check('analytics: bubble tip shows counts by game', await page.isVisible('#anLiveMap .anTip') && /,\s*MI|,\s*[A-Z]{2}/.test(await page.textContent('#anLiveMap .anTip')));
   await page.waitForTimeout(1500);
@@ -1010,6 +1010,12 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   await page.waitForTimeout(200);
   check('counts: later games do not credit the campaign again', pings.filter((p) => p && p.e === 'open').length === 2 && !pings.filter((p) => p && p.e === 'open')[1].c);
   check('counts: pings carry no device or pass data', !JSON.stringify(pings).match(/device|token|MOJI-|restore/i));
+  // Release 1.3: Share Party and Feelings Faces count like the other games
+  for (const g of ['share', 'feelings']) {
+    await page.evaluate(() => { const b = document.querySelector('.screen:not(.hidden) [data-go="home"]'); if (b) b.click(); }); await page.waitForTimeout(200);
+    await page.evaluate((id) => document.querySelector('#s-home [data-go="' + id + '"]').click(), g); await page.waitForTimeout(300);
+    check('counts 1.3: opening ' + g + ' sends one open ping with the game id', pings.filter((p) => p && p.e === 'open' && p.g === g).length === 1);
+  }
   await page.goto(base + '/play/?c=mi-troy-lib-sep');
   await page.waitForTimeout(200);
   check('counts: scanning the same card again counts nothing', pings.filter((p) => p && p.e === 'camp').length === 1);

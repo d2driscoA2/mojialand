@@ -220,7 +220,7 @@ create table if not exists public.plays_hourly (
   country    text not null default '',
   state      text not null default '',
   city       text not null default '',
-  game       text not null check (game in ('pattern','bounce','match','parade','draw')),
+  game       text not null check (game in ('pattern','bounce','match','parade','draw','share','feelings')),
   mode       text not null check (mode in ('app','web')),
   opens      integer not null default 0,
   b0         integer not null default 0,
@@ -236,7 +236,7 @@ create table if not exists public.plays_live (
   country    text not null default '',
   state      text not null default '',
   city       text not null default '',
-  game       text not null check (game in ('pattern','bounce','match','parade','draw')),
+  game       text not null check (game in ('pattern','bounce','match','parade','draw','share','feelings')),
   n          integer not null default 0,
   primary key (slot_start, country, state, city, game)
 );

@@ -3,7 +3,9 @@
 import { rest, rateHit, safeErr } from './db.mjs';
 import { notify } from './push.mjs';
 
-export const GAMES = ['pattern', 'bounce', 'match', 'parade', 'draw'];
+// New games go at the end so saved charts keep their order. Release 1.3 added share and feelings
+// (supabase/release-1.3-games.sql must run on the database first).
+export const GAMES = ['pattern', 'bounce', 'match', 'parade', 'draw', 'share', 'feelings'];
 export const LABEL_RE = /^[a-z0-9][a-z0-9-]{1,23}$/;
 const EVENTS = ['open', 'beat', 'close', 'camp', 'first'];
 

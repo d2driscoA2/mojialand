@@ -765,6 +765,10 @@ test('analytics: geo keeps only country, state and city', () => {
   assert.equal(placeFromGeo({ city: '<b>Ann Arbor</b>' }).city, 'bAnn Arborb');
   assert.equal(readPing({ e: 'open', g: 'chess' }), null);
   assert.equal(readPing({ e: 'close', g: 'draw', b: 7 }), null);
+  // Release 1.3: the 2 new games count like the others
+  assert.deepEqual(readPing({ e: 'open', g: 'share', m: 'web' }), { e: 'open', g: 'share', m: 'web' });
+  assert.deepEqual(readPing({ e: 'close', g: 'feelings', m: 'app', b: 1 }), { e: 'close', g: 'feelings', m: 'app', b: 1 });
+  assert.equal(readPing({ e: 'open', g: 'bubble' }), null);
   assert.equal(readPing({ e: 'camp', c: 'BAD LABEL' }), null);
   assert.deepEqual(readPing({ e: 'open', g: 'draw', m: 'app', c: 'mi-troy-lib', cp: 1, name: 'Ava' }), { e: 'open', g: 'draw', m: 'app', c: 'mi-troy-lib' });
 });

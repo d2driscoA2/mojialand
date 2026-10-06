@@ -16,6 +16,8 @@
     { k: 'match', n: 'Match', e: '😊', c: '#FFC83D' },
     { k: 'parade', n: 'Parade', e: '🐶', c: '#72D69A' },
     { k: 'draw', n: 'Draw', e: '🖍️', c: '#7138D1' },
+    { k: 'share', n: 'Share Party', e: '🍰', c: '#5122A5' },
+    { k: 'feelings', n: 'Feelings Faces', e: '😀', c: '#FF8A3D' },
   ];
   const GI = Object.fromEntries(GAMES.map((g, i) => [g.k, i]));
   const CC = ['#FF5FA2', '#4DBCEC', '#FFC83D', '#72D69A', '#7138D1', '#F4565C', '#FF8A3D'];
