@@ -824,6 +824,7 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   await page.waitForSelector('#cLabels [data-label="lincoln-elem"]');
   await page.click('#cLabels [data-label="lincoln-elem"]');
   check('#2 admin: last labels offered as taps fill the batch label', (await page.inputValue('#cBatch')) === 'lincoln-elem');
+  check('#2 admin: batch label rule says event or school, never a family or a child (Security R1)', /Name the event or the school, never a family or a child\./.test(await page.textContent('[data-panel="codes"]')));
   await page.fill('#cBatch', '');
   await page.click('#cGo');
   await page.waitForSelector('#cOut:not([hidden])');
