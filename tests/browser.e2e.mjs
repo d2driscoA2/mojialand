@@ -1660,7 +1660,76 @@ for (const [w, h, name, rm] of [[390, 844, '390', false], [375, 667, 'se', true]
   const fin = await page.evaluate(() => { const t = [...document.querySelectorAll('#feelingsstage .hopper text')].map((e) => e.getBoundingClientRect()); let overlap = 0; for (let i = 0; i < t.length; i++) for (let j = i + 1; j < t.length; j++) { const a = t[i], b = t[j]; const ox = Math.min(a.right, b.right) - Math.max(a.left, b.left), oy = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top); if (ox > a.width * 0.2 && oy > a.height * 0.2) overlap++; } const sc = document.querySelector('#feelingsstage .scn').getBoundingClientRect(); const cut = t.filter((r) => r.left < sc.left - 1 || r.right > sc.right + 1).length; return { n: t.length, overlap, cut, saved: localStorage.getItem('mojia.feelRound') }; });
   check('1.3 feelings finale: 20 friends, none overlapping or cut off, progress resets to scene 1', fin.n === 20 && fin.overlap === 0 && fin.cut === 0 && fin.saved === '0', JSON.stringify(fin));
   await page.screenshot({ path: path.join(SHOTS, 'feelings-finale-390.png') });
+  // Shuffle A (Danny, October 7): after the first finale the next run mixes the 7 easy scenes, then the 13 harder ones.
+  const EASY = ['A', 'B', 'C', 'E', 'D', 'G', 'F'];
+  const run = await page.evaluate(() => JSON.parse(localStorage.getItem('mojia.feelOrder') || 'null'));
+  check('1.3 feelings shuffle: the finale saves a new run of all 20 scenes, easy 7 first, not opening on the first scene', Array.isArray(run) && run.length === 20 && new Set(run).size === 20 && run.slice(0, 7).every((k) => EASY.includes(k)) && run[0] !== 'A', JSON.stringify(run));
+  check('1.3 feelings shuffle: the finale counts one full run', (await page.evaluate(() => localStorage.getItem('mojia.feelRuns'))) === '1');
+  await page.dispatchEvent('#feelingsstage .again', 'pointerdown'); await page.waitForTimeout(400);
+  const first = await page.evaluate(() => document.querySelector('#feelingsstage .panel[data-b="1"]').textContent);
+  const STRIP1 = { A: '🐶🎈', B: '🦄🎉', C: '🦈🛏️', E: '🐱🎁', D: '🐵🧱', G: '🐰☀️', F: '🐻🍦' };
+  check('1.3 feelings shuffle: Play again opens the first scene of the new run', first === STRIP1[run[0]], first + ' vs ' + run[0]);
+  await page.click('#s-feelings [data-go="home"]'); await page.waitForTimeout(300);
+  await page.evaluate(() => { localStorage.setItem('mojia.feelOrder', JSON.stringify(['A', 'A'])); });
+  await page.reload(); await page.click('#splash'); await page.waitForTimeout(400);
+  await page.evaluate(() => document.querySelector('[data-go="feelings"]').click()); await page.waitForTimeout(400);
+  // This page always opens on scene 20 (feelRound 19). In the first-play order, scene 20 is Octopus.
+  check('1.3 feelings shuffle: a broken saved run falls back to the first-play order', (await page.evaluate(() => document.querySelector('#feelingsstage .panel[data-b="1"]').textContent)) === '🐙🛝', await page.evaluate(() => (document.querySelector('#feelingsstage .panel[data-b="1"]') || {}).textContent + ' glass:' + !document.querySelector('#glass').classList.contains('hidden')));
   check('1.3 feelings finale: no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
+  await ctx.close();
+}
+
+// 12g. Same-color rule (Danny, October 7): cards with the same color never touch, in any layout, even with 4 more games.
+for (const [w, h, name] of [[390, 844, 'phone'], [820, 1180, 'ipad'], [1180, 820, 'ipad-side']]) {
+  const { ctx, page } = await newPage({ viewport: { width: w, height: h } });
+  await page.addInitScript(() => { localStorage.setItem('mojia.demos', 'false'); localStorage.setItem('mojia.welcomed', 'true'); localStorage.setItem('mojia.played', JSON.stringify({ share: 1, feelings: 1 })); });
+  await page.goto(base + '/play/'); await page.click('#splash'); await page.waitForTimeout(400);
+  const touching = () => page.evaluate(() => {
+    const col = (e) => getComputedStyle(e).backgroundColor;
+    const feat = document.querySelector('#hfeat .hfeat'), fr = feat.getBoundingClientRect();
+    const cells = [...document.querySelectorAll('#hgrid .hcell')].map((e) => ({ id: e.dataset.go, c: col(e), r: e.getBoundingClientRect() }));
+    const bad = [];
+    const near = (a, b) => Math.max(a.left - b.right, b.left - a.right) < 30 && Math.max(a.top - b.bottom, b.top - a.bottom) < 30;
+    for (let i = 0; i < cells.length; i++) {
+      if (cells[i].c === col(feat) && near(cells[i].r, fr)) bad.push('featured+' + cells[i].id);
+      for (let j = i + 1; j < cells.length; j++) if (cells[i].c === cells[j].c && near(cells[i].r, cells[j].r)) bad.push(cells[i].id + '+' + cells[j].id);
+    }
+    return { n: cells.length, bad };
+  });
+  const now = await touching();
+  check('same-color rule ' + name + ': today\'s 6 grid cards, no matching colors touch', now.n === 6 && now.bad.length === 0, JSON.stringify(now));
+  await page.evaluate(() => document.querySelector('#s-home').scrollTop = 9999); await page.waitForTimeout(200);
+  await page.screenshot({ path: path.join(SHOTS, 'home-same-color-' + name + '.png') });
+  check('same-color rule ' + name + ': no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
+  await ctx.close();
+}
+// Same-color rule with 4 more games: run the page's own ordering code here and check every layout with a separate checker.
+{
+  const src = fs.readFileSync(path.join(ROOT, 'site/play/index.html'), 'utf8');
+  const grab = (name) => { const i = src.indexOf('function ' + name + '('); let d = 0, j = src.indexOf('{', i); for (; j < src.length; j++) { if (src[j] === '{') d++; else if (src[j] === '}' && --d === 0) break; } return src.slice(i, j + 1); };
+  const mod = new Function('cols', grab('homeColor') + grab('homeTouch') + grab('homeOrder') + 'function homeCols(){ return cols; } return homeOrder;');
+  const G = (id, fill) => ({ id, fill });
+  const today = [G('pattern', '#FF5FA2'), G('bounce', '#4DBCEC'), G('match', '#FFC83D'), G('parade', '#72D69A'), G('share', '#5122A5'), G('feelings', '#EDE6FB')];
+  const future = today.concat([G('x1', '#FF5FA2'), G('x2', '#FF5FA2'), G('x3', '#4DBCEC'), G('x4', '#5122A5')]);
+  const touches = (list, cols, feat) => { const bad = []; const c = (x) => x.fill.toUpperCase();
+    list.forEach((x, k) => { const r = Math.floor(k / cols), q = k % cols; if (r === 0 && c(x) === feat) bad.push('featured+' + x.id);
+      list.forEach((y, m) => { if (m <= k) return; const r2 = Math.floor(m / cols), q2 = m % cols; if (Math.abs(r - r2) <= 1 && Math.abs(q - q2) <= 1 && c(x) === c(y)) bad.push(x.id + '+' + y.id); }); });
+    return bad; };
+  check('same-color rule: the plain order of 10 future cards would break the rule (test is real)', touches(future, 2, '#7138D1').length > 0);
+  for (const cols of [2, 3]) {
+    const order = mod(cols)(future, '#7138D1');
+    check('same-color rule: 10 cards in ' + cols + ' columns, no matching colors touch', order.length === 10 && new Set(order.map((x) => x.id)).size === 10 && touches(order, 2, '#7138D1').length === 0 && touches(order, 3, '#7138D1').length === 0, order.map((x) => x.id).join(','));
+    check('same-color rule: today\'s 6 cards keep their order in ' + cols + ' columns', mod(cols)(today, '#7138D1').map((x) => x.id).join(',') === today.map((x) => x.id).join(','));
+  }
+}
+// Option B (Danny, October 7): Feelings Faces in Light Purple with Ink text and a white window. Share Party gets a white play button.
+{
+  const { ctx, page } = await newPage({ viewport: { width: 390, height: 844 } });
+  await page.addInitScript(() => { localStorage.setItem('mojia.demos', 'false'); localStorage.setItem('mojia.welcomed', 'true'); localStorage.setItem('mojia.played', JSON.stringify({ share: 1, feelings: 1 })); });
+  await page.goto(base + '/play/'); await page.click('#splash'); await page.waitForTimeout(400);
+  const t = await page.evaluate(() => { const f = document.querySelector('#hgrid [data-go="feelings"]'), s = document.querySelector('#hgrid [data-go="share"]'); return { fbg: getComputedStyle(f).backgroundColor, fwin: getComputedStyle(f.querySelector('.win')).backgroundColor, fname: getComputedStyle(f.querySelector('.nm b')).color, sbtn: getComputedStyle(s.querySelector('.hplay')).backgroundColor, sarrow: s.querySelector('.hplay path').getAttribute('fill') }; });
+  check('Option B: Feelings Faces card is Light Purple with a white window and Ink name', t.fbg === 'rgb(237, 230, 251)' && t.fwin === 'rgb(255, 255, 255)' && t.fname === 'rgb(48, 37, 74)', JSON.stringify(t));
+  check('Option B: Share Party play button is white with a Deep Purple arrow', t.sbtn === 'rgb(255, 255, 255)' && t.sarrow === '#5122A5', JSON.stringify(t));
   await ctx.close();
 }
 

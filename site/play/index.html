@@ -674,6 +674,10 @@ textarea.pw-in{resize:none;min-height:88px}
 /* Release 1.3: Share Party and Feelings Faces stages; the game modules inject their own styles under .g-share and .g-feelings. */
 .ngstage{background:var(--cream)}
 .hcell.dark .nm b,.hcell.dark .nm small{color:#FFFFFF}
+/* Dark tiles get a white play button; light tiles (Light Purple) get a soft edge and a white window (Danny, October 7, Option B). */
+.hcell.dark .hplay{background:#FFFFFF}
+.hcell.soft{box-shadow:0 0 0 2px #E9E2F7,0 8px 18px rgba(48,37,74,.14)}
+.hcell.soft .win{background:#FFFFFF}
 /* Wide screens held sideways (iPad, computer): stamp canvas and every emoji on the left, every game on the right, nothing below the fold.
    Columns split 1.618 to 1 (Danny, September 28: kids did not see the games or the emoji under the canvas). */
 @media (min-width:700px) and (orientation:landscape){
@@ -1300,7 +1304,7 @@ const HG=[
   {id:'match',name:'Match',fill:'#FFC83D',sub:'Find the pairs',medals:true},
   {id:'parade',name:'Parade',fill:'#72D69A',sub:'Follow the leader'},
   {id:'share',name:'Share Party',fill:'#5122A5',sub:'Fair shares for all',isNew:true,dark:true},
-  {id:'feelings',name:'Feelings Faces',fill:'#FFC83D',sub:'How do they feel?',isNew:true},
+  {id:'feelings',name:'Feelings Faces',fill:'#EDE6FB',sub:'How do they feel?',isNew:true,soft:true},
   {id:'draw',name:'Draw',fill:'#7138D1',sub:'Draw with your friends',isNew:true,alwaysNew:true}];
 const MEDALS=[['🥉','Bronze'],['🥈','Silver'],['🥇','Gold'],['🏆','Trophy'],['👑','Crown'],['🌈','Rainbow']];
 const PLAYSVG=c=>'<svg width="22" height="22" viewBox="0 0 20 20" aria-hidden="true"><path d="M6 3.5v13l11-6.5z" fill="'+c+'"></path></svg>';
@@ -1316,6 +1320,26 @@ function homeProg(id,medal,frac){ const p=store.get('homeProg',{}), o=p[id]||{me
 function homeNote(id){ if(!HG.some(g=>g.id===id)) return; const pl=store.get('played',{}); pl[id]=1; store.set('played',pl); store.set('lastGame',id); }
 function homeFeatured(){ const pl=store.get('played',{}); const fresh=HG.find(g=>g.isNew&&(g.alwaysNew||!pl[g.id])); if(fresh) return {g:fresh,isNew:true};
   const last=HG.find(g=>g.id===store.get('lastGame',''))||HG[0]; return {g:last,isNew:false,played:!!pl[last.id]}; }
+/* Same-color rule (Danny, October 7): two cards with the same color never touch, side by side, stacked or corner to corner.
+   The featured card counts as a neighbor of the first row. The order in HG holds; a card moves down only when it would touch
+   its twin. The order is checked for 2 columns (phone, iPad sideways) and 3 columns (iPad upright) at once, so turning
+   the iPad never breaks the rule. The Draw tile in the grid is white. Test: browser.e2e.mjs "same-color rule". */
+function homeColor(x){ return x.id==='draw'?'#FFFFFF':x.fill.toUpperCase(); }
+function homeTouch(order,k,cols,feat){ const c=homeColor(order[k]), r=Math.floor(k/cols), col=k%cols;
+  if(r===0&&feat&&feat.toUpperCase()===c) return true;
+  for(let j=0;j<k;j++){ const rj=Math.floor(j/cols), cj=j%cols; if(Math.abs(rj-r)<=1&&Math.abs(cj-col)<=1&&homeColor(order[j])===c) return true; }
+  return false; }
+function homeOrder(list,feat,colsSet){ colsSet=colsSet||[2,3];
+  /* Search for the order closest to HG: try cards in HG order at each spot and step back on a dead end. */
+  const search=cs=>{ const out=[], used=list.map(()=>false); let steps=0;
+    const fill=()=>{ if(out.length===list.length) return true; if(++steps>20000) return false;
+      for(let i=0;i<list.length;i++){ if(used[i]) continue; out.push(list[i]);
+        if(!cs.some(c=>homeTouch(out,out.length-1,c,feat))){ used[i]=true; if(fill()) return true; used[i]=false; }
+        out.pop(); }
+      return false; };
+    return fill()?out:null; };
+  return search(colsSet)||search([homeCols()])||list; }
+function homeCols(){ return matchMedia('(min-width:700px) and (orientation:portrait)').matches?3:2; }
 function homeRender(){ const f=homeFeatured(), prog=store.get('homeProg',{}), g=f.g, dark=f.isNew||g.fill==='#7138D1'||!!g.dark;
   let mid='';
   if(!f.isNew&&g.medals){ const p=prog[g.id]||{medal:-1,frac:0}, have=p.medal, nxt=Math.min(MEDALS.length-1,have+1), on=Math.round(p.frac*6);
@@ -1323,13 +1347,13 @@ function homeRender(){ const f=homeFeatured(), prog=store.get('homeProg',{}), g=
   else mid='<div class="hsub" style="color:'+(dark?'#FFFFFF':'var(--ink)')+'">'+g.sub+'</div>';
   const chip=f.isNew?'<span class="hchip" style="background:#FFC83D;color:#30254A">New!</span>':'<span class="hchip" style="background:'+(dark?'#FFC83D':'#7138D1')+';color:'+(dark?'#30254A':'#FFFFFF')+'">'+(f.played?'Keep playing':'Play')+'</span>';
   $('#hfeat').innerHTML='<button class="htile hfeat" data-go="'+g.id+'" aria-label="'+g.name+'" style="background:'+(f.isNew?'#7138D1':g.fill)+'"><span class="win"><div>'+homeScene(g.id)+'</div></span><span class="col">'+chip+'<span class="hname" style="color:'+(dark?'#FFFFFF':'var(--ink)')+'">'+g.name+'</span>'+mid+'<span class="hplayrow"><span class="hplay big'+(dark?' inv':'')+'">'+PLAYSVG(dark?'#7138D1':'#FFFFFF')+'</span></span></span></button>';
-  $('#hgrid').innerHTML=HG.filter(x=>x.id!==g.id).map((x,i)=>{ const p=prog[x.id], medal=x.medals&&p&&p.medal>=0?MEDALS[p.medal][0]+' '+MEDALS[p.medal][1]:'', white=x.id==='draw';
-    return '<button class="htile hcell'+(white?' white':'')+(x.dark?' dark':'')+'" data-go="'+x.id+'" aria-label="'+x.name+'" style="'+(white?'':'background:'+x.fill)+'"><span class="win">'+homeScene(x.id)+'</span><span class="hrow"><span class="nm"><b>'+x.name+'</b>'+(medal?'<small>'+medal+'</small>':'')+'</span><span class="hplay sm" style="animation-delay:'+((i+1)*.5)+'s">'+PLAYSVG('#FFFFFF')+'</span></span></button>'; }).join(''); }
+  $('#hgrid').innerHTML=homeOrder(HG.filter(x=>x.id!==g.id),f.isNew?'#7138D1':g.fill).map((x,i)=>{ const p=prog[x.id], medal=x.medals&&p&&p.medal>=0?MEDALS[p.medal][0]+' '+MEDALS[p.medal][1]:'', white=x.id==='draw';
+    return '<button class="htile hcell'+(white?' white':'')+(x.dark?' dark':'')+(x.soft?' soft':'')+'" data-go="'+x.id+'" aria-label="'+x.name+'" style="'+(white?'':'background:'+x.fill)+'"><span class="win">'+homeScene(x.id)+'</span><span class="hrow"><span class="nm"><b>'+x.name+'</b>'+(medal?'<small>'+medal+'</small>':'')+'</span><span class="hplay sm" style="animation-delay:'+((i+1)*.5)+'s">'+PLAYSVG(x.dark?x.fill:'#FFFFFF')+'</span></span></button>'; }).join(''); }
 /* The stamp canvas fills the first screen; the featured card peeks 96 px at the bottom edge so kids see more games below. */
 function homeSize(){ const sc=$('#s-home'); if(!sc||sc.classList.contains('hidden')) return; if(matchMedia('(min-width:700px) and (orientation:landscape)').matches){ $('#canvas').style.height=''; return; } const cs=getComputedStyle(sc), gap=parseFloat(cs.rowGap)||14, H=sc.clientHeight-parseFloat(cs.paddingTop);
   const h=Math.max(240,Math.round(H-$('.homehead').offsetHeight-$('#tray').offsetHeight-gap*3-96)); $('#canvas').style.height=h+'px'; }
 function homeRefresh(){ homeRender(); homeSize(); $('#s-home').scrollTop=0; }
-window.addEventListener('resize',homeSize); addEventListener('orientationchange',()=>setTimeout(homeSize,300));
+let homeLastCols=homeCols(); window.addEventListener('resize',()=>{ const c=homeCols(); if(c!==homeLastCols){ homeLastCols=c; homeRender(); } homeSize(); }); addEventListener('orientationchange',()=>setTimeout(homeSize,300));
 homeRender(); requestAnimationFrame(homeSize);
 
 
@@ -3540,6 +3564,18 @@ const NGA=(function(){
   SCENES.length = 0; ORDER.forEach(k=>SCENES.push(ALL.find(x=>x.key===k)));
   const SHOT = { A:3200, B:3300, C:1950, D:3700, E:2500, F:2900, G:2600 };
   SCENES.forEach(sc=>{ if(!sc.shot) sc.shot = SHOT[sc.key]; });
+  /* Shuffle (Danny, October 7, option A): the first full play runs in ORDER. After the first finale, every new run
+     shuffles the 7 easy scenes, then the 13 harder ones, and never opens with the scene the last run opened with.
+     The run order is saved on this device so a kid resumes the same run after leaving. */
+  const EASY = 7;
+  function mix(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+  function useOrder(keys){ const list = keys.map(k=>ALL.find(x=>x.key===k)); SCENES.length = 0; list.forEach(x=>SCENES.push(x)); }
+  function newRun(){ const prev = SCENES[0] && SCENES[0].key; let keys;
+    do { keys = mix(ORDER.slice(0,EASY)).concat(mix(ORDER.slice(EASY))); } while(keys[0] === prev);
+    store.set("feelOrder", keys); useOrder(keys); }
+  function savedRun(){ const k = store.get("feelOrder", null);
+    if(Array.isArray(k) && k.length === ORDER.length && ORDER.every(x=>k.includes(x))) useOrder(k); else useOrder(ORDER); }
+  savedRun();
 
   const CSS = `
 .g-feelings{background:#FFF8E8;color:#30254A}
@@ -4206,8 +4242,10 @@ const NGA=(function(){
         token++; clearTimers(); setPhase("end");
         dots(); stripEl.innerHTML = ""; beatScene = null;
         store.set("feelRound", 0);
-        cam.x = 200; cam.y = 150; cam.z = 1;
+        store.set("feelRuns", (store.get("feelRuns", 0)|0) + 1);
         const gang = SCENES.map(x=>x.who);
+        newRun();
+        cam.x = 200; cam.y = 150; cam.z = 1;
         scnEl.innerHTML = "";
         svg = makeSVG({key:"Z", feel:"none"}, `
           <defs><linearGradient id="gfZ" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8ED8F8"/><stop offset="1" stop-color="#E9F8FF"/></linearGradient></defs>
