@@ -721,6 +721,19 @@ test('admin-api: needs the cookie; passes, codes, support, settings', async () =
   assert.ok(!JSON.stringify(db.passes).includes(d.code) && !JSON.stringify(db.passes).includes(d.code.replace(/-/g, '')));
   const rr = await redeemFn(ev({ code: d.code, device_id: 'b'.repeat(32) }));
   assert.equal(rr.statusCode, 200);
+  // Release 1.3 #16: a lost unused code is cancelled and replaced with the same settings; used codes are refused
+  [st, d] = await A('codes.create', { kind: 'forever', source: 'gift', days_valid: 45, note: 'aunt', batch: 'lincoln-elem' });
+  { const oldCode = d.code, oldId = d.pass.id;
+    const [s3, r3] = await A('codes.replace', { id: oldId });
+    assert.equal(s3, 200); assert.match(r3.code, /^GIFT-/); assert.notEqual(r3.code, oldCode);
+    assert.equal(r3.old.status, 'ended'); assert.match(r3.old.note, /replaced by/);
+    assert.equal(r3.pass.kind, 'forever'); assert.equal(r3.pass.note, 'aunt'); assert.equal(r3.pass.batch, 'lincoln-elem'); assert.equal(r3.pass.status, 'unused');
+    assert.ok(Math.abs(new Date(r3.pass.use_by) - Date.now() - 45 * 864e5) < 864e5, 'same use-by window');
+    assert.equal((await redeemFn(ev({ code: oldCode, device_id: 'c'.repeat(32) }))).statusCode !== 200, true, 'the old code no longer works');
+    assert.equal((await redeemFn(ev({ code: r3.code, device_id: 'd'.repeat(32) }))).statusCode, 200, 'the new code works');
+    assert.ok(!JSON.stringify(db.passes).includes(r3.code), 'new code never stored');
+    const [s4] = await A('codes.replace', { id: r3.pass.id }); assert.equal(s4, 400, 'a used code cannot be replaced');
+    const [s5] = await A('codes.replace', { id: pass.id }); assert.equal(s5, 400, 'a paid pass cannot be replaced'); }
   // batch for printed cards
   [st, d] = await A('codes.batch', { kind: '48h', source: 'gift', days_valid: 365, note: 'school', count: 7 });
   assert.equal(st, 200); assert.equal(d.codes.length, 7); assert.equal(new Set(d.codes.map((c) => c.code)).size, 7);

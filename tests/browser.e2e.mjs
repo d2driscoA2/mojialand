@@ -830,6 +830,16 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   await page.waitForSelector('#cOut:not([hidden])');
   check('admin: gift code shown once with a /r/ link', (await page.textContent('#cCode')) === 'GIFT-ABCD-EFGH-JKMN' && (await page.getAttribute('#cLink', 'href')).endsWith('/r/GIFTABCDEFGHJKMN'));
   check('admin: share row with Text and Email links carrying the code', /GIFT-ABCD-EFGH-JKMN/.test(decodeURIComponent(await page.getAttribute('#cSms', 'href'))) && /r\/GIFTABCDEFGHJKMN/.test(decodeURIComponent(await page.getAttribute('#cMail', 'href'))) && await page.isVisible('#cShare [data-share="share"]'));
+  // Release 1.3 #16: result card with settings; Done waits for a save; Make a code waits for Done
+  check('#16 admin: result card names kind, reason and use-by; Done is gray', /48 hours · Gift/.test(await page.textContent('#cMeta')) && await page.isDisabled('#cDone') && await page.isDisabled('#cGo'));
+  await page.screenshot({ path: path.join(SHOTS, 'admin-code-card.png') });
+  await page.check('#cSaved');
+  check('#16 admin: I saved it turns Done on', await page.isEnabled('#cDone'));
+  await page.click('#cDone');
+  check('#16 admin: Done closes the card and turns Make a code back on', await page.isHidden('#cOut') && await page.isEnabled('#cGo') && (await page.textContent('#cCode')) === '');
+  await page.click('#cHist'); await page.waitForTimeout(200);
+  check('#16 admin: Code history opens Passes, Gifts', bodiesBy['passes.list'].tab === 'gifts' && !(await page.isHidden('[data-panel="passes"]')));
+  await page.click('[data-tab="codes"]');
   await page.fill('#cBatch', 'lincoln-elem');
   await page.fill('#bCards', '4'); await page.click('#bGo');
   await page.waitForSelector('#bOut:not([hidden])');
@@ -1865,6 +1875,28 @@ for (const [w, h, name] of [[390, 844, 'phone'], [820, 1180, 'ipad'], [1180, 820
   const home = fs.readFileSync(path.join(site, 'index.html'), 'utf8');
   check('#21 the safety line sits in the website lede', home.includes('No accounts. No ads. No chat. Nothing collected from your child.</p>'));
   check('#22 FAQ refund sentence', home.includes('Something went wrong? Tell us within 7 days of buying what happened, with the email you used at checkout, and we will make it right, including a refund.') && !home.includes('we refund the full amount'));
+}
+// Release 1.3 #16: lost gift code, Cancel and replace from Passes, Gifts
+{
+  const { ctx, page } = await newPage({ viewport: { width: 390, height: 844 } });
+  page.on('dialog', (d) => d.accept());
+  await page.route('**/.netlify/functions/admin-login', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '{"signed_in":true}' }));
+  const now = new Date().toISOString(), useBy = new Date(Date.now() + 60 * 864e5).toISOString();
+  const gift = { id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', code_last4: 'QR7T', prefix: 'GIFT', kind: 'forever', source: 'gift', email: null, created_at: now, use_by: useBy, device_limit: 5, status: 'unused', note: 'Aunt Jo', batch: null, devices: 0 };
+  const used = { ...gift, id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', code_last4: 'ZZ22', status: 'active' };
+  const calls = [];
+  await page.route('**/.netlify/functions/admin-api', (r) => { const b = r.request().postDataJSON(); calls.push(b);
+    const o = { 'passes.list': { passes: [gift, used] }, 'codes.labels': { labels: [] }, 'codes.replace': { code: 'GIFT-NEWC-ODEA-BC34', pass: { ...gift, id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', code_last4: 'BC34' }, old: { ...gift, status: 'ended', note: 'Aunt Jo · cancelled, replaced by BC34' } } }[b.action] || {};
+    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(o) }); });
+  await page.goto(base + '/admin/'); await page.waitForSelector('#pList .item');
+  check('#16 admin: Cancel and replace shows on an unused gift code only', (await page.locator('#pList [data-act="codes.replace"]').count()) === 1 && (await page.locator('.item[data-id="' + gift.id + '"] [data-act="codes.replace"]').count()) === 1);
+  await page.click('#pList [data-act="codes.replace"]');
+  await page.waitForSelector('#cOut:not([hidden])');
+  check('#16 admin: replace sends the old id; the new code shows once with the same settings', calls.some((c) => c.action === 'codes.replace' && c.id === gift.id) && (await page.textContent('#cCode')) === 'GIFT-NEWC-ODEA-BC34' && /Forever · Gift · Note: Aunt Jo/.test(await page.textContent('#cMeta')) && /Replacement code/.test(await page.textContent('#cHead')));
+  check('#16 admin: the message names a Forever pass', /free Forever pass/.test(decodeURIComponent(await page.getAttribute('#cSms', 'href'))));
+  await page.screenshot({ path: path.join(SHOTS, 'admin-code-replace-390.png'), fullPage: true });
+  check('#16 admin: no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
+  await ctx.close();
 }
 // Release 1.3 #49: a new release reloads the Home Screen app once, only on the home screen
 {

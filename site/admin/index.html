@@ -78,6 +78,11 @@ textarea{resize:vertical;min-height:80px}
 .small{font-size:12px}
 @media (max-width:520px){.card{padding:16px;border-radius:20px}}
 .share{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 10px}
+/* Release 1.3 #16: result card after Make a code */
+.rescard{border:2px solid var(--deep);border-radius:18px;padding:14px;margin-top:12px;background:#fff}
+.rescard a{overflow-wrap:anywhere}
+.rescard .saved{display:flex;align-items:center;gap:8px;font-weight:800;margin:6px 0}
+.rescard .saved input{width:22px;height:22px}
 .codelist{display:grid;gap:6px;margin-top:10px}
 .codelist div{display:flex;justify-content:space-between;align-items:center;gap:8px;border:2px solid var(--line);border-radius:12px;padding:6px 10px;font:900 15px ui-monospace,Menlo,Consolas,monospace;color:var(--deep)}
 .codelist div .acts{display:flex;gap:6px}.codelist div button{min-height:36px;padding:4px 10px;font-size:12px}
@@ -151,7 +156,7 @@ textarea{resize:vertical;min-height:80px}
 
   <section class="card" data-panel="codes" hidden>
     <h2>Gift and support codes</h2>
-    <p>One code turns on one family's pass, on up to 5 devices. It starts the first time it is used. The code shows once here and is never stored.</p>
+    <p>One code turns on one family's pass, on up to 5 devices. It starts the first time it is used. The code shows once here and is never stored. <button class="textbtn" id="cHist" type="button">Code history</button></p>
     <div class="row">
       <label>Kind<select id="cKind"><option value="48h">48 hours</option><option value="forever">Forever</option></select></label>
       <label>Reason<select id="cSource"><option value="gift">Gift</option><option value="support">Support (something went wrong)</option></select></label>
@@ -163,8 +168,10 @@ textarea{resize:vertical;min-height:80px}
     <p style="margin-top:6px"><b>Name the event or the school, never a family or a child.</b> Lowercase letters, numbers and dashes. Codes with a label count under Passes, Campaigns and schools. Used for single codes and printed cards.</p>
     <div class="row" style="margin-top:12px"><button class="primary" id="cGo" type="button">Make a code</button></div>
     <p class="err" id="cErr"></p>
-    <div id="cOut" hidden>
+    <div id="cOut" class="rescard" hidden role="region" aria-label="Your new code">
+      <b id="cHead">Your new code. Save or share it now: it shows only once.</b>
       <div class="codebox" id="cCode"></div>
+      <div class="meta" id="cMeta"></div>
       <div class="share" id="cShare">
         <button class="primary" type="button" data-share="share">Share…</button>
         <button class="secondary" type="button" data-share="copylink">Copy link</button>
@@ -175,6 +182,8 @@ textarea{resize:vertical;min-height:80px}
       <p class="ok" id="cOk"></p>
       <p>Share… opens your phone's share sheet: Messages, Mail, AirDrop to a phone next to you, and more. The link turns Mojialand on in one tap: <a id="cLink" href="#"></a></p>
       <p>Typed by hand: open Mojialand, tap Grown-ups, answer the number question, tap Have a code?</p>
+      <label class="saved"><input type="checkbox" id="cSaved"> I saved it</label>
+      <div class="row"><button class="primary" id="cDone" type="button" disabled>Done</button><span class="meta" id="cDoneHint">Share, copy, text, email, or tick I saved it first.</span></div>
     </div>
     <h2 style="margin-top:22px">Printable cards</h2>
     <p>Business cards, 10 to a letter sheet, 3 passes on each card. Every code is its own family pass with a QR code and the link. Use the kind, reason and use-by days above. The codes show once, here and on the sheet.</p>
@@ -292,9 +301,9 @@ function passItem(p){ const st=p.status; const ends=p.kind==='forever'?'Forever'
   return '<div class="item" data-id="'+esc(p.id)+'"'+(mail?' data-mail="'+esc(maskMail(p.email))+'"':'')+'><div class="top"><b>'+esc(p.prefix)+'-…'+esc(p.code_last4)+' · '+(p.kind==='forever'?'Forever':'48h')+'</b><span class="pill '+esc(st)+'">'+esc(st)+'</span></div>'
     +'<div class="meta">'+esc(p.email||'(no email)')+' · '+esc(p.source)+(p.amount_cents?' · '+money(p.amount_cents):'')+' · made '+fmt(p.created_at)+'</div>'
     +'<div class="meta">'+esc(ends)+(p.use_by&&st==='unused'?' · use by '+fmt(p.use_by):'')+(typeof p.devices==='number'?' · '+p.devices+' of '+p.device_limit+' devices':'')+(p.stripe_session_id?' · '+esc(p.stripe_session_id):'')+'</div>'
-    +(p.note?'<div class="meta">Note: '+esc(p.note)+'</div>':'')
+    +(p.batch?'<div class="meta">Batch: '+esc(p.batch)+'</div>':'')+(p.note?'<div class="meta">Note: '+esc(p.note)+'</div>':'')
     +'<div class="acts">'+(p.kind!=='forever'?'<button class="secondary" data-act="passes.add48">Add 48 hours</button><button class="secondary" data-act="passes.forever">Make Forever</button>':'')
-    +(p.source==='stripe'&&p.stripe_session_id?'<button class="secondary" data-act="passes.code">Show code</button><button class="secondary" data-act="passes.email">Email code</button>':'')+'<button class="secondary" data-act="passes.devices_reset">Reset devices</button><button class="secondary" data-act="note">Note</button>'
+    +(p.source==='stripe'&&p.stripe_session_id?'<button class="secondary" data-act="passes.code">Show code</button><button class="secondary" data-act="passes.email">Email code</button>':'')+(st==='unused'&&p.prefix==='GIFT'&&(p.source==='gift'||p.source==='support')?'<button class="secondary" data-act="codes.replace">Lost code? Cancel and replace</button>':'')+'<button class="secondary" data-act="passes.devices_reset">Reset devices</button><button class="secondary" data-act="note">Note</button>'
     +(st==='active'?'<button class="danger" data-act="passes.end">End pass</button>':'')+(p.source==='stripe'&&p.stripe_session_id&&st!=='refunded'?'<button class="danger" data-act="passes.refund">Refund</button>':'')+'</div></div>'; }
 /* Release 1.2 #2: tabs, sort, Campaigns and schools. Counts cards, never people. */
 let pTab='all', pBatch='';
@@ -335,6 +344,11 @@ $('pList').addEventListener('click',async e=>{ const cp=e.target.closest('[data-
   else if(act==='passes.refund'&&!confirm('Refund the full '+(item.textContent.match(/\$\d+\.\d\d/)||['amount'])[0]+' to the card and end this pass? Add 48 hours and upgrade payments are separate; refund those in Stripe.')) return;
   else if(act==='passes.devices_reset'&&!confirm('Forget every device on this pass? The family taps the email button or types the code again on each device.')) return;
   else if(act==='passes.email'){ const t=prompt('Send the code email to which address? Use the parent\'s real email if the one on file is a Hide My Email address.',((item.querySelector('.meta')||{}).textContent||'').split(' · ')[0].replace('(no email)','')); if(t===null) return; extra.to=t.trim(); }
+  if(act==='codes.replace'){ if(made){ $('pErr').textContent='Finish the open code card under Codes first (Done).'; return; }
+    if(!confirm('Cancel code …'+(item.querySelector('.top b').textContent.split('…')[1]||'').split(' ')[0]+' and make a new code with the same settings? The old code stops working now.')) return;
+    b.disabled=true; try{ const d=await api('codes.replace',{id:id}); item.outerHTML=passItem(d.old);
+      document.querySelector('#tabs [data-tab="codes"]').click(); showMade(d.code,{kind:d.pass.kind,source:d.pass.source,note:d.pass.note,batch:d.pass.batch,use_by:d.pass.use_by},'Replacement code. The old code is cancelled. Save or share this one now: it shows only once.'); $('cOut').scrollIntoView({block:'center'}); }
+    catch(err){ $('pErr').textContent=err.message; b.disabled=false; } return; }
   if(act==='passes.code'){ b.disabled=true; try{ const d=await api('passes.code',extra); let box=item.querySelector('.codebox'); if(!box){ box=document.createElement('div'); box.className='meta codebox'; item.insertBefore(box,item.querySelector('.acts')); }
       box.innerHTML='Code: <b class="codeval">'+esc(d.code)+'</b> <button class="secondary" type="button" data-copy="'+esc(d.code)+'">Copy code</button> <button class="secondary" type="button" data-copy="'+esc(d.link)+'">Copy link</button>'; }
     catch(err){ $('pErr').textContent=err.message; } b.disabled=false; return; }
@@ -343,11 +357,27 @@ $('pList').addEventListener('click',async e=>{ const cp=e.target.closest('[data-
   catch(err){ $('pErr').textContent=err.message; b.disabled=false; } });
 
 /* ---- codes */
-$('cGo').addEventListener('click',async()=>{ const b=$('cGo'); b.disabled=true; $('cErr').textContent=''; $('cOut').hidden=true;
+/* Release 1.3 #16 (Danny, October 7): codes stay unrecoverable. The result card names the code's settings and stays
+   until Done. Done unlocks after Share, Copy, Text, Email, or I saved it. Make a code waits until Done, and leaving
+   the page asks first, so a code never disappears unsaved. A lost code: Passes, Gifts, Cancel and replace. */
+let made=null;
+const KINDN={'48h':'48 hours',forever:'Forever'}, SRCN={gift:'Gift',support:'Support'};
+function showMade(code,info,head){ made={code,kind:info.kind,label:info.batch||'',saved:false};
+  lastLabel=made.label; $('cHead').textContent=head||'Your new code. Save or share it now: it shows only once.';
+  $('cCode').textContent=code; const link=linkFor(code); $('cLink').textContent=link; $('cLink').href=link; setShareLinks(code);
+  $('cMeta').innerHTML=[KINDN[info.kind]||info.kind,SRCN[info.source]||info.source,info.note?'Note: '+esc(info.note):'',info.batch?'Batch: '+esc(info.batch):'',info.use_by?'Use by '+fmt(info.use_by):''].filter(Boolean).join(' · ');
+  $('cOk').textContent=''; $('cSaved').checked=false; $('cDone').disabled=true; $('cDoneHint').hidden=false; $('cGo').disabled=true; $('cOut').hidden=false; }
+function markSaved(){ if(!made) return; made.saved=true; $('cDone').disabled=false; $('cDoneHint').hidden=true; }
+$('cSaved').addEventListener('change',()=>{ if($('cSaved').checked) markSaved(); });
+$('cSms').addEventListener('click',markSaved); $('cMail').addEventListener('click',markSaved);
+$('cDone').addEventListener('click',()=>{ if(!made||!made.saved) return; made=null; $('cOut').hidden=true; $('cCode').textContent=''; $('cGo').disabled=false; $('cOk').textContent=''; $('cErr').textContent=''; });
+addEventListener('beforeunload',e=>{ if(made&&!made.saved){ e.preventDefault(); e.returnValue=''; } });
+$('cGo').addEventListener('click',async()=>{ if(made) return; const b=$('cGo'); b.disabled=true; $('cErr').textContent='';
   try{ const lb=curLabel(); const d=await api('codes.create',{kind:$('cKind').value,source:$('cSource').value,days_valid:$('cDays').value,note:$('cNote').value,batch:lb});
-    lastLabel=lb; loadLabels(); $('cCode').textContent=d.code; const link=linkFor(d.code); $('cLink').textContent=link; $('cLink').href=link; setShareLinks(d.code); $('cOk').textContent=''; $('cOut').hidden=false; $('cNote').value=''; }
+    loadLabels(); showMade(d.code,{kind:(d.pass&&d.pass.kind)||$('cKind').value,source:(d.pass&&d.pass.source)||$('cSource').value,note:(d.pass&&d.pass.note)||$('cNote').value,batch:(d.pass&&d.pass.batch)||lb,use_by:d.pass&&d.pass.use_by}); $('cNote').value=''; return; }
   catch(e){ $('cErr').textContent=e.message; }
   b.disabled=false; });
+$('cHist').addEventListener('click',()=>{ document.querySelector('#tabs [data-tab="passes"]').click(); document.querySelector('#pTabs [data-ptab="gifts"]').click(); });
 
 /* ---- share a code */
 let lastLabel='';
@@ -356,12 +386,13 @@ const curLabel=()=>$('cBatch').value.trim().toLowerCase();
 const linkFor=(c,lb)=>location.origin+'/r/'+c.replace(/-/g,'')+((lb===undefined?lastLabel:lb)?'?c='+encodeURIComponent(lb===undefined?lastLabel:lb):'');
 async function loadLabels(){ try{ const d=await api('codes.labels',{}); $('cLabels').innerHTML=d.labels.map(l=>'<button class="secondary" type="button" data-label="'+esc(l)+'">'+esc(l)+'</button>').join(''); }catch(e){} }
 $('cLabels').addEventListener('click',e=>{ const b=e.target.closest('[data-label]'); if(b) $('cBatch').value=b.dataset.label; });
-const msgFor=c=>'A Mojialand gift: a free '+($('cKind').value==='forever'?'Forever':'48-hour')+' pass for your family. Tap to turn it on: '+linkFor(c)+' Or open Mojialand, tap Grown-ups, then Have a code? and type '+c;
+const msgFor=c=>'A Mojialand gift: a free '+(((made&&made.kind)||$('cKind').value)==='forever'?'Forever':'48-hour')+' pass for your family. Tap to turn it on: '+linkFor(c)+' Or open Mojialand, tap Grown-ups, then Have a code? and type '+c;
 async function copy(t){ try{ await navigator.clipboard.writeText(t); return true; }catch(e){ return false; } }
 $('cShare').addEventListener('click',async e=>{ const b=e.target.closest('[data-share]'); if(!b) return; const c=$('cCode').textContent; $('cOk').textContent='';
-  if(b.dataset.share==='share'){ if(navigator.share){ try{ await navigator.share({title:'Mojialand gift pass',text:msgFor(c),url:linkFor(c)}); }catch(err){} } else { $('cOk').textContent=(await copy(msgFor(c)))?'Copied the message. This computer has no share sheet; paste it anywhere.':'Copy failed.'; } }
-  else if(b.dataset.share==='copylink'){ $('cOk').textContent=(await copy(linkFor(c)))?'Link copied.':'Copy failed.'; }
-  else if(b.dataset.share==='copycode'){ $('cOk').textContent=(await copy(c))?'Code copied.':'Copy failed.'; } });
+  if(b.dataset.share==='share'){ if(navigator.share){ try{ await navigator.share({title:'Mojialand gift pass',text:msgFor(c),url:linkFor(c)}); markSaved(); }catch(err){} } else { $('cOk').textContent=(await copy(msgFor(c)))?'Copied the message. This computer has no share sheet; paste it anywhere.':'Copy failed.'; } }
+  else if(b.dataset.share==='copylink'){ const ok=await copy(linkFor(c)); $('cOk').textContent=ok?'Link copied.':'Copy failed.'; if(ok) markSaved(); }
+  else if(b.dataset.share==='copycode'){ const ok=await copy(c); $('cOk').textContent=ok?'Code copied.':'Copy failed.'; if(ok) markSaved(); }
+  if(b.dataset.share==='share'&&!navigator.share&&/Copied/.test($('cOk').textContent)) markSaved(); });
 function setShareLinks(c){ $('cSms').href='sms:?&body='+encodeURIComponent(msgFor(c)); $('cMail').href='mailto:?subject='+encodeURIComponent('A Mojialand gift pass')+'&body='+encodeURIComponent(msgFor(c)); }
 
 /* ---- printable cards */

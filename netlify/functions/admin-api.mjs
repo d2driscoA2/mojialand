@@ -243,6 +243,22 @@ const actions = {
     return { code, pass };
   },
 
+  // Release 1.3 #16: a lost gift or support code. Cancels the unused code and makes a new one with the same
+  // kind, reason, note, batch, and use-by window. Codes stay unrecoverable: the new code shows once, like any other.
+  async 'codes.replace'({ id }) {
+    if (!UUID.test(String(id || ''))) throw new Error('bad id');
+    const old = await passWithDevices(id);
+    if (!old) throw new Error('code not found');
+    if (old.prefix !== 'GIFT' || (old.source !== 'gift' && old.source !== 'support')) throw new Error('only gift and support codes can be replaced');
+    if (old.status !== 'unused') throw new Error(old.status === 'active' ? 'this code is already turned on; use Reset devices instead' : 'this code is no longer open');
+    const span = old.use_by && old.created_at ? Math.round((new Date(old.use_by).getTime() - new Date(old.created_at).getTime()) / DAY) : 90;
+    const rows = await patchPass('id=eq.' + enc(id) + '&status=eq.unused', { status: 'ended', ends_at: new Date().toISOString() });
+    if (Array.isArray(rows) && rows.length === 0) throw new Error('this code was just turned on; use Reset devices instead');
+    const made = await actions['codes.create']({ kind: old.kind, source: old.source, days_valid: span, note: old.note, batch: old.batch }, null, { ensured: true });
+    await patchPass('id=eq.' + enc(id), { note: ((old.note ? old.note + ' · ' : '') + 'cancelled, replaced by ' + made.code.slice(-4) + ' on ' + new Date().toISOString().slice(0, 10)).slice(0, 500) });
+    return { code: made.code, pass: made.pass, old: await passWithDevices(id) };
+  },
+
   // Many codes at once, for printed cards. Up to 30 per call (function time limit); the page loops for more.
   async 'codes.batch'({ kind, source, days_valid, note, count, batch }) {
     const n = Math.min(30, Math.max(1, parseInt(count, 10) || 1));
