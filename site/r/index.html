@@ -176,7 +176,7 @@ let fromLink=''; try{ fromLink=norm(decodeURIComponent(location.pathname.replace
 try{ history.replaceState(null,'','/r/'); }catch(e){}
 /* Release 1.2 #33: a link preview (Messages, chat apps) opens the page without a person.
    Nothing redeems until a tap. A tap on the /g/ friend card a moment ago counts as that tap. */
-function tappedOnG(code){ try{ const t=JSON.parse(sessionStorage.getItem('mojia.tap')||'null'); sessionStorage.removeItem('mojia.tap'); return !!(t&&typeof t.c==='string'&&norm(t.c)===code&&Date.now()-t.t>=0&&Date.now()-t.t<120000); }catch(e){ return false; } }
+function tappedOnG(code){ try{ const t=JSON.parse(sessionStorage.getItem('mojia.tap')||'null'); sessionStorage.removeItem('mojia.tap'); return !!(t&&typeof t.l==='string'&&t.l.length===4&&t.l===code.replace(/-/g,'').slice(-4)&&Date.now()-t.t>=0&&Date.now()-t.t<120000); }catch(e){ return false; } }
 $('rTap').addEventListener('click',()=>{ if(fromLink) redeem(fromLink); else show('rForm'); });
 if(fromLink){ if(tappedOnG(fromLink)) redeem(fromLink); else show('rReady'); } else show('rForm');
 

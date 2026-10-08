@@ -415,11 +415,11 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   const bodies = [];
   await page.route('**/.netlify/functions/redeem-code', (r) => { bodies.push(r.request().postDataJSON()); r.fulfill({ status: 409, contentType: 'application/json', body: '{"error":"x"}' }); });
   await page.goto(base + '/r/');
-  await page.evaluate(() => sessionStorage.setItem('mojia.tap', JSON.stringify({ c: 'GIFTZZZZZZZZZZZZ', t: Date.now() })));
+  await page.evaluate(() => sessionStorage.setItem('mojia.tap', JSON.stringify({ l: 'ZZZZ', t: Date.now() })));
   await page.goto(base + '/r/GIFTABCDEFGHJKMN');
   await page.waitForSelector('#rReady:not([hidden])'); await page.waitForTimeout(800);
   check('#33 /r/ gift link waits; tap flag for a different code ignored', bodies.length === 0);
-  await page.evaluate(() => sessionStorage.setItem('mojia.tap', JSON.stringify({ c: 'GIFTABCDEFGHJKMN', t: Date.now() - 600000 })));
+  await page.evaluate(() => sessionStorage.setItem('mojia.tap', JSON.stringify({ l: 'JKMN', t: Date.now() - 600000 })));
   await page.goto(base + '/r/GIFTABCDEFGHJKMN');
   await page.waitForSelector('#rReady:not([hidden])'); await page.waitForTimeout(800);
   check('#33 /r/ old tap flag (10 minutes) ignored', bodies.length === 0);
@@ -1845,6 +1845,102 @@ for (const [w, h, name] of [[390, 844, 'phone'], [820, 1180, 'ipad'], [1180, 820
   await page.click('#pwHSbtn'); await page.waitForSelector('#pwOvHS:not(.hidden)'); await page.waitForTimeout(400);
   check('how-to sheet: shows no pairing number', !/pairing/i.test(await page.textContent('#pwOvHS')));
   check('reminder and sheet: no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
+  await ctx.close();
+}
+// Release 1.3 #54: the /g/ tap flag holds the last 4 characters only
+{
+  const { ctx, page } = await newPage();
+  await page.goto(base + '/g/GIFTABCDEFGHJKMN'); await page.waitForTimeout(300);
+  await page.evaluate(() => document.addEventListener('click', (e) => e.preventDefault(), true));
+  await page.click('#go');
+  const flag = await page.evaluate(() => sessionStorage.getItem('mojia.tap'));
+  check('#54 /g/ tap flag holds only the last 4 characters, never the full code', !!flag && !/ABCDEFGH|GIFT/.test(flag) && JSON.parse(flag).l === 'JKMN', flag);
+  await ctx.close();
+}
+// Release 1.3 #21 and #22: wording
+{
+  const pages = ['index.html', 'play/index.html', 'g/index.html', 'r/index.html', 'pass/index.html', 'pass/done/index.html'];
+  const hits = pages.filter((f) => /no tracking/i.test(fs.readFileSync(path.join(site, f), 'utf8')));
+  check('#21 no page says "No tracking"', hits.length === 0, hits.join(' '));
+  const home = fs.readFileSync(path.join(site, 'index.html'), 'utf8');
+  check('#21 the safety line sits in the website lede', home.includes('No accounts. No ads. No chat. Nothing collected from your child.</p>'));
+  check('#22 FAQ refund sentence', home.includes('Something went wrong? Tell us within 7 days of buying what happened, with the email you used at checkout, and we will make it right, including a refund.') && !home.includes('we refund the full amount'));
+}
+// Release 1.3 #49: a new release reloads the Home Screen app once, only on the home screen
+{
+  const html = fs.readFileSync(path.join(site, 'play', 'index.html'), 'utf8');
+  const id = (/<meta name="mojia-build" content="([0-9a-f]{16})">/.exec(html) || [])[1];
+  const bj = JSON.parse(fs.readFileSync(path.join(site, 'play', 'build.json'), 'utf8'));
+  check('#49 the build writes a build id into the game and build.json', !!id && bj.b === id, String(id) + ' ' + JSON.stringify(bj));
+  check('#49 build.json is never cached', /\/play\/build\.json\n  Cache-Control: no-store/.test(fs.readFileSync(path.join(site, '_headers'), 'utf8')));
+  const { ctx, page } = await newPage();
+  await page.addInitScript(() => { localStorage.setItem('mojia.welcomed', 'true'); localStorage.setItem('mojia.demos', 'false'); window.__loads = (Number(sessionStorage.getItem('loads')) || 0) + 1; sessionStorage.setItem('loads', String(window.__loads)); });
+  let served = id;
+  await page.route('**/play/build.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ b: served }) }));
+  await page.goto(base + '/play/'); await page.click('#splash'); await page.waitForTimeout(400);
+  await page.evaluate(() => new Promise((res) => { const r = indexedDB.open('mojia-t49', 1); r.onupgradeneeded = () => r.result.createObjectStore('s'); r.onsuccess = () => { const tx = r.result.transaction('s', 'readwrite'); tx.objectStore('s').put('my drawing', 'k'); tx.oncomplete = res; }; }));
+  await page.evaluate(() => localStorage.setItem('mojia.t49', 'kept'));
+  const show = () => page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+  served = 'abcdef0123456789';
+  await page.evaluate(() => document.querySelector('[data-go="pattern"]').click()); await page.waitForTimeout(500);
+  await page.evaluate(() => { const g = document.querySelector('#glass'); if (g && !g.classList.contains('hidden')) document.querySelector('#gGo').click(); });
+  await page.evaluate(() => localStorage.setItem('mojia.x', '1'));
+  await show(); await page.waitForTimeout(800);
+  check('#49 new build while in a game: no reload yet', (await page.evaluate(() => window.__loads)) === 1 && (await page.evaluate(() => !document.querySelector('#s-pattern').classList.contains('hidden'))));
+  const nav = page.waitForEvent('load', { timeout: 6000 }).then(() => true).catch(() => false);
+  await page.click('#s-pattern [data-go="home"]');
+  check('#49 back on the home screen, the game reloads to the new build', await nav);
+  await page.waitForTimeout(500);
+  check('#49 reloads once (no loop while the server still says the same new build)', (await page.evaluate(() => window.__loads)) === 2);
+  const kept = await page.evaluate(() => new Promise((res) => { const r = indexedDB.open('mojia-t49', 1); r.onsuccess = () => { const q = r.result.transaction('s').objectStore('s').get('k'); q.onsuccess = () => res([q.result, localStorage.getItem('mojia.t49')]); }; }));
+  check('#49 drawings (IndexedDB) and saved settings (localStorage) stay through the reload', kept[0] === 'my drawing' && kept[1] === 'kept', JSON.stringify(kept));
+  check('#49 no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
+  await ctx.close();
+}
+{
+  const { ctx, page } = await newPage();
+  await page.addInitScript(() => { window.__loads = (Number(sessionStorage.getItem('loads')) || 0) + 1; sessionStorage.setItem('loads', String(window.__loads)); });
+  await page.goto(base + '/play/'); await page.click('#splash'); await page.waitForTimeout(400);
+  const asked = page.waitForRequest('**/play/build.json', { timeout: 3000 }).then(() => true).catch(() => false);
+  await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+  check('#49 returning to the front asks for build.json; same build: no reload', await asked && (await page.waitForTimeout(800), await page.evaluate(() => window.__loads)) === 1);
+  await ctx.close();
+}
+{
+  const { ctx, page } = await newPage();
+  await page.addInitScript(() => { localStorage.setItem('mojia.welcomed', 'true'); localStorage.setItem('mojia.demos', 'false'); window.__loads = (Number(sessionStorage.getItem('loads')) || 0) + 1; sessionStorage.setItem('loads', String(window.__loads)); });
+  await page.route('**/play/build.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '{"b":"abcdef0123456789"}' }));
+  await page.goto(base + '/play/'); await page.click('#splash'); await page.waitForTimeout(400);
+  const cv = await page.locator('#canvas').boundingBox(); await page.mouse.click(cv.x + 60, cv.y + 60); await page.waitForTimeout(200);
+  await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange'))); await page.waitForTimeout(800);
+  check('#49 stamps on the home canvas: no reload until the kid clears them', (await page.evaluate(() => window.__loads)) === 1);
+  const nav = page.waitForEvent('load', { timeout: 6000 }).then(() => true).catch(() => false);
+  await page.click('#clearHome');
+  check('#49 after Clear, the game reloads to the new build', await nav);
+  await ctx.close();
+}
+// Release 1.3 #51: a Forever pass from before 1.1.1 (no x) works 30 days from the first 1.3 open, then the pass check renews it
+{
+  const old = makeTokenPayload({ id: crypto.randomUUID(), kind: 'forever', ends_at: null }, 'staging'); delete old.x;
+  const oldTok = signToken(old, PEM), fresh = tokenFor('forever', 0);
+  const seed = { code: 'MOJI-OLDF-PASS-2345', kind: 'forever', ends_at: 0, token: oldTok, email_masked: 'p•••@example.com', device_id: 'b'.repeat(32) };
+  const { ctx, page } = await newPage();
+  await page.addInitScript((s) => { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); localStorage.setItem('mojia.pass', JSON.stringify(s)); localStorage.setItem('mojia.welcomed', 'true'); localStorage.setItem('mojia.demos', 'false'); } }, seed);
+  let online = false;
+  await page.route('**/.netlify/functions/pass-check', (r) => online ? r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ state: 'on', kind: 'forever', ends_at: 0, token: fresh.token }) }) : r.abort());
+  const chip = async () => (await page.locator('#s-home [data-chip]').textContent()) || '';
+  await page.goto(base + '/play/'); await page.click('#splash'); await page.waitForTimeout(900);
+  const end = await page.evaluate(() => Number(localStorage.getItem('mojia.oldFvEnd')));
+  check('#51 old Forever pass stays on offline and gets a 30-day end on this device', !/\d+:\d\d/.test(await chip()) && Math.abs(end - (Date.now() + 30 * 864e5)) < 60e3, String(end));
+  await page.evaluate(() => { localStorage.setItem('mojia.oldFvEnd', String(Date.now() - 1000)); localStorage.setItem('mojia.passCheckAt', String(Date.now())); });
+  await page.reload(); await page.click('#splash').catch(() => {}); await page.waitForTimeout(900);
+  check('#51 offline past the end date, the old Forever pass turns off (free play)', /\d+:\d\d/.test(await chip()));
+  online = true;
+  await page.evaluate(() => localStorage.setItem('mojia.passCheckAt', '0'));
+  await page.reload(); await page.click('#splash').catch(() => {}); await page.waitForTimeout(1500);
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('mojia.pass') || 'null'));
+  check('#51 back online, the pass check renews it and Forever turns back on', !!saved && saved.token === fresh.token && !/\d+:\d\d/.test(await chip()), await chip());
+  check('#51 no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
   await ctx.close();
 }
 // Release 1.1.1 #28 with #42: the game re-checks its saved pass, at most once an hour

@@ -73,6 +73,16 @@ for rel in JWK_PAGES:
         f.write_text(h2, encoding='utf-8')
 
 
+# Release 1.3 #49: build id for the game. The Home Screen app compares its own id with /play/build.json
+# when it returns to the front, and reloads once on the home screen when they differ.
+_play = site_dir / 'play/index.html'
+_ph = _play.read_text(encoding='utf-8')
+if '__MOJIA_BUILD__' in _ph:
+    BUILD_ID = hashlib.sha256(_ph.encode('utf-8')).hexdigest()[:16]
+    _play.write_text(_ph.replace('__MOJIA_BUILD__', BUILD_ID), encoding='utf-8')
+    (site_dir / 'play/build.json').write_text('{"b":"%s"}\n' % BUILD_ID, encoding='utf-8')
+
+
 def script_hash(rel):
     html = (site_dir / rel).read_text(encoding='utf-8')
     scripts = re.findall(r'<script>(.*?)</script>', html, re.S)
@@ -155,6 +165,7 @@ headers = "".join([
     block('/', site_csp, 'DENY'),
     block('/index.html', site_csp, 'DENY'),
     block('/play/*', game_csp, 'SAMEORIGIN'),
+    "/play/build.json\n  Cache-Control: no-store\n",
     block('/r/*', redeem_csp, 'DENY') + "  Cache-Control: no-store\n",
     block('/g/*', friend_csp, 'DENY'),
     block('/admin/*', admin_csp, 'DENY') + "  Cache-Control: no-store\n  X-Robots-Tag: noindex, nofollow\n",

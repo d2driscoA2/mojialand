@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#FFF8E8">
+<meta name="mojia-build" content="__MOJIA_BUILD__">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Mojialand">
@@ -962,7 +963,7 @@ body.in-draw #app{max-width:none}
   <div class="row"><div><div class="l">Sound check</div><div class="s" id="sndInfo">Tap to play a chime</div></div><button class="small" id="sndTest">Test</button></div>
   <div class="row"><div><div class="l">How-to-play cards</div><div class="s" id="demosInfo">Show a how-to card the first time each game opens</div></div><button class="sw" id="swDemos" role="switch" aria-checked="true" aria-label="How-to-play cards"></button></div>
   <div class="row"><div><div class="l">Show cards again</div><div class="s">Replay the how-to cards for every game</div></div><button class="small" id="resetDemos">Reset</button></div>
-  <div class="note"><div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="width:28px;height:28px;border-radius:999px;background:var(--purple);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px">✓</span><b style="color:var(--ink);font-size:13px">No accounts · No ads · No tracking</b></div>Nothing about your child leaves your phone. Just a safe, fun place to play, create and explore.<br><span id="voiceInfo"></span></div>
+  <div class="note"><div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="width:28px;height:28px;border-radius:999px;background:var(--purple);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px">✓</span><b style="color:var(--ink);font-size:13px">No accounts · No ads · No chat</b></div>Nothing about your child leaves your phone. Just a safe, fun place to play, create and explore.<br><span id="voiceInfo"></span></div>
 </section>
 
 <!-- TIME'S UP (kid-facing, no price) -->
@@ -994,7 +995,7 @@ body.in-draw #app{max-width:none}
   <div id="pwCards"></div>
   <ul class="pw-trust">
     <li><span>🛡️</span><span><b>Nothing collected from your child.</b> Ever. No names, no photos, no voice.</span></li>
-    <li><span>🚫</span><span><b>No ads, no tracking, no chat.</b> No strangers, no pop-ups, nothing to click away to.</span></li>
+    <li><span>🚫</span><span><b>No ads, no chat, no accounts.</b> No strangers, no pop-ups, nothing to click away to.</span></li>
     <li><span>📱</span><span id="pwDevLine"><b>One pass, up to 5 devices.</b> Phones and tablets in your family.</span></li>
   </ul>
   <p class="pw-why">Made by a Michigan family. Your pass keeps ads out. <button class="pw-link" id="pwWhyBtn" aria-expanded="false" aria-controls="pwWhyMore">Why we charge</button></p>
@@ -1217,7 +1218,7 @@ const PS=(function(){
 const screens={home:'#s-home',pattern:'#s-pattern',bounce:'#s-bounce',match:'#s-match',parade:'#s-parade',share:'#s-share',feelings:'#s-feelings',draw:'#s-draw',gate:'#s-gate',rest:'#s-rest',ngate:'#s-ngate',plans:'#s-plans',allset:'#s-allset'};
 let current='home';
 const games={};
-function go(name){ stopDemo(); closeGlass(); if(games[current]&&games[current].leave) games[current].leave(); $$('.screen').forEach(s=>s.classList.add('hidden')); $(screens[name]).classList.remove('hidden'); PS.screen(name); current=name; document.body.classList.toggle('in-draw',name==='draw'); homeNote(name); if(name==='home') homeRefresh(); onScreen(name); if(games[name]&&games[name].enter) games[name].enter(); if(games[name]&&settings.demos&&!demoDone[name]) setTimeout(()=>showGlass(name),350); }
+function go(name){ stopDemo(); closeGlass(); if(games[current]&&games[current].leave) games[current].leave(); $$('.screen').forEach(s=>s.classList.add('hidden')); $(screens[name]).classList.remove('hidden'); PS.screen(name); current=name; document.body.classList.toggle('in-draw',name==='draw'); homeNote(name); if(name==='home'){ homeRefresh(); setTimeout(()=>{ if(typeof maybeReload==='function') maybeReload(); },400); } onScreen(name); if(games[name]&&games[name].enter) games[name].enter(); if(games[name]&&settings.demos&&!demoDone[name]) setTimeout(()=>showGlass(name),350); }
 document.addEventListener('click',e=>{ const b=e.target.closest('[data-go]'); if(b){ ctx(); sfx.boop(); go(b.dataset.go);} const d=e.target.closest('[data-demo]'); if(d){ ctx(); sfx.boop(); showGlass(d.dataset.demo);} });
 
 /* ---------- how-to-play glass cards ---------- */
@@ -1292,7 +1293,7 @@ TRAY.forEach((e,i)=>tray.appendChild(trayTile(e,!i)));
 const moreTile=document.createElement('button'); moreTile.className='tile'; moreTile.textContent='➕'; moreTile.setAttribute('aria-label','More characters'); moreTile.style.background='var(--sand)'; tray.appendChild(moreTile);
 moreTile.onclick=()=>{ ctx(); sfx.boop(); drawer.open(e=>{ stampEmoji=e; say(nameOf(e)); if(!$$('#tray .tile').some(x=>x.textContent===e)){ const t=trayTile(e,false); tray.insertBefore(t,moreTile); } $$('#tray .tile').forEach(x=>x.classList.toggle('on',x.textContent===e)); tray.scrollLeft=tray.scrollWidth; drawer.close(); }); };
 function flyOff(els,host){ const r=host.getBoundingClientRect(); const cxp=r.width/2, cyp=r.height/2; els.forEach((el,i)=>{ const x=parseFloat(el.style.left)||cxp, y=parseFloat(el.style.top)||cyp; let dx=x-cxp, dy=y-cyp; const d=Math.hypot(dx,dy)||1; dx/=d; dy/=d; const far=Math.max(r.width,r.height)*1.2; el.style.pointerEvents='none'; el.animate([{transform:'translate(-50%,-50%) scale(1) rotate(0deg)',opacity:1,offset:0},{transform:'translate(-50%,-50%) scale(1.15) rotate('+(dx*8)+'deg)',opacity:1,offset:0.25},{transform:'translate(calc(-50% + '+(dx*far)+'px), calc(-50% + '+(dy*far)+'px)) scale(.4) rotate('+(dx*40)+'deg)',opacity:0,offset:1}],{duration:720,delay:i*28,easing:'cubic-bezier(.45,0,.2,1)',fill:'forwards'}); setTimeout(()=>el.remove(),760+i*28); }); }
-$('#clearHome').onclick=ev=>{ ev.stopPropagation(); ctx(); const st=$$('#canvas .stamp'); if(!st.length) return; sfx.poof(); flyOff(st,$('#canvas')); };
+$('#clearHome').onclick=ev=>{ ev.stopPropagation(); ctx(); const st=$$('#canvas .stamp'); if(!st.length) return; sfx.poof(); flyOff(st,$('#canvas')); setTimeout(()=>{ if(typeof maybeReload==='function') maybeReload(); },1200); };
 $('#canvas').addEventListener('pointerdown',ev=>{ if(ev.target.closest('#clearHome')) return; ctx(); const r=ev.currentTarget.getBoundingClientRect(); const s=document.createElement('div'); s.className='stamp'; s.textContent=stampEmoji; s.style.left=(ev.clientX-r.left)+'px'; s.style.top=(ev.clientY-r.top)+'px'; ev.currentTarget.appendChild(s); sfx.boop(); if(ev.currentTarget.querySelectorAll('.stamp').length%6===0) say(nameOf(stampEmoji)); });
 /* Grown-ups: one tap opens the number-word gate (the real lock). No hold. */
 $('#lockBtn').addEventListener('click',()=>{ ctx(); sfx.boop(); pay.openGate('gate','home'); });
@@ -4323,6 +4324,10 @@ const pay=(function(){
     const v=vcache.payload; if(!v||v.k!==p.kind||v.e!==(p.kind==='forever'?0:Number(p.ends_at))) return null;
     /* Release 1.1.1 #42: a Forever token works until x (30 days); the hourly pass check renews it */
     if(typeof v.x==='number'&&v.x<=Date.now()) return null;
+    /* Release 1.3 #51: a Forever token from before 1.1.1 carries no x. It works for 30 more days from the first time
+       this device opens Release 1.3. The pass check renews it with a real x long before then; a refunded pass stops.
+       Gifted Forever passes have no payment to refund, so they renew for life. */
+    if(v.k==='forever'&&v.x===undefined){ let end=Number(store.get('oldFvEnd',0))||0; if(!end){ end=Date.now()+30*DAY; store.set('oldFvEnd',end); } if(end<=Date.now()) return null; }
     return {code:String(p.code||''),kind:v.k,ends_at:v.e,email_masked:String(p.email_masked||''),device_id:p.device_id||deviceId()}; }
   const passOn=p=>!!p&&(p.kind==='forever'||p.ends_at>Date.now());
   /* grace: paid, but the pass did not arrive yet. Free minutes until it does; the game keeps asking the server. */
@@ -4595,6 +4600,19 @@ let keepAlive=null;
 function keepSession(){ if(navigator.audioSession) return; try{ if(!keepAlive){ keepAlive=new Audio(SILENT); keepAlive.setAttribute('playsinline',''); keepAlive.loop=true; keepAlive.volume=0.01; } if(keepAlive.paused){ const pr=keepAlive.play(); if(pr&&pr.catch) pr.catch(()=>{}); } }catch(e){} }
 function unlock(){ setPlayback(); keepSession(); if(unlocked) return; unlocked=true; const a=ctx(); if(a){ try{ const b=a.createBuffer(1,1,22050), s=a.createBufferSource(); s.buffer=b; s.connect(a.destination); s.start(0); }catch(e){} } if('speechSynthesis' in window){ try{ const u=new SpeechSynthesisUtterance(' '); u.volume=0; speechSynthesis.speak(u); }catch(e){} } }
 ['touchend','click','pointerup'].forEach(ev=>document.addEventListener(ev,unlock,{passive:true}));
+/* Release 1.3 #49 (Danny, October 7): a Home Screen app picks up a new release by itself.
+   When the app returns to the front, the game asks this site for build.json (a short build id, no data sent).
+   A new build reloads the page once, only on the home screen with no how-to card and no stamps on the canvas,
+   so no game, drawing, or grown-up screen is ever cut off. Passes (localStorage) and drawings (IndexedDB) stay. */
+const BUILD=((document.querySelector('meta[name="mojia-build"]')||{}).content)||'', BUILD_RE=/^[0-9a-f]{16}$/;
+let newBuild='', buildAskAt=0;
+async function checkBuild(){ if(!BUILD_RE.test(BUILD)||newBuild||Date.now()-buildAskAt<60e3) return; buildAskAt=Date.now();
+  try{ const r=await fetch('/play/build.json',{cache:'no-store',credentials:'same-origin'}); if(!r.ok) return; const d=await r.json();
+    if(d&&BUILD_RE.test(String(d.b||''))&&d.b!==BUILD){ newBuild=d.b; maybeReload(); } }catch(e){} }
+function maybeReload(){ if(!newBuild||document.hidden||current!=='home'||!$('#glass').classList.contains('hidden')||$$('#canvas .stamp').length) return;
+  let tried=''; try{ tried=sessionStorage.getItem('mojia.reloadFor')||''; }catch(e){ return; } if(tried===newBuild) return;
+  try{ sessionStorage.setItem('mojia.reloadFor',newBuild); }catch(e){ return; } location.reload(); }
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) checkBuild(); });
 document.addEventListener('visibilitychange',()=>{ if(document.hidden) return; setPlayback(); if(unlocked) keepSession(); if(ac&&ac.state!=='running') ac.resume(); });
 /* no double-tap zoom, no pinch */
 document.addEventListener('dblclick',e=>e.preventDefault(),{passive:false});

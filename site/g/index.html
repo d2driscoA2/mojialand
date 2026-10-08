@@ -8,7 +8,7 @@
 <link rel="icon" type="image/svg+xml" href="/logo/favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="/logo/icon-180.png">
 <title>48 free hours of Mojialand</title>
-<meta name="description" content="A friend sent you a free 48-hour pass. Emoji games for kids 3 and up. No accounts. No ads. No tracking.">
+<meta name="description" content="A friend sent you a free 48-hour pass. Emoji games for kids 3 and up. No accounts. No ads. No chat.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Mojialand">
 <meta property="og:title" content="48 free hours of Mojialand">
@@ -32,13 +32,14 @@ a:focus-visible{outline:3px solid #4DBCEC;outline-offset:2px}
 <body>
 <img src="/logo/logo-3d.png" alt="Mojialand" width="200" height="66">
 <h1>A friend sent you 48 free hours</h1>
-<p>Emoji games for kids 3 and up. No accounts. No ads. No tracking.</p>
+<p>Emoji games for kids 3 and up. No accounts. No ads. No chat.</p>
 <a id="go" href="/r/">Turn on my free 48 hours</a>
 <p class="s">Works once, on a device new to Mojialand.</p>
 <script>
 (function(){ var c=(location.pathname.split('/')[2]||'').replace(/[^A-Za-z0-9]/g,'').slice(0,20), go=document.getElementById('go'); go.href='/r/'+c+location.search;
-  /* Release 1.2 #33: this tap is the person's tap, so /r/ turns the pass on without asking twice. */
-  go.addEventListener('click',function(){ try{ sessionStorage.setItem('mojia.tap',JSON.stringify({c:c,t:Date.now()})); }catch(e){} }); })();
+  /* Release 1.2 #33: this tap is the person's tap, so /r/ turns the pass on without asking twice.
+     Release 1.3 #54: the flag holds the last 4 characters only, never the full code. */
+  go.addEventListener('click',function(){ try{ sessionStorage.setItem('mojia.tap',JSON.stringify({l:c.toUpperCase().slice(-4),t:Date.now()})); }catch(e){} }); })();
 </script>
 </body>
 </html>

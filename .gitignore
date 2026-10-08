@@ -9,3 +9,4 @@ site/robots.txt
 # Secrets: never commit
 .env
 .env.*
+site/play/build.json
