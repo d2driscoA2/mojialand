@@ -1665,8 +1665,10 @@ for (const [w, h, name, rm] of [[390, 844, '390', false], [375, 667, 'se', true]
   check('1.3 feelings: scene 20 is Octopus (lonely)', ok);
   await page.click('#feelingsstage .pick[data-feel="lonely"]');
   await page.waitForSelector('#feelingsstage .ffhelp', { timeout: 6000 }); await page.click('#feelingsstage .ffhelp');
-  await page.waitForSelector('#feelingsstage .nextbtn', { timeout: 8000 }); await page.click('#feelingsstage .nextbtn');
-  await page.waitForSelector('#feelingsstage .again', { timeout: 4000 }); await page.waitForTimeout(800);
+  await page.waitForSelector('#feelingsstage .nextbtn', { timeout: 8000 });
+  // The Next button pulses and moves on by itself after 6 seconds, so tap it with a pointer event instead of a stable-element click.
+  await page.evaluate(() => { const b = document.querySelector('#feelingsstage .nextbtn'); if (b) b.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true })); });
+  await page.waitForSelector('#feelingsstage .again', { timeout: 8000 }); await page.waitForTimeout(800);
   const fin = await page.evaluate(() => { const t = [...document.querySelectorAll('#feelingsstage .hopper text')].map((e) => e.getBoundingClientRect()); let overlap = 0; for (let i = 0; i < t.length; i++) for (let j = i + 1; j < t.length; j++) { const a = t[i], b = t[j]; const ox = Math.min(a.right, b.right) - Math.max(a.left, b.left), oy = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top); if (ox > a.width * 0.2 && oy > a.height * 0.2) overlap++; } const sc = document.querySelector('#feelingsstage .scn').getBoundingClientRect(); const cut = t.filter((r) => r.left < sc.left - 1 || r.right > sc.right + 1).length; return { n: t.length, overlap, cut, saved: localStorage.getItem('mojia.feelRound') }; });
   check('1.3 feelings finale: 20 friends, none overlapping or cut off, progress resets to scene 1', fin.n === 20 && fin.overlap === 0 && fin.cut === 0 && fin.saved === '0', JSON.stringify(fin));
   await page.screenshot({ path: path.join(SHOTS, 'feelings-finale-390.png') });
@@ -1949,6 +1951,23 @@ for (const [w, h, name] of [[390, 844, 'phone'], [820, 1180, 'ipad'], [1180, 820
   const nav = page.waitForEvent('load', { timeout: 6000 }).then(() => true).catch(() => false);
   await page.click('#clearHome');
   check('#49 after Clear, the game reloads to the new build', await nav);
+  await ctx.close();
+}
+// Release 1.3: the website and game descriptions count 7 games; the website shows a card for each
+{
+  const home = fs.readFileSync(path.join(site, 'index.html'), 'utf8'), game = fs.readFileSync(path.join(site, 'play', 'index.html'), 'utf8');
+  check('1.3 wording: no page says five or four games', !/five (emoji )?games|four little/i.test(home + game));
+  check('1.3 wording: website and game say seven games', /Seven games\. One happy place\./.test(home) && /seven emoji games/.test(game));
+  const { ctx, page } = await newPage({ viewport: { width: 1280, height: 900 } });
+  await page.goto(base + '/'); await page.waitForTimeout(400);
+  const t = await page.evaluate(() => { const cells = [...document.querySelectorAll('.tiles .gcell')]; const names = cells.map((c) => c.querySelector('.gname').textContent); const bg = cells.map((c) => getComputedStyle(c).backgroundColor); const r = cells.map((c) => c.getBoundingClientRect()); let touch = 0; for (let i = 0; i < r.length; i++) for (let j = i + 1; j < r.length; j++) { const near = Math.max(r[i].left - r[j].right, r[j].left - r[i].right) < 30 && Math.max(r[i].top - r[j].bottom, r[j].top - r[i].bottom) < 30; if (near && bg[i] === bg[j]) touch++; } return { names: names.join(','), touch, white: getComputedStyle(cells[4].querySelector('.gname')).color }; });
+  check('1.3 website: game cards for all 6 grid games, Share Party and Feelings Faces included', t.names === 'Pattern,Bounce,Match,Parade,Share Party,Feelings Faces', t.names);
+  check('1.3 website: same-color rule holds and Share Party text is white', t.touch === 0 && t.white === 'rgb(255, 255, 255)', JSON.stringify(t));
+  await page.locator('.tiles').scrollIntoViewIfNeeded(); await page.screenshot({ path: path.join(SHOTS, 'website-games-1280.png') });
+  await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(200);
+  const ov = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
+  check('1.3 website: no sideways scroll at 390 px', !ov);
+  check('1.3 website: no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
   await ctx.close();
 }
 // Release 1.3 #51: a Forever pass from before 1.1.1 (no x) works 30 days from the first 1.3 open, then the pass check renews it
