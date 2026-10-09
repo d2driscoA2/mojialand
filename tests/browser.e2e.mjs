@@ -1886,12 +1886,13 @@ for (const [w, h, name] of [[390, 844, 'phone'], [820, 1180, 'ipad'], [1180, 820
   const now = new Date().toISOString(), useBy = new Date(Date.now() + 60 * 864e5).toISOString();
   const gift = { id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', code_last4: 'QR7T', prefix: 'GIFT', kind: 'forever', source: 'gift', email: null, created_at: now, use_by: useBy, device_limit: 5, status: 'unused', note: 'Aunt Jo', batch: null, devices: 0 };
   const used = { ...gift, id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', code_last4: 'ZZ22', status: 'active' };
+  const friend = { ...gift, id: 'ffffffff-ffff-4fff-8fff-ffffffffffff', code_last4: 'FR13', batch: 'FRIEND', note: null };
   const calls = [];
   await page.route('**/.netlify/functions/admin-api', (r) => { const b = r.request().postDataJSON(); calls.push(b);
-    const o = { 'passes.list': { passes: [gift, used] }, 'codes.labels': { labels: [] }, 'codes.replace': { code: 'GIFT-NEWC-ODEA-BC34', pass: { ...gift, id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', code_last4: 'BC34' }, old: { ...gift, status: 'ended', note: 'Aunt Jo · cancelled, replaced by BC34' } } }[b.action] || {};
+    const o = { 'passes.list': { passes: [gift, used, friend] }, 'codes.labels': { labels: [] }, 'codes.replace': { code: 'GIFT-NEWC-ODEA-BC34', pass: { ...gift, id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', code_last4: 'BC34' }, old: { ...gift, status: 'ended', note: 'Aunt Jo · cancelled, replaced by BC34' } } }[b.action] || {};
     r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(o) }); });
   await page.goto(base + '/admin/'); await page.waitForSelector('#pList .item');
-  check('#16 admin: Cancel and replace shows on an unused gift code only', (await page.locator('#pList [data-act="codes.replace"]').count()) === 1 && (await page.locator('.item[data-id="' + gift.id + '"] [data-act="codes.replace"]').count()) === 1);
+  check('#16 admin: Cancel and replace shows on an unused gift code only, never on a friend pass (Security R1)', (await page.locator('#pList [data-act="codes.replace"]').count()) === 1 && (await page.locator('.item[data-id="' + gift.id + '"] [data-act="codes.replace"]').count()) === 1);
   await page.click('#pList [data-act="codes.replace"]');
   await page.waitForSelector('#cOut:not([hidden])');
   check('#16 admin: replace sends the old id; the new code shows once with the same settings', calls.some((c) => c.action === 'codes.replace' && c.id === gift.id) && (await page.textContent('#cCode')) === 'GIFT-NEWC-ODEA-BC34' && /Forever · Gift · Note: Aunt Jo/.test(await page.textContent('#cMeta')) && /Replacement code/.test(await page.textContent('#cHead')));

@@ -63,6 +63,8 @@ function cleanBatch(v) {
   const b = String(v || '').trim().toLowerCase();
   if (!b) return null;
   if (!LABEL_RE.test(b)) throw new Error('use 2 to 24 lowercase letters, numbers or dashes for the batch label, like in-fair-oct');
+  // Release 1.3 Security R1: friend is reserved for friend passes (batch FRIEND).
+  if (b === FRIEND_BATCH.toLowerCase()) throw new Error('friend is reserved for friend passes. Pick another label, like in-fair-oct');
   return b;
 }
 async function ensureCampaign(label) {
@@ -250,6 +252,7 @@ const actions = {
     const old = await passWithDevices(id);
     if (!old) throw new Error('code not found');
     if (old.prefix !== 'GIFT' || (old.source !== 'gift' && old.source !== 'support')) throw new Error('only gift and support codes can be replaced');
+    if (String(old.batch || '').toUpperCase() === FRIEND_BATCH) throw new Error('Friend passes come from the parent pass and cannot be replaced.');
     if (old.status !== 'unused') throw new Error(old.status === 'active' ? 'this code is already turned on; use Reset devices instead' : 'this code is no longer open');
     const span = old.use_by && old.created_at ? Math.round((new Date(old.use_by).getTime() - new Date(old.created_at).getTime()) / DAY) : 90;
     const rows = await patchPass('id=eq.' + enc(id) + '&status=eq.unused', { status: 'ended', ends_at: new Date().toISOString() });

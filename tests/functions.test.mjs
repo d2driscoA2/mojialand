@@ -734,6 +734,12 @@ test('admin-api: needs the cookie; passes, codes, support, settings', async () =
     assert.ok(!JSON.stringify(db.passes).includes(r3.code), 'new code never stored');
     const [s4] = await A('codes.replace', { id: r3.pass.id }); assert.equal(s4, 400, 'a used code cannot be replaced');
     const [s5] = await A('codes.replace', { id: pass.id }); assert.equal(s5, 400, 'a paid pass cannot be replaced'); }
+  // Release 1.3 Security R1: friend passes (batch FRIEND) cannot be replaced; the label friend is reserved
+  { const fr = { id: crypto.randomUUID(), code_hash: 'x', code_last4: 'FR13', prefix: 'GIFT', kind: '48h', source: 'gift', status: 'unused', uses_left: 1, device_limit: 5, batch: 'FRIEND', note: null, created_at: new Date().toISOString(), use_by: new Date(Date.now() + 30 * 864e5).toISOString() };
+    db.passes.push(fr);
+    const [s6, r6] = await A('codes.replace', { id: fr.id }); assert.equal(s6, 400, 'friend pass refused'); assert.match(r6.error, /Friend passes/);
+    assert.equal(db.passes.find((x) => x.id === fr.id).status, 'unused', 'friend pass untouched');
+    const [s7] = await A('codes.create', { kind: '48h', source: 'gift', days_valid: 30, batch: 'Friend' }); assert.equal(s7, 400, 'label friend reserved'); }
   // batch for printed cards
   [st, d] = await A('codes.batch', { kind: '48h', source: 'gift', days_valid: 365, note: 'school', count: 7 });
   assert.equal(st, 200); assert.equal(d.codes.length, 7); assert.equal(new Set(d.codes.map((c) => c.code)).size, 7);
