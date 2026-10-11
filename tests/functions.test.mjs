@@ -21,6 +21,7 @@ import { handler as passCheck } from '../netlify/functions/pass-check.mjs';
 import { friendPass } from '../netlify/functions/_lib/friend.mjs';
 import { deriveFriendCode } from '../netlify/functions/_lib/codes.mjs';
 import ping from '../netlify/functions/ping.mjs';
+import { resetSwitchCache } from '../netlify/functions/_lib/db.mjs';
 import { placeFromGeo, readPing } from '../netlify/functions/_lib/analytics.mjs';
 import { localMidnight, lastDays } from '../netlify/functions/_lib/analytics-admin.mjs';
 
@@ -31,6 +32,7 @@ beforeEach(() => {
   globalThis.fetch = db.fetch;
   stripe = fakeStripe();
   setStripe(stripe);
+  resetSwitchCache();
 });
 
 const CODE_RE = new RegExp('^MOJI-[' + ALPHABET + ']{4}-[' + ALPHABET + ']{4}-[' + ALPHABET + ']{4}$');
@@ -1285,4 +1287,32 @@ test('1.4 #58 gifts.report: totals, rounds, bought after a gift, holder rows wit
   assert.ok(r.holders.some((h) => h.started === 'gift' && h.round === 1));
   const txt = JSON.stringify(r);
   assert.ok(!/device|code_hash|giver_id|"id"/.test(txt), 'no device values, hashes or pass IDs leave the server');
+});
+
+test('1.4 #14 busy day switches: admin sets 0 or 1; ping, emails, new free gifts and checkout respect them', async () => {
+  const cookie = await adminSignIn();
+  const set = async (key, value) => (await adminApi(withCookie({ action: 'settings.set', key, value }, cookie)));
+  assert.equal((await set('lite_home', 2)).statusCode >= 400, true, 'switches take 0 or 1 only');
+  assert.equal((await set('emails_paused', 1)).statusCode, 200);
+  assert.equal(db.settings.find((r) => r.key === 'emails_paused').value, 1, 'a new switch row is created on first use');
+  // emails paused: the message saves, no email goes out
+  const before = db.emails.length;
+  const r = await contact(ev({ email: 'parent@example.com', topic: 'other', message: 'Hello there' }));
+  assert.equal(r.statusCode, 200);
+  assert.equal(db.emails.length, before);
+  assert.equal(db.support_messages.length, 1);
+  // play counts off: ping answers 204 and counts nothing
+  await set('play_counts_off', 1);
+  assert.equal((await ping(pingReq({ e: 'open', g: 'draw', m: 'app' }), ctx())).status, 204);
+  assert.equal(db.analytics.length, 0);
+  // new free weeks paused: no new holder, no new gifts
+  await set('new_free_paused', 1);
+  const g = await giftsFn(ev({ device_id: DEV('e') }));
+  assert.equal(g.statusCode, 503);
+  assert.equal(db.passes.filter((x) => x.kind === 'holder').length, 0);
+  // all off again: things work
+  for (const k of ['emails_paused', 'play_counts_off', 'new_free_paused']) await set(k, 0);
+  assert.equal((await giftsFn(ev({ device_id: DEV('e') }))).statusCode, 200);
+  const s = JSON.parse((await settingsFn(ev({}, {}, 'GET'))).body);
+  assert.equal(s.new_free_paused, 0);
 });

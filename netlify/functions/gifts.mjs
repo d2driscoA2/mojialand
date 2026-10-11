@@ -9,7 +9,7 @@
 // reward days and pick up new time through the normal pass check.
 import { guard, envName } from './_lib/env.mjs';
 import { json, fail, readJson, clientIp, header, originFromHost, sha256hex } from './_lib/http.mjs';
-import { rateHit, getPassBy, addDevice, safeErr, DEVICE_RE, rest } from './_lib/db.mjs';
+import { rateHit, getPassBy, addDevice, safeErr, DEVICE_RE, rest, switchOn } from './_lib/db.mjs';
 import { verifyToken, makeTokenPayload, signToken } from './_lib/token.mjs';
 import { gifts, givesGifts } from './_lib/friend.mjs';
 import { randomCode, codeHash, codeLast4 } from './_lib/codes.mjs';
@@ -63,10 +63,16 @@ export const handler = async (event) => {
       if (!pass) return fail(410, 'This pass has no gifts to give.');
     } else {
       pass = await holderForDevice(input.device_id);
+      if (!pass && (await switchOn('new_free_paused'))) return fail(503, 'Gifts are paused for a little while. Please try again later.');
       if (!pass) pass = await newHolder(input.device_id, input.fv_end);
       issue = true;
     }
     if (!givesGifts(pass)) return fail(410, 'This pass has no gifts to give.');
+    // Release 1.4 #14: new gifts paused during a spike (gifts already made keep working).
+    if (await switchOn('new_free_paused')) {
+      const { data } = await rest('GET', 'passes?giver_id=eq.' + pass.id + '&select=id&limit=1');
+      if (!Array.isArray(data) || !data.length) return fail(503, 'Gifts are paused for a little while. Please try again later.');
+    }
     const g = await gifts(pass);
     if (!g) return fail(410, 'This pass has no gifts to give.');
     const origin = originFromHost(header(event, 'host'));

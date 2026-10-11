@@ -4,7 +4,7 @@
 // The IP address is read for the rate limiter (hashed there) and never stored.
 import { checkEnv } from './_lib/env.mjs';
 import { recordPing } from './_lib/analytics.mjs';
-import { safeErr } from './_lib/db.mjs';
+import { safeErr, switchOn } from './_lib/db.mjs';
 
 const REQUIRED = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY'];
 const HEADERS = { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' };
@@ -16,6 +16,8 @@ export default async (req, context) => {
     console.error('ping: refused to start (' + reason + ')');
     return new Response(null, { status: 500, headers: HEADERS });
   }
+  // Release 1.4 #14: play counts off during a traffic spike (no database write).
+  if (await switchOn('play_counts_off')) return new Response(null, { status: 204, headers: HEADERS });
   let body = null;
   try {
     const text = await req.text();

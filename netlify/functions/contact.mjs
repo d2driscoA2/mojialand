@@ -6,6 +6,7 @@ import { json, fail, readJson, clientIp } from './_lib/http.mjs';
 import { rateHit, addSupportMessage, getPassBy, safeErr } from './_lib/db.mjs';
 import { normalizeCode, codeHash, codeLast4 } from './_lib/codes.mjs';
 import { sendEmail } from './_lib/email.mjs';
+import { switchOn } from './_lib/db.mjs';
 
 const REQUIRED = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY', 'RESTORE_CODE_PEPPER'];
 const TOPICS = { pass: 'My pass', broken: 'Something is broken', refund: 'Refund', other: 'Other' };
@@ -56,6 +57,8 @@ export const handler = async (event) => {
   } catch (e) {
     console.error('contact: save failed (' + safeErr(e) + ')');
   }
+  // Release 1.4 #14: emails paused during a spike; messages still land in the admin Support tab.
+  if (saved && (await switchOn('emails_paused'))) { console.log('contact: saved, email paused'); return json(200, { ok: true }); }
   try {
     // Release 1.1.1 #44 L6: the first line marks this as a contact form message, so a
     // stranger's text never looks like it came from Mojialand itself.

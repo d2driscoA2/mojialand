@@ -4,7 +4,7 @@ import { json, fail } from './_lib/http.mjs';
 import { rest, safeErr } from './_lib/db.mjs';
 
 const REQUIRED = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY'];
-const KEYS = ['free_days', 'first_visit_minutes', 'daily_minutes', 'daily_reset', 'devices_per_code', 'warning_minutes', 'credit_days'];
+const KEYS = ['free_days', 'play_counts_off', 'new_free_paused', 'lite_home', 'first_visit_minutes', 'daily_minutes', 'daily_reset', 'devices_per_code', 'warning_minutes', 'credit_days'];
 
 export const handler = async (event) => {
   const stop = guard('settings', REQUIRED);

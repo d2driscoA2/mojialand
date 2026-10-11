@@ -236,7 +236,11 @@ textarea{resize:vertical;min-height:80px}
   </section>
 
   <section class="card settings" data-panel="settings" hidden>
-    <h2>Settings</h2>
+    <h2>Busy day switches</h2>
+    <p>Turn these on when a big crowd arrives. Turn them off when the rush ends. The site picks up a change within a minute.</p>
+    <p class="err" id="swErr"></p><p class="ok" id="swOk"></p>
+    <div class="list" id="swList"></div>
+    <h2 style="margin-top:22px">Settings</h2>
     <p>The game reads these on the next open. Numbers are minutes or days. Reset time is 24-hour, like 04:00.</p>
     <p class="err" id="stErr"></p><p class="ok" id="stOk"></p>
     <div class="list" id="stList"></div>
@@ -492,8 +496,13 @@ $('sList').addEventListener('click',async e=>{ const b=e.target.closest('[data-s
   try{ await api('support.set',{id:id,status:b.dataset.st}); loadSupport(); }catch(err){ $('sErr').textContent=err.message; b.disabled=false; } });
 
 /* ---- settings */
-async function loadSettings(){ $('stErr').textContent=''; $('stOk').textContent=''; $('stList').innerHTML='<p>Loading…</p>';
-  try{ const d=await api('settings.get'); $('stList').innerHTML=d.settings.map(s=>'<div class="item" data-key="'+esc(s.key)+'"><b>'+esc(s.key.replace(/_/g,' '))+'</b><input value="'+esc(s.value)+'" aria-label="'+esc(s.key)+'"><div class="meta">'+esc(s.help||'')+'</div></div>').join(''); }
+const SWITCH_INFO=[['play_counts_off','Stop play counts','The game stops sending play counts. Analytics pauses. Play is not affected.'],['emails_paused','Pause emails','Pass emails and support emails stop. Admin shows the share text in their place. Messages still save.'],['new_free_paused','Pause new free weeks and gifts','New devices start with daily minutes. No new gift links. Gifts already made keep working.'],['lite_home','Lite home screen','The game home screen stops its animations. Phones do less work.']];
+function paintSwitches(rows){ const on={}; rows.forEach(r=>{ on[r.key]=String(r.value)==='1'; });
+  $('swList').innerHTML=SWITCH_INFO.map(x=>'<div class="item"><b>'+esc(x[1])+'</b> <span class="pill">'+(on[x[0]]?'ON':'off')+'</span><div class="meta">'+esc(x[2])+'</div><button class="secondary" type="button" data-sw="'+x[0]+'" data-to="'+(on[x[0]]?0:1)+'">'+(on[x[0]]?'Turn off':'Turn on')+'</button></div>').join(''); }
+$('swList').addEventListener('click',async e=>{ const b=e.target.closest('button[data-sw]'); if(!b) return; $('swErr').textContent=''; $('swOk').textContent=''; b.disabled=true;
+  try{ await api('settings.set',{key:b.dataset.sw,value:b.dataset.to}); $('swOk').textContent=(b.dataset.to==='1'?'On: ':'Off: ')+SWITCH_INFO.find(x=>x[0]===b.dataset.sw)[1]+'.'; loadSettings(true); }catch(err){ $('swErr').textContent=err.message; b.disabled=false; } });
+async function loadSettings(keepMsg){ $('stErr').textContent=''; if(!keepMsg){ $('stOk').textContent=''; $('swOk').textContent=''; } $('stList').innerHTML='<p>Loading…</p>';
+  try{ const d=await api('settings.get'); const swk=SWITCH_INFO.map(x=>x[0]); paintSwitches(d.settings.filter(s=>swk.includes(s.key))); d.settings=d.settings.filter(s=>!swk.includes(s.key)); $('stList').innerHTML=d.settings.map(s=>'<div class="item" data-key="'+esc(s.key)+'"><b>'+esc(s.key.replace(/_/g,' '))+'</b><input value="'+esc(s.value)+'" aria-label="'+esc(s.key)+'"><div class="meta">'+esc(s.help||'')+'</div></div>').join(''); }
   catch(e){ $('stList').innerHTML=''; $('stErr').textContent=e.message; } }
 $('stList').addEventListener('change',async e=>{ const inp=e.target; if(inp.tagName!=='INPUT') return; const key=inp.closest('.item').dataset.key; $('stErr').textContent=''; $('stOk').textContent='';
   try{ await api('settings.set',{key:key,value:inp.value}); $('stOk').textContent='Saved '+key.replace(/_/g,' ')+'.'; }catch(err){ $('stErr').textContent=err.message; } });

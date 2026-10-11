@@ -14,7 +14,8 @@ const REQUIRED = [
 ];
 const DAY = 864e5;
 const CANT_CHANGE = "That pass can't be changed. Pick a new pass.";
-const TRY_AGAIN = 'Checkout could not start. Please try again.';
+// Release 1.4 #14: when Stripe or the database is busy, the parent sees one calm line.
+const TRY_AGAIN = 'Busy, try again soon.';
 
 export const handler = async (event) => {
   const stop = guard('create-checkout', REQUIRED);
@@ -26,7 +27,7 @@ export const handler = async (event) => {
   if (typeof plan !== 'string' || !Object.hasOwn(PLANS, plan)) return fail(400, 'Pick a pass.');
 
   if (!(await rateHit('create-checkout', clientIp(event), 5, 60))) {
-    return fail(429, 'Too many tries. Please wait a minute.');
+    return fail(429, 'Busy, try again soon.');
   }
 
   try {

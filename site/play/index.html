@@ -871,6 +871,8 @@ body.in-draw #app{max-width:none}
 }
 @media (min-width:700px){ .dpanelw{width:292px} #s-draw .dpanelw .dctl{padding:14px;gap:14px} }
 @media (min-width:460px) and (max-width:699px){ .dpanelw{width:216px} #s-draw .dpanelw .dtools{grid-template-columns:repeat(4,minmax(0,1fr))} #s-draw .dpanelw .dswatches{grid-template-columns:repeat(4,minmax(0,1fr))} }
+/* Release 1.4 #14: lite home screen during a traffic spike (admin switch) */
+html.lite #s-home *,html.lite #s-home *::before,html.lite #s-home *::after{animation:none!important;transition:none!important}
 </style>
 
 <div id="app">
@@ -1125,9 +1127,10 @@ const FRESH=(function(){ try{ for(let i=0;i<localStorage.length;i++){ if(String(
 /* Android and desktop Chrome need start_url for the install prompt. iPhone must not have one (see the link tag). */
 (function(){ if(!/iPhone|iPad|iPod/.test(navigator.userAgent)&&!(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)){ const l=document.querySelector('link[rel="manifest"]'); if(l) l.setAttribute('href','/manifest-install.webmanifest'); } })();
 /* Play settings. Defaults here; the admin page's values come from the server and are kept for the next open. */
-const SETTINGS={free_days:7,first_visit_minutes:15,daily_minutes:3,daily_reset:'04:00',warning_minutes:10,credit_days:7,devices_per_code:5};
+const SETTINGS={free_days:7,play_counts_off:0,new_free_paused:0,lite_home:0,first_visit_minutes:15,daily_minutes:3,daily_reset:'04:00',warning_minutes:10,credit_days:7,devices_per_code:5};
 (function(){ function apply(o){ if(!o||typeof o!=='object') return; for(const k of Object.keys(SETTINGS)){ if(!(k in o)) continue; const v=o[k]; if(k==='daily_reset'){ if(/^([01]\d|2[0-3]):[0-5]\d$/.test(String(v))) SETTINGS[k]=String(v); } else { const n=Number(v); if(Number.isFinite(n)&&n>=0&&n<=100000) SETTINGS[k]=n; } } }
   try{ apply(JSON.parse(localStorage.getItem('mojia.settings')||'null')); }catch(e){}
+  try{ if(SETTINGS.lite_home===1) document.documentElement.classList.add('lite'); }catch(e){}
   fetch('/.netlify/functions/settings',{credentials:'same-origin'}).then(r=>r.ok?r.json():null).then(o=>{ if(o){ try{ localStorage.setItem('mojia.settings',JSON.stringify(o)); }catch(e){} } }).catch(()=>{}); })();
 const PRICES={pass:4.99,add:4.99,life:14.99,up:10.00}; /* Release 1.4 #32: 30 days $4.99, Forever $14.99, upgrade $10.00. Shown only behind the parent gate; set in Stripe */
 /* Public key for pass tokens. The build fills it in; null means no pass is valid. A public key only checks, never signs. */
@@ -1207,7 +1210,7 @@ const PS=(function(){
   const GIDS=['pattern','bounce','match','parade','draw','share','feelings'], LRE=/^[a-z0-9][a-z0-9-]{1,23}$/, WEEK=7*864e5;
   const mode=()=>{ try{ return (matchMedia('(display-mode: standalone)').matches||navigator.standalone===true)?'app':'web'; }catch(e){ return 'web'; } };
   const slot=()=>Math.floor(Date.now()/300000);
-  function send(o){ try{ const s=JSON.stringify(o); if(navigator.sendBeacon&&navigator.sendBeacon('/api/ping',new Blob([s],{type:'application/json'}))) return; fetch('/api/ping',{method:'POST',headers:{'Content-Type':'application/json'},body:s,keepalive:true,credentials:'same-origin'}).catch(()=>{}); }catch(e){} }
+  function send(o){ if(SETTINGS.play_counts_off===1) return; /* Release 1.4 #14: busy-day switch */ try{ const s=JSON.stringify(o); if(navigator.sendBeacon&&navigator.sendBeacon('/api/ping',new Blob([s],{type:'application/json'}))) return; fetch('/api/ping',{method:'POST',headers:{'Content-Type':'application/json'},body:s,keepalive:true,credentials:'same-origin'}).catch(()=>{}); }catch(e){} }
   function camp(){ const c=store.get('camp',null); return c&&typeof c.l==='string'&&LRE.test(c.l)&&Date.now()-c.t<WEEK?c:null; }
   // A QR card link (?c=event-label): remember the event name for 7 days, count the first open once.
   try{ const u=new URL(location.href), c=u.searchParams.get('c'); if(c!=null){ u.searchParams.delete('c'); history.replaceState(null,'',u.pathname+u.search+u.hash); const l=c.toLowerCase(); const old=camp(); if(LRE.test(l)&&(!old||old.l!==l)){ store.set('camp',{l,t:Date.now()}); send({e:'camp',c:l}); } } }catch(e){}
@@ -4371,7 +4374,7 @@ const pay=(function(){
   function rollDay(){ const day=playDay(Date.now()), last=store.get('freeDay',''); if(last!==day){ if(last) store.set('firstDone',true); store.set('freeDay',day); store.set('freeUsed',0); } return day; }
   /* Release 1.4 #32 (Danny, October 6 and 11): a free week from the first open of 1.4 on this device, every game, no limits.
      Then the daily minutes. Devices that played before 1.4 get the free week once, from their first 1.4 open. */
-  function freeStart(){ let t=Number(store.get('freeStart',0))||0; if(!t||t>Date.now()+DAY){ t=Date.now(); store.set('freeStart',t); } return t; }
+  function freeStart(){ let t=Number(store.get('freeStart',0))||0; if(!t||t>Date.now()+DAY){ t=Date.now()-(SETTINGS.new_free_paused===1?SETTINGS.free_days*DAY:0); /* Release 1.4 #14: new free weeks paused */ store.set('freeStart',t); } return t; }
   const freeEnd=()=>freeStart()+SETTINGS.free_days*DAY;
   const inFreeWeek=()=>Date.now()<freeEnd();
   const dayNum=()=>Math.floor((Date.now()-freeStart())/DAY)+1;

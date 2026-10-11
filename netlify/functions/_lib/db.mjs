@@ -78,6 +78,22 @@ export async function patchPass(filter, patch) {
   return Array.isArray(data) ? data : [];
 }
 
+// Release 1.4 #14: busy-day switches, read at most once a minute per function
+// instance so a traffic spike never doubles the database calls. 1 = on.
+export const SWITCHES = ['play_counts_off', 'emails_paused', 'new_free_paused', 'lite_home'];
+const swCache = { at: 0, v: {} };
+export async function switchOn(key) {
+  if (Date.now() - swCache.at > 60e3) {
+    try {
+      const { data } = await rest('GET', 'settings?key=in.(' + SWITCHES.join(',') + ')&select=key,value');
+      const v = {}; for (const r of Array.isArray(data) ? data : []) v[r.key] = Number(r.value) === 1;
+      swCache.v = v; swCache.at = Date.now();
+    } catch { swCache.at = Date.now() - 50e3; /* retry in 10 seconds; keep the last answer */ }
+  }
+  return !!swCache.v[key];
+}
+export function resetSwitchCache() { swCache.at = 0; swCache.v = {}; }
+
 export async function getSetting(key, fallback) {
   try {
     const { data } = await rest('GET', 'settings?key=eq.' + enc(key) + '&select=value&limit=1');

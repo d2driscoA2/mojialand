@@ -927,6 +927,10 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   await page.press('#stList .item[data-key="daily_minutes"] input', 'Tab');
   await page.waitForFunction(() => /Saved/.test(document.querySelector('#stOk').textContent));
   check('admin: settings save on change', calls.includes('settings.set'));
+  check('1.4 #14 admin: four busy day switches show off when no row exists, and stay out of the number list', (await page.locator('#swList button[data-sw]').count()) === 4 && (await page.locator('#swList button[data-to="1"]').count()) === 4 && (await page.locator('#stList .item[data-key="lite_home"]').count()) === 0);
+  await page.click('#swList button[data-sw="emails_paused"]');
+  await page.waitForFunction(() => /On: Pause emails/.test(document.querySelector('#swOk').textContent));
+  check('1.4 #14 admin: Turn on sends emails_paused = 1', bodiesBy['settings.set'].key === 'emails_paused' && String(bodiesBy['settings.set'].value) === '1');
   await page.click('[data-tab="services"]');
   check('admin: services tab lists Stripe, Supabase, Resend with links', (await page.locator('#svcList a[href^="https://"]').count()) >= 8 && /Stripe/.test(await page.textContent('#svcList')));
   await page.screenshot({ path: path.join(SHOTS, 'admin-services.png') });

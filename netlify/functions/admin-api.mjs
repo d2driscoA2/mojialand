@@ -1,7 +1,7 @@
 // POST {action, ...} for the admin page. Every call needs the session cookie.
 import { guard } from './_lib/env.mjs';
 import { json, fail, readJson, header, originFromHost, sameOrigin, maskEmail } from './_lib/http.mjs';
-import { rest, patchPass, safeErr } from './_lib/db.mjs';
+import { rest, patchPass, safeErr, switchOn, resetSwitchCache } from './_lib/db.mjs';
 import { isSignedIn } from './_lib/admin.mjs';
 import { randomCode, codeHash, codeLast4, deriveCode, codeNoDashes } from './_lib/codes.mjs';
 import { buildEmail, sendEmail, adminShareText } from './_lib/email.mjs';
@@ -19,7 +19,7 @@ const DAY = 24 * HOUR;
 const enc = encodeURIComponent;
 const UUID = /^[0-9a-f-]{36}$/i;
 const PASS_FIELDS = 'id,code_last4,prefix,kind,source,email,stripe_session_id,amount_cents,created_at,starts_at,ends_at,device_limit,status,uses_left,use_by,note,emailed_at,batch';
-const SETTING_KEYS = ['first_visit_minutes', 'daily_minutes', 'daily_reset', 'devices_per_code', 'warning_minutes', 'credit_days', 'delete_ended_after_days'];
+const SETTING_KEYS = ['free_days', 'play_counts_off', 'emails_paused', 'new_free_paused', 'lite_home', 'first_visit_minutes', 'daily_minutes', 'daily_reset', 'devices_per_code', 'warning_minutes', 'credit_days', 'delete_ended_after_days'];
 
 async function passWithDevices(id) {
   const { data } = await rest('GET', 'passes?id=eq.' + enc(id) + '&select=' + PASS_FIELDS + '&limit=1');
@@ -47,6 +47,8 @@ async function paidCode(id) {
 async function tellFamily(p, plan, event, skip) {
   if (skip) return { email: 'skipped' };
   if (!p.email || p.source !== 'stripe' || !p.stripe_session_id) return { email: 'none', share: adminShareText(plan, p) };
+  // Release 1.4 #14: emails paused during a spike; the admin gets the message to share instead.
+  if (await switchOn('emails_paused')) return { email: 'paused', share: adminShareText(plan, p) };
   try {
     const code = deriveCode(process.env.RESTORE_CODE_PEPPER, p.stripe_session_id);
     const ok = await sendEmail(p.email, buildEmail({ plan, pass: p, code, origin: originFromHost(header(event, 'host')), byAdmin: true }));
@@ -396,7 +398,10 @@ const actions = {
       v = parseInt(value, 10);
       if (!Number.isFinite(v) || v < 0 || v > 100000) throw new Error('enter a whole number');
     }
-    await rest('PATCH', 'settings?key=eq.' + enc(key), { body: { value: v, updated_at: new Date().toISOString() }, prefer: 'return=minimal' });
+    if (['play_counts_off', 'emails_paused', 'new_free_paused', 'lite_home'].includes(key) && v !== 0 && v !== 1) throw new Error('switches are 0 (off) or 1 (on)');
+    if (key === 'free_days' && v > 60) throw new Error('free days: 60 at most');
+    await rest('POST', 'settings?on_conflict=key', { body: { key, value: v, updated_at: new Date().toISOString() }, prefer: 'resolution=merge-duplicates,return=minimal' });
+    resetSwitchCache();
     return { ok: true };
   },
 };
