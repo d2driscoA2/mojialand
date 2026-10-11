@@ -1319,8 +1319,15 @@ function homeScene(id){
   return '<div style="display:flex;align-items:center;gap:2px"><svg width="96" height="60" viewBox="0 0 96 60" aria-hidden="true"><path class="hs-dr" d="M6 46 C 22 6, 40 6, 48 30 S 74 56, 90 14" fill="none" stroke="#FF5FA2" stroke-width="7" stroke-linecap="round"></path></svg><span style="font-size:28px;line-height:1">🖍️</span></div>'; }
 function homeProg(id,medal,frac){ const p=store.get('homeProg',{}), o=p[id]||{medal:-1,frac:0}; o.medal=Math.max(o.medal,medal); o.frac=Math.max(0,Math.min(1,frac)); p[id]=o; store.set('homeProg',p); }
 function homeNote(id){ if(!HG.some(g=>g.id===id)) return; const pl=store.get('played',{}); pl[id]=1; store.set('played',pl); store.set('lastGame',id); }
-function homeFeatured(){ const pl=store.get('played',{}); const fresh=HG.find(g=>g.isNew&&(g.alwaysNew||!pl[g.id])); if(fresh) return {g:fresh,isNew:true};
+function homePick(){ const pl=store.get('played',{}); const fresh=HG.find(g=>g.isNew&&(g.alwaysNew||!pl[g.id])); if(fresh) return {g:fresh,isNew:true};
   const last=HG.find(g=>g.id===store.get('lastGame',''))||HG[0]; return {g:last,isNew:false,played:!!pl[last.id]}; }
+/* Release 1.3 (Danny, October 10, option B): the big card holds for the whole visit, so a game a kid just played never jumps
+   away. The pick happens once per app session (sessionStorage, which also survives the #49 update reload) and changes on the
+   next app open. A new game played during the visit keeps its spot and colors; its chip turns from New! to Keep playing. */
+function homeFeatured(){ let held=null; try{ held=JSON.parse(sessionStorage.getItem('mojia.featVisit')||'null'); }catch(e){}
+  const g=held&&HG.find(x=>x.id===held.id);
+  if(g){ const pl=store.get('played',{}); const isNew=!!held.isNew; return {g,isNew,keep:isNew&&!g.alwaysNew&&!!pl[g.id],played:!!pl[g.id]}; }
+  const f=homePick(); try{ sessionStorage.setItem('mojia.featVisit',JSON.stringify({id:f.g.id,isNew:f.isNew})); }catch(e){} return f; }
 /* Same-color rule (Danny, October 7): two cards with the same color never touch, side by side, stacked or corner to corner.
    The featured card counts as a neighbor of the first row. The order in HG holds; a card moves down only when it would touch
    its twin. The order is checked for 2 columns (phone, iPad sideways) and 3 columns (iPad upright) at once, so turning
@@ -1346,7 +1353,7 @@ function homeRender(){ const f=homeFeatured(), prog=store.get('homeProg',{}), g=
   if(!f.isNew&&g.medals){ const p=prog[g.id]||{medal:-1,frac:0}, have=p.medal, nxt=Math.min(MEDALS.length-1,have+1), on=Math.round(p.frac*6);
     mid='<div class="hprog">'+(have>=0?'<span>'+MEDALS[have][0]+'</span>':'')+[0,1,2,3,4,5].map(i=>'<i class="'+(i<on?'on':'')+'"></i>').join('')+'<span class="dim">'+MEDALS[nxt][0]+'</span></div>'; }
   else mid='<div class="hsub" style="color:'+(dark?'#FFFFFF':'var(--ink)')+'">'+g.sub+'</div>';
-  const chip=f.isNew?'<span class="hchip" style="background:#FFC83D;color:#30254A">New!</span>':'<span class="hchip" style="background:'+(dark?'#FFC83D':'#7138D1')+';color:'+(dark?'#30254A':'#FFFFFF')+'">'+(f.played?'Keep playing':'Play')+'</span>';
+  const chip=f.keep?'<span class="hchip" style="background:#FFC83D;color:#30254A">Keep playing</span>':f.isNew?'<span class="hchip" style="background:#FFC83D;color:#30254A">New!</span>':'<span class="hchip" style="background:'+(dark?'#FFC83D':'#7138D1')+';color:'+(dark?'#30254A':'#FFFFFF')+'">'+(f.played?'Keep playing':'Play')+'</span>';
   $('#hfeat').innerHTML='<button class="htile hfeat" data-go="'+g.id+'" aria-label="'+g.name+'" style="background:'+(f.isNew?'#7138D1':g.fill)+'"><span class="win"><div>'+homeScene(g.id)+'</div></span><span class="col">'+chip+'<span class="hname" style="color:'+(dark?'#FFFFFF':'var(--ink)')+'">'+g.name+'</span>'+mid+'<span class="hplayrow"><span class="hplay big'+(dark?' inv':'')+'">'+PLAYSVG(dark?'#7138D1':'#FFFFFF')+'</span></span></span></button>';
   $('#hgrid').innerHTML=homeOrder(HG.filter(x=>x.id!==g.id),f.isNew?'#7138D1':g.fill).map((x,i)=>{ const p=prog[x.id], medal=x.medals&&p&&p.medal>=0?MEDALS[p.medal][0]+' '+MEDALS[p.medal][1]:'', white=x.id==='draw';
     return '<button class="htile hcell'+(white?' white':'')+(x.dark?' dark':'')+(x.soft?' soft':'')+'" data-go="'+x.id+'" aria-label="'+x.name+'" style="'+(white?'':'background:'+x.fill)+'"><span class="win">'+homeScene(x.id)+'</span><span class="hrow"><span class="nm"><b>'+x.name+'</b>'+(medal?'<small>'+medal+'</small>':'')+'</span><span class="hplay sm" style="animation-delay:'+((i+1)*.5)+'s">'+PLAYSVG(x.dark?x.fill:'#FFFFFF')+'</span></span></button>'; }).join(''); }

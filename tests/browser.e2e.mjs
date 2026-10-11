@@ -1590,11 +1590,17 @@ for (const [w, h, name] of [[375, 667, 'se'], [820, 1180, 'ipad']]) {
   check('1.3 share: the map shows all 9 levels after back', (await page.locator('#sharestage .sh-lv').count()) === 9);
   await page.click('#s-share [data-go="home"]'); await page.waitForTimeout(300);
   check('1.3 share: back from the map goes home', await page.isVisible('#s-home'));
-  check('1.3 home: after Share Party, Feelings Faces is featured with New!', (await page.getAttribute('#hfeat .hfeat', 'data-go')) === 'feelings' && /New!/.test(await page.textContent('#hfeat')));
+  // Option B (Danny, October 10): the big card holds for the whole visit; nothing on the home screen moves.
+  check('1.3 home: after Share Party, Share Party stays in the big card for this visit, chip Keep playing', (await page.getAttribute('#hfeat .hfeat', 'data-go')) === 'share' && /Keep playing/.test(await page.textContent('#hfeat')) && !/New!/.test(await page.textContent('#hfeat')));
+  check('1.3 home: the grid did not move during the visit', (await page.evaluate(() => [...document.querySelectorAll('#hgrid .hcell')].map((b) => b.dataset.go).join(','))) === 'pattern,bounce,match,parade,feelings,draw');
   await page.evaluate(() => localStorage.setItem('mojia.shareStars', JSON.stringify([0, 1, 99, 'x'])));
-  await page.click('#hgrid [data-go="share"]'); await page.waitForSelector('#s-share:not(.hidden)'); await page.waitForTimeout(300);
+  await page.click('#hfeat .hfeat'); await page.waitForSelector('#s-share:not(.hidden)'); await page.waitForTimeout(300);
   check('1.3 share: stars saved on the device show on the map (bad values ignored)', (await page.locator('#sharestage .sh-lv.done').count()) === 2);
   await page.click('#s-share [data-go="home"]'); await page.waitForTimeout(300);
+  // Next app open: a new visit picks the next new game.
+  await page.evaluate(() => sessionStorage.removeItem('mojia.featVisit')); await page.reload(); await page.click('#splash'); await page.waitForTimeout(400);
+  check('1.3 home: next app open, Feelings Faces fills the big card with New!', (await page.getAttribute('#hfeat .hfeat', 'data-go')) === 'feelings' && /New!/.test(await page.textContent('#hfeat')));
+  await page.evaluate(() => { window.__spoke = []; });
 
   await page.click('#hfeat .hfeat'); await page.waitForSelector('#s-feelings:not(.hidden)');
   check('1.3 feelings: picture strip has 3 panels, first lit', await page.evaluate(() => document.querySelectorAll('#feelingsstage .panel').length === 3 && document.querySelector('#feelingsstage .panel[data-b="1"]').classList.contains('on')));
@@ -1614,7 +1620,8 @@ for (const [w, h, name] of [[375, 667, 'se'], [820, 1180, 'ipad']]) {
   await page.waitForSelector('#feelingsstage .nextbtn', { timeout: 8000 });
   check('1.3 feelings: helping finishes the scene and saves it on the device', (await page.evaluate(() => localStorage.getItem('mojia.feelRound'))) === '1');
   await page.click('#s-feelings [data-go="home"]'); await page.waitForTimeout(300);
-  await page.click('#hgrid [data-go="feelings"]'); await page.waitForSelector('#s-feelings:not(.hidden)'); await page.waitForTimeout(300);
+  check('1.3 home: Feelings Faces holds the big card for this visit', (await page.getAttribute('#hfeat .hfeat', 'data-go')) === 'feelings' && /Keep playing/.test(await page.textContent('#hfeat')));
+  await page.click('#hfeat .hfeat'); await page.waitForSelector('#s-feelings:not(.hidden)'); await page.waitForTimeout(300);
   check('1.3 feelings: reopening starts on scene 2', await page.evaluate(() => [...document.querySelectorAll('#feelingsstage .ffdot')].findIndex((d) => d.classList.contains('now')) === 1));
   await page.click('#s-feelings [data-go="home"]'); await page.waitForTimeout(2500);
   check('1.3: leaving mid-story stops the game (stage empty)', await page.evaluate(() => document.querySelector('#feelingsstage').children.length === 0 && document.querySelector('#sharestage').children.length === 0));
