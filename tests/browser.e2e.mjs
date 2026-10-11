@@ -846,7 +846,17 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   await page.waitForSelector('#bOut:not([hidden])');
   const one = await page.evaluate(() => ({ cards: document.querySelectorAll('#sheet .bc.one').length, qrs: document.querySelectorAll('#sheet .q img').length, title: document.querySelector('#sheet .bc b').textContent }));
   check('1.4 #57 admin: 1 per card makes 3 codes for 3 cards, one big QR each', (await page.locator('#bList > div').count()) === 3 && /3 cards, 3 codes made \(1 on each card\)/.test(await page.textContent('#bOk')) && one.cards === 3 && one.qrs === 3 && one.title === 'A free 48-hour pass', JSON.stringify(one));
-  await page.emulateMedia({ media: 'print' }); await page.screenshot({ path: path.join(SHOTS, 'admin-cards-print-one.png'), fullPage: true }); await page.emulateMedia({ media: 'screen' });
+  await page.emulateMedia({ media: 'print' }); await page.screenshot({ path: path.join(SHOTS, 'admin-cards-print-one.png'), fullPage: true });   const fitOne = await page.evaluate(() => ({ fit: [...document.querySelectorAll('#sheet .bc')].every((c) => c.scrollHeight <= c.clientHeight + 1 && c.scrollWidth <= c.clientWidth + 1), shown: [...document.body.children].filter((e) => e.id !== 'sheet' && getComputedStyle(e).display !== 'none').map((e) => e.tagName + '#' + e.id) }));
+  const pagesOf = (buf) => (buf.toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length;
+  await page.evaluate(() => { const s = document.getElementById('sheet'); s.dataset.keep = s.innerHTML; s.innerHTML = s.innerHTML.repeat(4); });
+  const tenCards = await page.evaluate(() => { const s = document.getElementById('sheet'); const cards = [...s.querySelectorAll('.bc')].slice(0, 10); s.innerHTML = cards.map((c) => c.outerHTML).join(''); return s.querySelectorAll('.bc').length; });
+  const pdfIos = await page.pdf({ format: 'Letter', margin: { top: '0.5in', bottom: '0.5in', left: '0.5in', right: '0.5in' }, displayHeaderFooter: true, preferCSSPageSize: false });
+  const pdfCss = await page.pdf({ preferCSSPageSize: true });
+  fs.writeFileSync(path.join(SHOTS, 'admin-cards-one.pdf'), pdfIos);
+  check('1.4 #57 admin: 10 one-code cards fit one letter page with phone-style margins and with the page CSS', tenCards === 10 && pagesOf(pdfIos) === 1 && pagesOf(pdfCss) === 1, tenCards + ' cards, ' + pagesOf(pdfIos) + ' and ' + pagesOf(pdfCss) + ' pages');
+  check('1.4 #57 admin: nothing spills out of a card in print, only the sheet prints', fitOne.fit && fitOne.shown.length === 0, JSON.stringify(fitOne));
+  await page.emulateMedia({ media: 'screen' });
+  await page.evaluate(() => { const s = document.getElementById('sheet'); s.innerHTML = s.dataset.keep; });
   await page.selectOption('#bPer', '3');
   check('1.4 #57 admin: switching to 3 per card updates the count line', (await page.textContent('#bCount')) === '3 cards, 9 codes');
   await page.fill('#bCards', '4'); await page.click('#bGo');
@@ -859,6 +869,7 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   check('#2 admin: cards carry the batch label in small print and in the batch call', bodiesBy['codes.batch'].batch === 'lincoln-elem' && (await page.locator('#sheet .blabel').count()) === 4 && /lincoln-elem/.test(await page.textContent('#sheet .blabel')));
   await page.emulateMedia({ media: 'print' });
   await page.screenshot({ path: path.join(SHOTS, 'admin-cards-print.png'), fullPage: true });
+  check('1.4 #57 admin: 3-code cards fit their card in print', await page.evaluate(() => [...document.querySelectorAll('#sheet .bc')].every((c) => c.scrollHeight <= c.clientHeight + 1 && c.scrollWidth <= c.clientWidth + 1)), JSON.stringify(await page.evaluate(() => { const c = document.querySelector('#sheet .bc'); return { card: [c.scrollWidth, c.clientWidth, c.scrollHeight, c.clientHeight], l: c.querySelector('.l').getBoundingClientRect().height, r: c.querySelector('.r').getBoundingClientRect().height, rw: c.querySelector('.r').scrollWidth, rcw: c.querySelector('.r').clientWidth }; })));
   await page.emulateMedia({ media: null });
   await page.screenshot({ path: path.join(SHOTS, 'admin-codes.png') });
   await page.click('[data-tab="support"]');

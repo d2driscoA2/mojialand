@@ -142,4 +142,4 @@
   #anRoot .anFill{transition:none}
 }
 /* campaign QR card sheet reuses the gift card print layout */
-@media print{ .bc.camp .r{justify-items:center} .bc.camp .r img{width:1.3in;height:1.3in} .bc.camp .r code{font:900 7pt/1.2 ui-monospace,Menlo,Consolas,monospace;color:#5122A5;text-align:center} }
+@media print{ .bc.camp .r{justify-items:center} .bc.camp .r img{width:1.2in;height:1.2in} .bc.camp .r code{font:900 7pt/1.2 ui-monospace,Menlo,Consolas,monospace;color:#5122A5;text-align:center} }
