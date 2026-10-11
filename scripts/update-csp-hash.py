@@ -81,6 +81,10 @@ if '__MOJIA_BUILD__' in _ph:
     BUILD_ID = hashlib.sha256(_ph.encode('utf-8')).hexdigest()[:16]
     _play.write_text(_ph.replace('__MOJIA_BUILD__', BUILD_ID), encoding='utf-8')
     (site_dir / 'play/build.json').write_text('{"b":"%s"}\n' % BUILD_ID, encoding='utf-8')
+    # Release 1.4 #14: the /play/ service worker carries the same build id, so a new build makes a new cache.
+    _sw = site_dir / 'play/sw.js'
+    if _sw.exists():
+        _sw.write_text(_sw.read_text(encoding='utf-8').replace('__MOJIA_BUILD__', BUILD_ID), encoding='utf-8')
 
 
 def script_hash(rel):
@@ -107,7 +111,7 @@ if STAGING:
 # Game: same strict policy as before. The website may show the game in its
 # play window, so the game allows framing by its own site only.
 game_csp = ("default-src 'none'; script-src 'self' 'sha256-%s'; style-src 'self' 'unsafe-inline'; "
-            "img-src 'self' data:; font-src 'self'; media-src data:; manifest-src 'self'; connect-src 'self'; "
+            "img-src 'self' data:; font-src 'self'; media-src data:; manifest-src 'self'; connect-src 'self'; worker-src 'self'; "
             "base-uri 'self'; form-action 'none'; frame-ancestors 'self'; upgrade-insecure-requests") % game
 
 # Website: adds the contact form (posts to this site) and the play window.
@@ -166,6 +170,10 @@ headers = "".join([
     block('/index.html', site_csp, 'DENY'),
     block('/play/*', game_csp, 'SAMEORIGIN'),
     "/play/build.json\n  Cache-Control: no-store\n",
+    # Release 1.4 #14: the service worker file is checked on every visit; logos and images keep a week.
+    "/play/sw.js\n  Cache-Control: no-cache\n",
+    "/logo/*\n  Cache-Control: public, max-age=604800, stale-while-revalidate=86400\n",
+    "/img/*\n  Cache-Control: public, max-age=604800, stale-while-revalidate=86400\n",
     block('/r/*', redeem_csp, 'DENY') + "  Cache-Control: no-store\n",
     block('/g/*', friend_csp, 'DENY'),
     block('/admin/*', admin_csp, 'DENY') + "  Cache-Control: no-store\n  X-Robots-Tag: noindex, nofollow\n",

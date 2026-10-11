@@ -117,7 +117,7 @@ const base = 'http://localhost:' + A.port, baseNoKey = 'http://localhost:' + B.p
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
 
 async function newPage(opts = {}) {
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, ...opts });
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, serviceWorkers: 'block', ...opts });
   const page = await ctx.newPage();
   page.csp = []; page.errors = []; page.reqs = [];
   page.on('console', (m) => { if (/Content Security Policy|Refused to/i.test(m.text())) page.csp.push(m.text()); });
@@ -2195,6 +2195,31 @@ for (const [st, title] of [[403, 'This pass is on 5 devices'], [410, 'This link 
   const html = fs.readFileSync(path.join(site, 'g', 'index.html'), 'utf8');
   check('/g/ has the preview card tags', /og:image" content="https:\/\/[a-z.]+\/img\/friend-pass-card\.jpg"/.test(html) && /og:title" content="48 free hours of Mojialand"/.test(html) && fs.existsSync(path.join(site, 'img', 'friend-pass-card.jpg')));
   check('/g/ no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
+  await ctx.close();
+}
+
+// Release 1.4 #14: service worker saves /play/ for offline play; build.json and api calls never saved.
+{
+  const swSrc = fs.readFileSync(path.join(site, 'play', 'sw.js'), 'utf8');
+  const bid = (/mojia-build" content="([0-9a-f]{16})"/.exec(fs.readFileSync(path.join(site, 'play', 'index.html'), 'utf8')) || [])[1];
+  check('1.4 #14 sw: build stamps the same build id into the service worker', !!bid && swSrc.includes("'" + bid + "'") && !swSrc.includes('__MOJIA_BUILD__'));
+  const hb = parseHeaders(site); const hdr = (p) => { const h = {}; for (const b of hb) if (matches(b.path, p)) Object.assign(h, b.h); return h; };
+  check('1.4 #14 headers: sw.js no-cache, build.json no-store, logos a week, admin and /r/ never cached, game CSP allows its worker', hdr('/play/sw.js')['Cache-Control'] === 'no-cache' && hdr('/play/build.json')['Cache-Control'] === 'no-store' && /max-age=604800/.test(hdr('/logo/icon-180.png')['Cache-Control']) && hdr('/admin/')['Cache-Control'] === 'no-store' && hdr('/r/X')['Cache-Control'] === 'no-store' && /worker-src 'self'/.test(hdr('/play/')['Content-Security-Policy']));
+  const { ctx, page } = await newPage({ serviceWorkers: 'allow' });
+  await page.addInitScript(() => { localStorage.setItem('mojia.demos', 'false'); localStorage.setItem('mojia.welcomed', 'true'); });
+  await page.goto(base + '/play/');
+  const ready = await page.evaluate(() => Promise.race([navigator.serviceWorker.ready.then((r) => r.scope), new Promise((r) => setTimeout(() => r(''), 8000))]));
+  check('1.4 #14 sw: the game registers its worker with scope /play/ only', /\/play\/$/.test(ready), ready);
+  await page.waitForTimeout(500);
+  const saved = await page.evaluate(async () => { const out = []; for (const k of await caches.keys()) { const c = await caches.open(k); for (const r of await c.keys()) out.push(new URL(r.url).pathname); } return out; });
+  check('1.4 #14 sw: saves the game page and fonts, never build.json, api, pass, admin or code links', saved.includes('/play/') && saved.includes('/fonts/nunito-latin.woff2') && !saved.some((u) => /build\.json|^\/api\/|^\/pass\/|^\/admin\/|^\/r\/|^\/g\/|netlify/.test(u)), JSON.stringify(saved));
+  await ctx.setOffline(true);
+  await page.goto(base + '/play/?restore=abc').catch(() => null);
+  const off = await page.evaluate(() => ({ b: (document.querySelector('meta[name="mojia-build"]') || {}).content, ok: !!document.body && document.body.innerHTML.length > 1000 })).catch(() => ({}));
+  check('1.4 #14 sw: offline, the game still opens from the saved copy', off.ok && off.b === bid, JSON.stringify(off));
+  const bj = await page.evaluate(() => fetch('/play/build.json', { cache: 'no-store' }).then(() => 'answered', () => 'failed'));
+  check('1.4 #14 sw: offline, build.json fails (never served from the saved copy)', bj === 'failed');
+  await ctx.setOffline(false);
   await ctx.close();
 }
 

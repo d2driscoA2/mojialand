@@ -4620,6 +4620,8 @@ function unlock(){ setPlayback(); keepSession(); if(unlocked) return; unlocked=t
    A new build reloads the page once, only on the home screen with no how-to card and no stamps on the canvas,
    so no game, drawing, or grown-up screen is ever cut off. Passes (localStorage) and drawings (IndexedDB) stay. */
 const BUILD=((document.querySelector('meta[name="mojia-build"]')||{}).content)||'', BUILD_RE=/^[0-9a-f]{16}$/;
+/* Release 1.4 #14: the service worker saves the game for offline play and cheap return visits (scope /play/ only). */
+if(BUILD_RE.test(BUILD)&&'serviceWorker' in navigator){ addEventListener('load',()=>{ try{ navigator.serviceWorker.register('/play/sw.js',{scope:'/play/'}).catch(()=>{}); }catch(e){} }); }
 let newBuild='', buildAskAt=0;
 /* Sturdier check (Danny, October 10): when the app returns to the front, a failed ask (the phone's connection not back yet)
    tries once more after 3 seconds. A return to the home screen from a game also asks, at most once a minute.
