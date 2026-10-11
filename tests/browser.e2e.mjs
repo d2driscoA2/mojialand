@@ -110,6 +110,8 @@ function tamper(tok) {
   return Buffer.from(JSON.stringify(p)).toString('base64url') + '.' + s;
 }
 
+// Release 1.4 #32: free play shows minutes after the free week, or the free week's days left.
+const FREE_CHIP = /^(\d+:\d\d|⏳ \d+d free)$/;
 const site = build(true);
 const siteNoKey = build(false);
 const A = await serve(site), B = await serve(siteNoKey);
@@ -137,7 +139,7 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   const t = fs.readFileSync(path.join(site, rel), 'utf8');
   check('#18 no "every device" wording: ' + rel, !/every device|all your devices/i.test(t));
 }
-check('#18 website pass card says up to 5 devices', /Up to 5 devices share the same 48 hours\./.test(fs.readFileSync(path.join(site, 'index.html'), 'utf8')));
+check('#18 website pass card says up to 5 devices', /Up to 5 devices share the same 30 days\./.test(fs.readFileSync(path.join(site, 'index.html'), 'utf8')));
 
 // 1. WebCrypto verifies node-signed tokens
 {
@@ -163,11 +165,14 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   await page.route('**/.netlify/functions/create-checkout', (r) => { body = r.request().postDataJSON(); r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ clientSecret: 'cs_test_x_secret', publishableKey: 'pk_test_x' }) }); });
   await page.goto(base + '/pass/?plan=pass');
   await page.waitForSelector('#checkout >> text=Apple Pay');
-  check('/pass/ sheet: item and price', (await page.textContent('#coItem')) === '48-hour pass' && (await page.textContent('#coPrice')) === '$1.50');
+  check('/pass/ sheet: item and price', (await page.textContent('#coItem')) === '30-day pass' && (await page.textContent('#coPrice')) === '$4.99');
   await page.goto(base + '/play/#passes'); await page.waitForSelector('#s-ngate:not(.hidden)');
   { const ans = await page.getAttribute('#pwChoices', 'data-a'); await page.click('#pwChoices [data-n="' + ans + '"]'); }
   await page.waitForSelector('#s-plans:not(.hidden)');
-  check('pass screen CTA names the pass', (await page.textContent('#pwPay')) === 'Start 48 hours · $1.50', await page.textContent('#pwPay'));
+  check('1.4 pass screen: Forever shown first and picked first', (await page.textContent('#pwPay')) === 'Get Forever · $14.99' && (await page.getAttribute('#pwCards .pw-plan:first-child', 'data-plan')) === 'life', await page.textContent('#pwPay'));
+  await page.click('[data-plan="pass"]');
+  await page.screenshot({ path: path.join(SHOTS, 'plans-14-390.png') });
+  check('pass screen CTA names the pass', (await page.textContent('#pwPay')) === 'Start 30 days · $4.99', await page.textContent('#pwPay'));
   await page.click('[data-plan="life"]');
   check('pass screen CTA for Forever', (await page.textContent('#pwPay')) === 'Get Forever · $14.99');
   await page.goto(base + '/pass/?plan=pass'); await page.waitForSelector('#checkout >> text=Apple Pay');
@@ -217,7 +222,7 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   await page.waitForSelector('#checkout >> text=Apple Pay');
   check('/pass/ Try again mounts checkout', await page.isHidden('#coError'));
   check('/pass/?plan=add sends device code', bodies[0].plan === 'add' && bodies[0].code === 'MOJI-AAAA-BBBB-CCCC', JSON.stringify(bodies[0]));
-  check('/pass/ add shows Add 48 hours $1.50', (await page.textContent('#coItem')) === 'Add 48 hours');
+  check('/pass/ add shows Add 30 days $4.99', (await page.textContent('#coItem')) === 'Add 30 days' && (await page.textContent('#coPrice')) === '$4.99');
   await ctx.close();
 }
 
@@ -296,11 +301,11 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   await page.goto(base + '/play/#allset');
   await page.waitForTimeout(800);
   const chip = await page.locator('#s-home [data-chip]').textContent();
-  check('play: tampered pass ignored (no All set, free play chip)', await page.isHidden('#s-allset') && /^\d+:\d\d$/.test(chip.trim()), chip);
+  check('play: tampered pass ignored (no All set, free play chip)', await page.isHidden('#s-allset') && FREE_CHIP.test(chip.trim()), chip);
   // payload edited ends_at in storage but token valid: ignored
   await page.evaluate(([tok, e]) => localStorage.setItem('mojia.pass', JSON.stringify({ code: 'X', kind: '48h', ends_at: e + 864e5, token: tok })), [token, payload.e]);
   await page.reload(); await page.waitForTimeout(800);
-  check('play: stored ends_at not matching token ignored', /^\d+:\d\d$/.test((await page.locator('#s-home [data-chip]').textContent()).trim()));
+  check('play: stored ends_at not matching token ignored', FREE_CHIP.test((await page.locator('#s-home [data-chip]').textContent()).trim()));
   await page.evaluate(([tok, e]) => localStorage.setItem('mojia.pass', JSON.stringify({ code: 'X', kind: '48h', ends_at: e, token: tok })), [token, payload.e]);
   await page.reload(); await page.waitForTimeout(800);
   check('play: valid stored pass honored', /48h left/.test(await page.locator('#s-home [data-chip]').textContent()));
@@ -488,7 +493,7 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   await page.evaluate(([tok]) => localStorage.setItem('mojia.pass', JSON.stringify({ code: 'X', kind: 'forever', ends_at: 0, token: tok })), [token]);
   await page.reload(); await page.waitForTimeout(800);
   const chip = (await page.locator('#s-home [data-chip]').textContent()).trim();
-  check('play without key: pass not honored', /^\d+:\d\d$/.test(chip), chip);
+  check('play without key: pass not honored', FREE_CHIP.test(chip), chip);
   const src = fs.readFileSync(path.join(siteNoKey, 'play/index.html'), 'utf8');
   check('build without key writes null', src.includes('const PASS_PUBLIC_JWK=null;'));
   await ctx.close();
@@ -592,13 +597,13 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   await page.waitForSelector('#s-plans:not(.hidden)');
   await page.click('#pwCode'); await page.fill('#pwCodeIn', 'friends50'); await page.click('#pwCodeGo');
   await page.waitForSelector('#pwDiscount:not([hidden])');
-  check('discount: green line and halved prices', (await page.textContent('#pwDiscount')) === 'FRIENDS50 applied: 50% off' && (await page.textContent('#pwPay')) === 'Start 48 hours · $0.75');
+  check('discount: green line and halved prices', (await page.textContent('#pwDiscount')) === 'FRIENDS50 applied: 50% off' && (await page.textContent('#pwPay')) === 'Get Forever · $' + (Math.round(14.99 * 0.5 * 100) / 100).toFixed(2), await page.textContent('#pwPay'));
   await page.screenshot({ path: path.join(SHOTS, 'plans-discount-390.png') });
   await page.evaluate(() => { window.__nav = null; });
   await page.route('**/pass/**', (r) => { payUrl = r.request().url(); r.fulfill({ status: 200, contentType: 'text/html', body: '<title>x</title>' }); });
   await page.click('#pwPay');
   await page.waitForTimeout(500);
-  check('discount: checkout link carries plan and promo', /\/pass\/\?plan=pass&promo=FRIENDS50$/.test(payUrl), payUrl);
+  check('discount: checkout link carries plan and promo', /\/pass\/\?plan=life&promo=FRIENDS50$/.test(payUrl), payUrl);
   await ctx.close();
 }
 
@@ -707,13 +712,14 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
 // 9e2. play settings from the admin page apply on the next open
 {
   const { ctx, page } = await newPage();
-  await page.route('**/.netlify/functions/settings', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '{"first_visit_minutes":20,"daily_minutes":3,"daily_reset":"04:00"}' }));
+  await page.route('**/.netlify/functions/settings', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '{"free_days":7,"daily_minutes":20,"daily_reset":"04:00"}' }));
+  await page.addInitScript(() => { localStorage.setItem('mojia.freeStart', String(Date.now() - 10 * 864e5)); });
   await page.goto(base + '/play/');
   await page.waitForTimeout(700);
   const first = (await page.locator('#s-home [data-chip]').textContent()).trim();
   await page.reload(); await page.waitForTimeout(700);
   const second = (await page.locator('#s-home [data-chip]').textContent()).trim();
-  check('play: server settings apply on the next open (15:00 then 20:00)', /^15:0\d|^14:5\d/.test(first) && /^20:0\d|^19:5\d/.test(second), first + ' -> ' + second);
+  check('play: server settings apply on the next open (3:00 then 20:00, after the free week)', /^3:0\d|^2:5\d/.test(first) && /^20:0\d|^19:5\d/.test(second), first + ' -> ' + second);
   await ctx.close();
 }
 
@@ -733,7 +739,7 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   const AN = await analyticsSamples();
   const tellBodies = []; const bodiesBy = {};
   await page.route('**/.netlify/functions/admin-api', (r) => {
-    const b = r.request().postDataJSON(); calls.push(b.action); if (/^passes\.(add48|forever)$/.test(b.action)) tellBodies.push(b); bodiesBy[b.action] = b;
+    const b = r.request().postDataJSON(); calls.push(b.action); if (/^passes\.(add30|forever)$/.test(b.action)) tellBodies.push(b); bodiesBy[b.action] = b;
     if (signedIn && /^(analytics|campaigns)\./.test(b.action)) {
       if (b.action === 'campaigns.create' && !/^[a-z0-9][a-z0-9-]{1,23}$/.test(b.label || '')) return r.fulfill({ status: 400, contentType: 'application/json', body: '{"error":"Use 2 to 24 lowercase letters, numbers or dashes for the label."}' });
       const made = b.action === 'campaigns.create' ? { campaigns: [{ ...AN.campaigns.campaigns[0], label: b.label, name: b.name, open: 0, play: 0, gift: 0, pass48: 0, forever: 0, cities: [], rolls: {}, daily: [{ d: AN.campaigns.campaigns[0].daily.at(-1).d, n: 0 }], avgDays: null }, ...AN.campaigns.campaigns] } : null;
@@ -741,7 +747,7 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
       return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(o) });
     }
     if (!signedIn) return r.fulfill({ status: 401, contentType: 'application/json', body: '{"error":"Please sign in."}' });
-    const out = { 'passes.list': { passes: [pass] }, 'passes.note': { pass: { ...pass, note: b.note } }, 'passes.add48': { pass: { ...pass, ends_at: new Date(Date.now() + 49 * 3600e3).toISOString() }, tell: b.skip_email ? { email: 'skipped' } : { email: 'sent', to: 'p•••@example.com' } },
+    const out = { 'passes.list': { passes: [pass] }, 'passes.note': { pass: { ...pass, note: b.note } }, 'passes.add30': { pass: { ...pass, ends_at: new Date(Date.now() + 49 * 3600e3).toISOString() }, tell: b.skip_email ? { email: 'skipped' } : { email: 'sent', to: 'p•••@example.com' } },
       'passes.batches': { batches: [{ label: 'in-fair-oct', name: 'in-fair-oct', note: 'Busy table', made: new Date().toISOString(), codes: 30, used: 12, open: 18, voided: 0, pct: 40, avgDays: 2.5, bought: 3 }] }, 'codes.end_unused': { ended: 18 },
       'codes.labels': { labels: ['in-fair-oct', 'lincoln-elem'] }, 'campaigns.note': { ok: true },
       'passes.forever': { pass: { ...pass, kind: 'forever', ends_at: null, email: null, source: 'gift', stripe_session_id: null }, tell: { email: 'none', share: 'Good news: your Mojialand pass is Forever now. Open Mojialand on each phone or tablet and Forever shows up.' } },
@@ -771,19 +777,19 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   await page.waitForFunction(() => /Code email sent to real\.parent@example\.com/.test(document.querySelector('#pErr').textContent));
   check('admin: Email code sends to the typed address', calls.includes('passes.email'));
   // Release 1.2 #27: Add 48 hours asks first, emails unless Skip email is checked
-  await page.click('#pList [data-act="passes.add48"]');
+  await page.click('#pList [data-act="passes.add30"]');
   await page.waitForSelector('#pList .tellbox');
   check('#27 admin: Add 48 hours asks first and names the masked email; nothing sent yet', /p•••@example\.com/.test(await page.textContent('#pList .tellbox')) && !(await page.isChecked('#pList .skipmail')) && tellBodies.length === 0);
   await page.screenshot({ path: path.join(SHOTS, 'admin-tell-ask.png') });
-  await page.click('#pList [data-tell="passes.add48"]');
+  await page.click('#pList [data-tell="passes.add30"]');
   await page.waitForFunction(() => /Email sent to p•••@example\.com/.test(document.querySelector('#pList').textContent));
   check('#27 admin: confirm sends with skip_email false and shows the confirm line', tellBodies.length === 1 && tellBodies[0].skip_email === false);
-  await page.click('#pList [data-act="passes.add48"]');
+  await page.click('#pList [data-act="passes.add30"]');
   await page.check('#pList .tellbox .skipmail');
-  await page.click('#pList [data-tell="passes.add48"]');
+  await page.click('#pList [data-tell="passes.add30"]');
   await page.waitForFunction(() => /No email sent/.test(document.querySelector('#pList').textContent));
   check('#27 admin: Skip email sends skip_email true', tellBodies.length === 2 && tellBodies[1].skip_email === true);
-  await page.click('#pList [data-act="passes.add48"]'); await page.click('#pList [data-tell="cancel"]');
+  await page.click('#pList [data-act="passes.add30"]'); await page.click('#pList [data-tell="cancel"]');
   check('#27 admin: Cancel closes the ask without a call', tellBodies.length === 2 && (await page.locator('#pList .tellbox').count()) === 0);
   // Release 1.2 #2: Passes tabs, sort, Campaigns and schools; iPhone width keeps cards inside their border
   await page.setViewportSize({ width: 390, height: 844 });
@@ -834,7 +840,7 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   check('admin: gift code shown once with a /r/ link', (await page.textContent('#cCode')) === 'GIFT-ABCD-EFGH-JKMN' && (await page.getAttribute('#cLink', 'href')).endsWith('/r/GIFTABCDEFGHJKMN'));
   check('admin: share row with Text and Email links carrying the code', /GIFT-ABCD-EFGH-JKMN/.test(decodeURIComponent(await page.getAttribute('#cSms', 'href'))) && /r\/GIFTABCDEFGHJKMN/.test(decodeURIComponent(await page.getAttribute('#cMail', 'href'))) && await page.isVisible('#cShare [data-share="share"]'));
   // Release 1.3 #16: result card with settings; Done waits for a save; Make a code waits for Done
-  check('#16 admin: result card names kind, reason and use-by; Done is gray', /48 hours · Gift/.test(await page.textContent('#cMeta')) && await page.isDisabled('#cDone') && await page.isDisabled('#cGo'));
+  check('#16 admin: result card names kind, reason and use-by; Done is gray', /7 free days · Gift/.test(await page.textContent('#cMeta')) && await page.isDisabled('#cDone') && await page.isDisabled('#cGo'));
   await page.screenshot({ path: path.join(SHOTS, 'admin-code-card.png') });
   await page.check('#cSaved');
   check('#16 admin: I saved it turns Done on', await page.isEnabled('#cDone'));
@@ -850,7 +856,7 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   await page.fill('#bCards', '3'); await page.click('#bGo');
   await page.waitForSelector('#bOut:not([hidden])');
   const one = await page.evaluate(() => ({ cards: document.querySelectorAll('#sheet .bc.one').length, qrs: document.querySelectorAll('#sheet .q img').length, title: document.querySelector('#sheet .bc b').textContent }));
-  check('1.4 #57 admin: 1 per card makes 3 codes for 3 cards, one big QR each', (await page.locator('#bList > div').count()) === 3 && /3 cards, 3 codes made \(1 on each card\)/.test(await page.textContent('#bOk')) && one.cards === 3 && one.qrs === 3 && one.title === 'A free 48-hour pass', JSON.stringify(one));
+  check('1.4 #57 admin: 1 per card makes 3 codes for 3 cards, one big QR each', (await page.locator('#bList > div').count()) === 3 && /3 cards, 3 codes made \(1 on each card\)/.test(await page.textContent('#bOk')) && one.cards === 3 && one.qrs === 3 && one.title === '7 free days of Mojialand', JSON.stringify(one));
   await page.emulateMedia({ media: 'print' }); await page.screenshot({ path: path.join(SHOTS, 'admin-cards-print-one.png'), fullPage: true });   const fitOne = await page.evaluate(() => ({ fit: [...document.querySelectorAll('#sheet .bc')].every((c) => c.scrollHeight <= c.clientHeight + 1 && c.scrollWidth <= c.clientWidth + 1), shown: [...document.body.children].filter((e) => e.id !== 'sheet' && getComputedStyle(e).display !== 'none').map((e) => e.tagName + '#' + e.id) }));
   const pagesOf = (buf) => (buf.toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length;
   await page.evaluate(() => { const s = document.getElementById('sheet'); s.dataset.keep = s.innerHTML; s.innerHTML = s.innerHTML.repeat(4); });
@@ -866,7 +872,7 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   const [dl1] = await Promise.all([page.waitForEvent('download'), page.click('#bPrint')]);
   const pdf1 = fs.readFileSync(await dl1.path()); fs.writeFileSync(path.join(SHOTS, 'admin-cards-one-real.pdf'), pdf1);
   const s1 = pdf1.toString('latin1');
-  check('1.4 #57 admin: Print cards makes a real PDF, one letter page, every code on it', dl1.suggestedFilename() === 'mojialand-cards.pdf' && s1.startsWith('%PDF-1.4') && (s1.match(/\/Type \/Page /g) || []).length === 1 && s1.includes('/MediaBox [0 0 612 792]') && ['GIFT-B000-EFGH-JKMN', 'GIFT-B001-EFGH-JKMN', 'GIFT-B002-EFGH-JKMN'].every((c) => s1.includes('(' + c + ')')) && s1.includes('(A free 48-hour'));
+  check('1.4 #57 admin: Print cards makes a real PDF, one letter page, every code on it', dl1.suggestedFilename() === 'mojialand-cards.pdf' && s1.startsWith('%PDF-1.4') && (s1.match(/\/Type \/Page /g) || []).length === 1 && s1.includes('/MediaBox [0 0 612 792]') && ['GIFT-B000-EFGH-JKMN', 'GIFT-B001-EFGH-JKMN', 'GIFT-B002-EFGH-JKMN'].every((c) => s1.includes('(' + c + ')')) && s1.includes('(7 free days'));
   check('1.4 #57 admin: PDF cards are exact business cards, 252 by 144 points', /54 612 252 144 re S|54 \S+ 252 144 re S/.test(s1));
   check('1.4 #57 admin: PDF hint says actual size', /100 percent/.test(await page.textContent('#bPdfHint')));
   check('1.4 #57 admin: printing the PDF turns Done on', await page.isEnabled('#bDone'));
@@ -882,7 +888,7 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   const [dl3] = await Promise.all([page.waitForEvent('download'), page.click('#bPrint')]);
   const s3 = fs.readFileSync(await dl3.path()).toString('latin1');
   fs.writeFileSync(path.join(SHOTS, 'admin-cards-three-real.pdf'), fs.readFileSync(await dl3.path()));
-  check('1.4 #57 admin: 3-per-card PDF holds 4 cards and 12 codes on one page', (s3.match(/\/Type \/Page /g) || []).length === 1 && (s3.match(/252 144 re S/g) || []).length === 4 && (s3.match(/\(GIFT-/g) || []).length === 12 && s3.includes('(3 free 48-hour'));
+  check('1.4 #57 admin: 3-per-card PDF holds 4 cards and 12 codes on one page', (s3.match(/\/Type \/Page /g) || []).length === 1 && (s3.match(/252 144 re S/g) || []).length === 4 && (s3.match(/\(GIFT-/g) || []).length === 12 && s3.includes('(7 free days for 3'));
   check('admin: cards batch makes 3 codes per card', (await page.locator('#bList > div').count()) === 12 && /4 cards, 12 codes made \(3 on each card\)/.test(await page.textContent('#bOk')));
   check('1.4 #57 admin: the count line matches the codes made', (await page.textContent('#bCount')) === '4 cards, 12 codes');
   const sheet = await page.evaluate(() => ({ cards: document.querySelectorAll('#sheet .bc').length, qrs: [...document.querySelectorAll('#sheet .q img')].filter((i) => i.src.startsWith('data:image/')).length, codes: document.querySelectorAll('#sheet .q code').length }));
@@ -2083,7 +2089,7 @@ for (const [w, h, name] of [[390, 844, 'phone'], [820, 1180, 'ipad'], [1180, 820
   check('#51 old Forever pass stays on offline and gets a 30-day end on this device', !/\d+:\d\d/.test(await chip()) && Math.abs(end - (Date.now() + 30 * 864e5)) < 60e3, String(end));
   await page.evaluate(() => { localStorage.setItem('mojia.oldFvEnd', String(Date.now() - 1000)); localStorage.setItem('mojia.passCheckAt', String(Date.now())); });
   await page.reload(); await page.click('#splash').catch(() => {}); await page.waitForTimeout(900);
-  check('#51 offline past the end date, the old Forever pass turns off (free play)', /\d+:\d\d/.test(await chip()));
+  check('#51 offline past the end date, the old Forever pass turns off (free play)', FREE_CHIP.test((await chip()).trim()), await chip());
   online = true;
   await page.evaluate(() => localStorage.setItem('mojia.passCheckAt', '0'));
   await page.reload(); await page.click('#splash').catch(() => {}); await page.waitForTimeout(1500);
@@ -2120,7 +2126,7 @@ for (const [w, h, name] of [[390, 844, 'phone'], [820, 1180, 'ipad'], [1180, 820
     await page.route('**/.netlify/functions/pass-check', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ state: 'off', reason: 'refunded' }) }));
     await page.goto(base + '/play/'); await page.waitForTimeout(1200);
     check('pass check: a refund turns the pass off on the device', (await page.evaluate(() => localStorage.getItem('mojia.pass'))) === null);
-    check('pass check: the kid sees free play, no error screen', /\d+:\d\d/.test(await page.locator('#s-home [data-chip]').textContent()) && page.errors.length === 0);
+    check('pass check: the kid sees free play, no error screen', FREE_CHIP.test((await page.locator('#s-home [data-chip]').textContent()).trim()) && page.errors.length === 0);
     await openGU(page);
     check('pass check: Grown-ups says why the pass turned off', /turned off\. It was refunded\./.test(await page.textContent('#pwStatus')));
     await page.screenshot({ path: path.join(SHOTS, 'gu-pass-refunded-390.png') });
@@ -2193,9 +2199,59 @@ for (const [st, title] of [[403, 'This pass is on 5 devices'], [410, 'This link 
   await page.waitForSelector('#rStop:not([hidden])', { timeout: 8000 }).catch(() => null);
   check('#33 /g/ tap counts: /r/ redeems the gift code without a second tap', gBodies.length >= 1 && gBodies[0].code === 'GIFT-ABCD-EFGH-JKMN', JSON.stringify(gBodies));
   const html = fs.readFileSync(path.join(site, 'g', 'index.html'), 'utf8');
-  check('/g/ has the preview card tags', /og:image" content="https:\/\/[a-z.]+\/img\/friend-pass-card\.jpg"/.test(html) && /og:title" content="48 free hours of Mojialand"/.test(html) && fs.existsSync(path.join(site, 'img', 'friend-pass-card.jpg')));
+  check('/g/ has the preview card tags', /og:image" content="https:\/\/[a-z.]+\/img\/friend-pass-card\.jpg"/.test(html) && /og:title" content="Free days of Mojialand"/.test(html) && fs.existsSync(path.join(site, 'img', 'friend-pass-card.jpg')));
   check('/g/ no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
   await ctx.close();
+}
+
+// Release 1.4 #32: free week, gifts from day 3, the day 5 offer, staging test days, redeem carries the free week end
+{
+  const openGU2 = async (page) => { if (await page.isVisible('#splash')) { await page.click('#splash'); await page.waitForTimeout(400); } await page.click('#lockBtn'); await page.waitForSelector('#s-ngate:not(.hidden)'); const ans = await page.getAttribute('#pwChoices', 'data-a'); await page.click('#pwChoices [data-n="' + ans + '"]'); await page.waitForSelector('#s-gate:not(.hidden)'); };
+  const holderEnd = Date.now() + 4 * 864e5;
+  const ht = tokenFor('holder', holderEnd);
+  const giftBodies = [];
+  const { ctx, page } = await newPage();
+  await page.addInitScript(() => { if (sessionStorage.getItem('s14')) return; sessionStorage.setItem('s14', '1'); localStorage.setItem('mojia.demos', 'false'); localStorage.setItem('mojia.welcomed', 'true'); });
+  await page.route('**/api/gifts', (r) => { const b = r.request().postDataJSON(); giftBodies.push(b); r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ kind: 'holder', reward_days: 7, cap: 21, token: ht.token, ends_at: ht.payload.e, gifts: [
+    { code: 'GIFT-AAAA-BBBB-CCCC', link: base + '/g/GIFTAAAABBBBCCCC', state: 'ready', use_by: new Date(Date.now() + 30 * 864e5).toISOString() },
+    { code: 'GIFT-DDDD-EEEE-FFFF', link: base + '/g/GIFTDDDDEEEEFFFF', state: 'used', use_by: new Date(Date.now() + 30 * 864e5).toISOString() },
+    { code: 'GIFT-GGGG-HHHH-JJJJ', link: base + '/g/GIFTGGGGHHHHJJJJ', state: 'ready', use_by: new Date(Date.now() + 30 * 864e5).toISOString() }] }) }); });
+  await page.goto(base + '/play/'); await page.click('#splash'); await page.waitForTimeout(500);
+  check('1.4 free week: a new device shows 7 free days on the chip and plays with no timer', (await page.locator('#s-home [data-chip]').textContent()).trim() === '⏳ 7d free');
+  const fs0 = await page.evaluate(() => Number(localStorage.getItem('mojia.freeStart')));
+  check('1.4 free week: the first open time is saved on the device', Math.abs(fs0 - Date.now()) < 60e3);
+  await openGU2(page);
+  check('1.4 free week: Grown-ups says Free week with the end time and 3 minutes a day after', /Free week/.test(await page.textContent('#pwStatus')) && /3 minutes a day/.test(await page.textContent('#pwStatus')));
+  check('1.4 gifts: no gift row before day 3', (await page.locator('#pwGuList [data-a="gifts"]').count()) === 0);
+  check('1.4 staging: test date buttons show on staging hosts', (await page.locator('#pwStatus [data-day]').count()) === 4);
+  await page.click('#pwStatus [data-day="3"]'); await page.waitForTimeout(300);
+  check('1.4 gifts: day 3 adds Give 3 friends 7 free days to Grown-ups', (await page.locator('#pwGuList [data-a="gifts"]').count()) === 1 && (await page.locator('#pwGuList .pw-offer').count()) === 0);
+  await page.click('#pwGuList [data-a="gifts"]'); await page.waitForSelector('#pwGuGift .pw-gift1');
+  await page.waitForTimeout(700); await page.screenshot({ path: path.join(SHOTS, 'gifts-sheet-390.png') });
+  const sheet = await page.textContent('#pwGuGift');
+  check('1.4 gifts: the sheet lists 3 gifts, rewards earned, and never a name', (await page.locator('#pwGuGift .pw-gift1').count()) === 3 && /Bonus days earned: 7 of 21/.test(sheet) && /A friend turned this one on/.test(sheet) && (await page.locator('#pwGuGift [data-g="share"]').count()) === 2, sheet.slice(0, 200));
+  check('1.4 gifts: a free-week device asks with no token and sends its free week end', giftBodies.length === 1 && giftBodies[0].token === undefined && typeof giftBodies[0].fv_end === 'number' && /^[0-9a-f]{32}$/.test(giftBodies[0].device_id));
+  await page.waitForTimeout(400);
+  const sp = await page.evaluate(() => JSON.parse(localStorage.getItem('mojia.pass') || 'null'));
+  check('1.4 gifts: the gift holder token from the server is saved on the device', sp && sp.kind === 'holder' && sp.token === ht.token);
+  await page.click('#pwOvGift [data-pw-close]');
+  await page.click('#pwStatus [data-day="5"]').catch(() => {}); await page.waitForTimeout(300);
+  await page.screenshot({ path: path.join(SHOTS, 'gu-offer-390.png') });
+  check('1.4 offer: day 5 shows the offer in Grown-ups with Forever first', /Forever, \$14\.99, or 30 days, \$4\.99/.test(await page.textContent('#pwGuList .pw-offer')));
+  await page.click('#pwGuList .pw-offerbtn'); await page.waitForSelector('#s-ngate:not(.hidden),#s-plans:not(.hidden)');
+  check('1.4 offer: See passes opens the grown-up check, then the pass screen', true);
+  await ctx.close();
+  // day 8 with no holder: daily minutes
+  const { ctx: c2, page: p2 } = await newPage();
+  await p2.addInitScript(() => { localStorage.setItem('mojia.demos', 'false'); localStorage.setItem('mojia.welcomed', 'true'); localStorage.setItem('mojia.freeStart', String(Date.now() - 7 * 864e5 - 60e3)); });
+  let rb = null;
+  await p2.route('**/.netlify/functions/redeem-code', (r) => { rb = r.request().postDataJSON(); r.fulfill({ status: 404, contentType: 'application/json', body: '{"error":"We could not find that code."}' }); });
+  await p2.goto(base + '/play/'); await p2.click('#splash'); await p2.waitForTimeout(500);
+  check('1.4 free week: day 8 drops to the daily minutes', /^\d+:\d\d$/.test((await p2.locator('#s-home [data-chip]').textContent()).trim()));
+  await openGU2(p2); await p2.click('#pwGuList [data-a="code"]'); await p2.fill('#pwCodeIn', 'GIFT-AAAA-BBBB-CCCC'); await p2.click('#pwCodeGo'); await p2.waitForTimeout(400);
+  check('1.4 gifts: Have a code? sends the free week end (a gift adds 7 days after it)', rb && typeof rb.fv_end === 'number' && Math.abs(rb.fv_end - (Date.now() - 60e3)) < 120e3);
+  check('1.4: no CSP violations or errors', p2.csp.length === 0 && p2.errors.length === 0, p2.csp.concat(p2.errors).join(' | '));
+  await c2.close();
 }
 
 // Release 1.4 #14: service worker saves /play/ for offline play; build.json and api calls never saved.

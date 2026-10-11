@@ -123,7 +123,7 @@ async function verifyToken(tok){
     const ok=await crypto.subtle.verify({name:'ECDSA',hash:'SHA-256'},key,b64u(parts[1]),new TextEncoder().encode(parts[0]));
     if(!ok) return null;
     const p=JSON.parse(new TextDecoder().decode(b64u(parts[0])));
-    if(!p||p.v!==1||(p.k!=='48h'&&p.k!=='forever')||typeof p.e!=='number') return null;
+    if(!p||p.v!==1||['48h','30d','7d','holder','forever'].indexOf(p.k)<0||typeof p.e!=='number') return null;
     return p;
   }catch(e){ return null; }
 }
@@ -141,7 +141,7 @@ async function save(d){
   if(!p||p.k!==d.kind||p.e!==d.ends_at){ formErr(d.code,'Something went wrong on our side. Please try again.'); return; }
   const old=read('pass'); const oldP=old&&typeof old.token==='string'?await verifyToken(old.token):null;
   if(oldP&&rank(oldP)>=rank(p)&&(oldP.k==='forever'||oldP.e>Date.now())){ location.replace('/play/'); return; }
-  try{ write('pass',{code:d.code,kind:p.k,ends_at:p.e,token:d.token,email_masked:String(d.email_masked||''),device_id:deviceId()}); write('allset',{plan:'redeem',email_masked:'',at:Date.now()}); }
+  try{ write('pass',{code:d.code,kind:p.k,ends_at:p.e,token:d.token,email_masked:String(d.email_masked||''),device_id:deviceId()}); write('allset',{plan:'redeem',email_masked:'',at:Date.now()}); if(p.k==='7d') write('fromGift',true); }
   catch(e){ show('rSave'); return; }
   location.replace('/play/#allset');
 }
@@ -156,7 +156,7 @@ async function redeem(code){
     if(w) await new Promise(r=>setTimeout(r,w));
     let res, d={};
     try{
-      res=await fetch('/.netlify/functions/redeem-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code,device_id:dev,camp:(function(){ try{ var c=JSON.parse(localStorage.getItem('mojia.camp')||'null'); return c&&Date.now()-c.t<7*864e5?c.l:undefined; }catch(e){ return undefined; } })()}),credentials:'same-origin',cache:'no-store'});
+      res=await fetch('/.netlify/functions/redeem-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code,device_id:dev,fv_end:(function(){ try{ var f=Number(JSON.parse(localStorage.getItem('mojia.freeStart')||'0'))||0; if(!f){ f=Date.now(); localStorage.setItem('mojia.freeStart',JSON.stringify(f)); } return f+7*864e5; }catch(e){ return undefined; } })(),camp:(function(){ try{ var c=JSON.parse(localStorage.getItem('mojia.camp')||'null'); return c&&Date.now()-c.t<7*864e5?c.l:undefined; }catch(e){ return undefined; } })()}),credentials:'same-origin',cache:'no-store'});
       try{ d=await res.json(); }catch(e){ d={}; }
     }catch(e){ continue; }
     const msg=d&&typeof d.error==='string'&&d.error.length<200?d.error:'';

@@ -439,32 +439,32 @@ footer .fine.credit a{color:#fff;text-decoration:underline;text-underline-offset
   <div class="wrap">
    <p class="eyebrow">For grown-ups</p>
    <h2 style="margin-top:10px;font-size:clamp(34px,4.4vw,52px)">Keep Mojialand ad-free</h2>
-   <p class="lede" style="margin-top:12px">Each device gets <span id="freeMinutes">15</span> free minutes on the first visit, then 3 minutes a day. Pick a pass when your child wants more.</p>
+   <p class="lede" style="margin-top:12px">Each device gets a free week: every game, no limits. Then 3 minutes a day. Pick a pass when your child wants more.</p>
    <div class="pass-grid">
     <div class="pass-card">
      <h3>Pick a pass</h3>
      <p class="sub">One-time charge. Never a subscription.</p>
      <div class="opts" role="radiogroup" aria-label="Pass type">
-      <button class="opt" type="button" role="radio" aria-checked="true" data-pass="day" id="opt-day">
-       <span class="name">48-hour pass</span>
-       <span class="price" style="display:block">$1.50</span>
-       <span class="note">Up to 5 devices. Never renews.</span>
-      </button>
-      <button class="opt" type="button" role="radio" aria-checked="false" data-pass="forever" id="opt-forever">
+      <button class="opt" type="button" role="radio" aria-checked="true" data-pass="forever" id="opt-forever">
        <span class="tag">Best value</span>
        <span class="name">Forever</span>
        <span class="price" style="display:block">$14.99</span>
        <span class="note">Up to 5 devices. Yours for good.</span>
       </button>
+      <button class="opt" type="button" role="radio" aria-checked="false" data-pass="day" id="opt-day">
+       <span class="name">30-day pass</span>
+       <span class="price" style="display:block">$4.99</span>
+       <span class="note">Up to 5 devices. Never renews.</span>
+      </button>
      </div>
      <div class="devices">
-      <p class="dev-head" id="devHead">One $1.50 pass works on up to 5 devices.</p>
+      <p class="dev-head" id="devHead">One $14.99 pass works on up to 5 devices.</p>
       <ol class="dev-steps">
        <li><span class="ic" aria-hidden="true"><svg width="22" height="30" viewBox="0 0 18 28"><rect x="1.5" y="1.5" width="15" height="25" rx="4" fill="none" stroke="currentColor" stroke-width="3"/></svg></span><span><b>Pay once</b> on any phone, tablet, or computer.</span></li>
        <li><span class="ic" aria-hidden="true"><svg width="30" height="24" viewBox="0 0 30 24"><rect x="1.5" y="1.5" width="27" height="21" rx="4" fill="none" stroke="currentColor" stroke-width="3"/><path d="M3 4l12 9 12-9" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/></svg></span><span><b>Get a code</b> in your email.</span></li>
        <li><span class="ic" aria-hidden="true"><svg width="36" height="28" viewBox="0 0 36 28"><rect x="5.5" y="3.5" width="25" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="3"/><path d="M1 24h34" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></span><span><b>Type the code</b> on every other device. Done.</span></li>
       </ol>
-      <p class="dev-foot" id="devLine">Up to 5 devices share the same 48 hours.</p>
+      <p class="dev-foot" id="devLine">Up to 5 devices keep the pass for good.</p>
      </div>
      <ul class="checks">
       <li>Nothing collected from your child. No ads, no chat, no account.</li>
@@ -476,7 +476,7 @@ footer .fine.credit a{color:#fff;text-decoration:underline;text-underline-offset
       <summary>Why we charge</summary>
       <p>Free kids apps pay their bills with ads or with data about your child. Mojialand does neither. Passes pay for hosting and for new games. When you pay, your card goes straight to Stripe. Mojialand never sees your card number.</p>
      </details>
-     <a class="btn btn-primary pay" id="payBtn" href="#passes">Pay $1.50</a>
+     <a class="btn btn-primary pay" id="payBtn" href="#passes">Pay $14.99</a>
      <p class="stripe-row" aria-label="Pay with Apple Pay, Google Pay, Visa, Mastercard, or Amex. Payments by Stripe."><span class="pm">Apple Pay</span><span class="pm">G Pay</span><span class="pm">VISA</span><span class="pm">Mastercard</span><span class="pm">AMEX</span><span class="by">by <b>stripe</b></span></p>
      <a class="restore" href="#restore" data-open-faq="restore">Already paid? Use your pass on another device</a>
      <p class="pay-status" id="payStatus" hidden></p>
@@ -487,7 +487,7 @@ footer .fine.credit a{color:#fff;text-decoration:underline;text-underline-offset
       <div><strong>Who am I paying?</strong><span>Mojialand, made by a family in Michigan. No company behind us, no investors.</span></div>
       <div><strong>Where does the money go?</strong><span>New games and hosting. No investors, no ad partners.</span></div>
       <div><strong>What happens after I pay?</strong><span>You get a device code by email. Enter the code in Mojialand on each phone or tablet.</span></div>
-      <div><strong>Does a 48-hour pass restart on a new device?</strong><span>No. All devices on the pass end at the same moment.</span></div>
+      <div><strong>Does a 30-day pass restart on a new device?</strong><span>No. All devices on the pass end at the same moment.</span></div>
      </div>
     </aside>
    </div>
@@ -500,7 +500,7 @@ footer .fine.credit a{color:#fff;text-decoration:underline;text-underline-offset
    <h2 style="margin-top:10px;font-size:clamp(34px,4.4vw,52px)">Questions, fixes, and a real person</h2>
    <div class="help-grid">
     <div class="faq">
-     <details id="faq-free"><summary>How does free play work?</summary><div class="a">Each device gets <span class="freeMin">15</span> free minutes on the first visit, then 3 minutes a day. The timer lives on the device only. When time runs out, your child sees a pause picture and a Grown-up button. Prices never appear on kid screens.</div></details>
+     <details id="faq-free"><summary>How does free play work?</summary><div class="a">Each device gets a free week of every game, with no limits, then 3 minutes a day. From day 3, Grown-ups holds 3 gifts of 7 free days to share with friends. The timer lives on the device only. When time runs out, your child sees a pause picture and a Grown-up button. Prices never appear on kid screens.</div></details>
      <details id="faq-restore"><summary>How do I use my pass on another device?</summary><div class="a">Open your pass email on the new device and tap Turn on Mojialand. Or open Mojialand, tap Grown-ups, answer the number question, tap Have a code? and type the code from the email (it starts with MOJI). One pass works on up to 5 devices.</div></details>
      <details id="faq-home"><summary>How do I add Mojialand to my home screen?</summary><div class="a">On iPhone or iPad:<ol><li>Open Mojialand in Safari.</li><li>Tap the Share button.</li><li>Tap Add to Home Screen, then Add.</li></ol>On Android, open the Chrome menu and tap Add to Home screen.</div></details>
      <details id="faq-refund"><summary>How do refunds work?</summary><div class="a">Something went wrong? Tell us within 7 days of buying what happened, with the email you used at checkout, and we fix it or refund it. Send a message with the form here.</div></details>
@@ -577,7 +577,7 @@ footer .fine.credit a{color:#fff;text-decoration:underline;text-underline-offset
       </ul>
       <h4>How long we keep data</h4>
       <ul>
-       <li>48-hour pass records: deleted 30 days after the pass expires.</li>
+       <li>30-day, 48-hour and gift pass records: deleted 30 days after the pass ends.</li>
        <li>Forever pass records: kept while the pass exists.</li>
        <li>Contact messages: deleted after 90 days.</li>
        <li>Gift and support codes never used: deleted 30 days after they expire.</li>
@@ -599,13 +599,15 @@ footer .fine.credit a{color:#fff;text-decoration:underline;text-underline-offset
       <h3>Terms and refunds</h3>
       <p class="date">Effective <span class="effDate">September 28, 2026</span></p>
       <h4>Using Mojialand</h4>
-      <p>Mojialand is a set of games for children, used with a grown-up's permission. Free play gives each device <span class="freeMin">15</span> minutes on the first visit, then 3 minutes a day. By buying a pass, you confirm you are 18 or older.</p>
+      <p>Mojialand is a set of games for children, used with a grown-up's permission. Free play gives each device a free week of unlimited play, then 3 minutes a day. By buying a pass, you confirm you are 18 or older.</p>
       <h4>Passes</h4>
       <ul>
-       <li>48-hour pass, $1.50: unlocks unlimited play for 48 hours from purchase. Never renews.</li>
+       <li>30-day pass, $4.99: unlocks unlimited play for 30 days from purchase. Never renews.</li>
        <li>Forever pass, $14.99: unlocks unlimited play for as long as Mojialand runs.</li>
-       <li>Each pass works on up to <span id="devLimit">5</span> devices. Tap the button in your pass email on each device, or type the pass code. A 48-hour pass ends at the same moment on all of them.</li>
-       <li>Add 48 hours to a running pass for $1.50. Move to Forever for $13.49 while a 48-hour pass runs, or within 7 days after it ends.</li>
+       <li>Each pass works on up to <span id="devLimit">5</span> devices. Tap the button in your pass email on each device, or type the pass code. A 30-day pass ends at the same moment on all of them.</li>
+       <li>Add 30 days to a running 30-day pass for $4.99. Move to Forever for $10.00 while a 30-day pass runs, or within 7 days after it ends.</li>
+       <li>48-hour passes bought before October 2026 keep their time and work as before.</li>
+       <li>Gifts: from day 3, each family can share 3 gifts of 7 free days. A gift works once, on a device new to Mojialand, within 30 days. When a friend turns one on, the giver gets 7 more days of play, up to 21. Gifts have no cash value.</li>
        <li>Every pass is a one-time charge. No subscription, no automatic renewal.</li>
       </ul>
       <h4>Refunds</h4>
@@ -747,13 +749,13 @@ var CONFIG = {
  $("#gate").addEventListener("click",function(e){if(e.target===this){gateNext=null;closeGate()}});
 
  /* Passes */
- var pass="day", prices={day:"$1.50",forever:"$14.99"};
+ var pass="forever", prices={day:"$4.99",forever:"$14.99"};
  function setPass(p){
   pass=p;
   $$(".opt").forEach(function(o){o.setAttribute("aria-checked",o.dataset.pass===p?"true":"false")});
   $("#payBtn").textContent="Pay "+prices[p];
   $("#devHead").textContent="One "+prices[p]+" pass works on up to 5 devices.";
-  $("#devLine").textContent=p==="day"?"Up to 5 devices share the same 48 hours.":"Up to 5 devices keep the pass for good.";
+  $("#devLine").textContent=p==="day"?"Up to 5 devices share the same 30 days.":"Up to 5 devices keep the pass for good.";
   $("#payStatus").hidden=true;
  }
  $$(".opt").forEach(function(o){o.onclick=function(){setPass(o.dataset.pass)}});
@@ -764,7 +766,7 @@ var CONFIG = {
    if(!CONFIG.preview){ window.location.href=url; return; }
    var s=$("#payStatus"); s.hidden=false;
    s.textContent= CONFIG.preview
-    ? "Preview: on the live site this button opens Stripe checkout for the "+(pass==="day"?"48-hour pass ($1.50).":"Forever pass ($14.99).")
+    ? "Preview: on the live site this button opens Stripe checkout for the "+(pass==="day"?"30-day pass ($4.99).":"Forever pass ($14.99).")
     : "Checkout opens soon. Passes go on sale once Stripe is connected.";
   });
  });

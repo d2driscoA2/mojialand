@@ -474,6 +474,7 @@ body.drawer-open .addbtn{display:none}
 /* sheets */
 .pw-ov{position:absolute;inset:0;z-index:1500;background:rgba(48,37,74,.45);display:flex;align-items:flex-end;animation:fadein .2s}
 .pw-ov .pw-card{background:var(--white);width:100%;border-radius:28px 28px 0 0;padding:18px 18px max(18px,env(safe-area-inset-bottom,0px));display:grid;gap:10px;text-align:center}
+.pw-ov .pw-card{max-height:92%;overflow-y:auto;-webkit-overflow-scrolling:touch} /* Release 1.4: the 3-gift sheet is tall on small phones */
 .pw-in{font:700 16px/1.35 var(--body);color:var(--ink);background:var(--white);border:2px solid var(--line);border-radius:14px;padding:11px 12px;width:100%;user-select:text;-webkit-user-select:text;box-sizing:border-box}
 .pw-in:focus{outline:3px solid var(--blue);outline-offset:1px;border-color:var(--purple)}
 .pw-codein{font:900 19px/1.2 ui-monospace,Menlo,Consolas,monospace;letter-spacing:1px;text-transform:uppercase;text-align:center}
@@ -511,6 +512,15 @@ textarea.pw-in{resize:none;min-height:88px}
 .pw-giftshare{background:var(--pink);color:var(--white);border:0}
 .pw-giftcopy{background:var(--white);color:var(--purple);border:2px solid var(--purple)}
 .pw-giftlink{font-weight:800;font-size:13px;color:var(--purple);word-break:break-all;user-select:text;-webkit-user-select:text}
+/* Release 1.4 #32: 3 gifts, the day 5 offer, staging test days */
+.pw-gift1{display:grid;gap:6px;justify-items:center;border-top:2px dashed #FFD0E3;padding-top:10px}
+.pw-gift1 b{font-family:var(--display);font-weight:900;font-size:16px;color:var(--deep)}
+.pw-gift1 span{font-weight:700;font-size:14px;color:var(--ink)}
+.pw-giftreward{font-weight:900!important;color:var(--deep)!important}
+.pw-offer{display:grid;gap:8px;justify-items:center;background:#F3ECFC;border-color:var(--purple)}
+.pw-offerbtn{min-height:44px;border:0;border-radius:999px;padding:8px 18px;background:var(--purple);color:#fff;font-family:var(--display);font-weight:900;font-size:15px;cursor:pointer}
+.pw-stagedays{display:flex;gap:6px;flex-wrap:wrap;align-items:center;opacity:.8}
+.pw-stagedays button{min-height:32px;border-radius:999px;border:2px solid var(--purple);background:#fff;color:var(--purple);font-weight:900;padding:2px 10px;cursor:pointer}
 .pw-okhs>div:last-child{padding-bottom:0}
 .pw-okhs .pw-mini{border-bottom:5px solid var(--ink);border-radius:18px}
 .pw-okhs .pw-secondary{width:auto;padding:8px 14px;font-size:14px;margin-top:8px}
@@ -1001,7 +1011,7 @@ body.in-draw #app{max-width:none}
   <p class="pw-why">Made by a Michigan family. Your pass keeps ads out. <button class="pw-link" id="pwWhyBtn" aria-expanded="false" aria-controls="pwWhyMore">Why we charge</button></p>
   <p class="pw-more" id="pwWhyMore" hidden>Many free kids apps pay their bills with ads and data about your child. We won't. Parents who pay keep Mojialand this way for every family.</p>
   <div class="pw-spacer"></div>
-  <button class="pw-primary" id="pwPay">Pay $1.50</button>
+  <button class="pw-primary" id="pwPay">Get Forever · $14.99</button>
   <div class="pw-marks" aria-label="Pay with Apple Pay, Google Pay, Visa, Mastercard, or Amex. Payments by Stripe.">
     <span class="pw-pm">Apple Pay</span><span class="pw-pm">G Pay</span><span class="pw-pm">VISA</span><span class="pw-pm">Mastercard</span><span class="pw-pm">AMEX</span><span class="pw-pmby">by <b>stripe</b></span>
   </div>
@@ -1012,7 +1022,7 @@ body.in-draw #app{max-width:none}
 <section class="screen hidden pw-ok" id="s-allset">
   <div class="pw-okgroup">
     <div class="pw-okfriends" aria-hidden="true">🦄🦈🐶😀🍕</div>
-    <h2 id="pwOkTitle">You're all set for 48 hours</h2>
+    <h2 id="pwOkTitle">You're all set</h2>
     <p id="pwOkText"></p>
   </div>
   <button class="pw-primary pw-okgo" id="pwOkBack">▶ Hand it back to your kid</button>
@@ -1080,7 +1090,7 @@ body.in-draw #app{max-width:none}
   <p>Thanks. We write back to you by email.</p>
   <button class="pw-primary" data-pw-close>OK</button>
 </div></div>
-<div class="pw-ov hidden" id="pwOvGift" role="dialog" aria-label="Give a friend 48 hours"><div class="pw-card"><div class="pw-gift" id="pwGuGift"></div><button class="pw-secondary" data-pw-close>Done</button></div></div>
+<div class="pw-ov hidden" id="pwOvGift" role="dialog" aria-label="Give a friend free days"><div class="pw-card"><div class="pw-gift" id="pwGuGift"></div><button class="pw-secondary" data-pw-close>Done</button></div></div>
 <div class="pw-ov hidden" id="pwOvSoon" role="dialog" aria-label="Coming soon"><div class="pw-card">
   <h3 id="pwSoonTitle">Coming soon</h3>
   <p id="pwSoonText">This part of Mojialand is on the way.</p>
@@ -1115,11 +1125,11 @@ const FRESH=(function(){ try{ for(let i=0;i<localStorage.length;i++){ if(String(
 /* Android and desktop Chrome need start_url for the install prompt. iPhone must not have one (see the link tag). */
 (function(){ if(!/iPhone|iPad|iPod/.test(navigator.userAgent)&&!(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)){ const l=document.querySelector('link[rel="manifest"]'); if(l) l.setAttribute('href','/manifest-install.webmanifest'); } })();
 /* Play settings. Defaults here; the admin page's values come from the server and are kept for the next open. */
-const SETTINGS={first_visit_minutes:15,daily_minutes:3,daily_reset:'04:00',warning_minutes:10,credit_days:7,devices_per_code:5};
+const SETTINGS={free_days:7,first_visit_minutes:15,daily_minutes:3,daily_reset:'04:00',warning_minutes:10,credit_days:7,devices_per_code:5};
 (function(){ function apply(o){ if(!o||typeof o!=='object') return; for(const k of Object.keys(SETTINGS)){ if(!(k in o)) continue; const v=o[k]; if(k==='daily_reset'){ if(/^([01]\d|2[0-3]):[0-5]\d$/.test(String(v))) SETTINGS[k]=String(v); } else { const n=Number(v); if(Number.isFinite(n)&&n>=0&&n<=100000) SETTINGS[k]=n; } } }
   try{ apply(JSON.parse(localStorage.getItem('mojia.settings')||'null')); }catch(e){}
   fetch('/.netlify/functions/settings',{credentials:'same-origin'}).then(r=>r.ok?r.json():null).then(o=>{ if(o){ try{ localStorage.setItem('mojia.settings',JSON.stringify(o)); }catch(e){} } }).catch(()=>{}); })();
-const PRICES={pass:1.50,add:1.50,life:14.99,up:13.49}; /* shown only behind the parent gate; set in Stripe */
+const PRICES={pass:4.99,add:4.99,life:14.99,up:10.00}; /* Release 1.4 #32: 30 days $4.99, Forever $14.99, upgrade $10.00. Shown only behind the parent gate; set in Stripe */
 /* Public key for pass tokens. The build fills it in; null means no pass is valid. A public key only checks, never signs. */
 const PASS_PUBLIC_JWK=/*__PASS_PUBLIC_JWK__*/null;
 var payHook=null; function onScreen(name){ if(payHook) payHook(name); }
@@ -4318,23 +4328,26 @@ const pay=(function(){
 
   /* device id: random, made once, only used later to count devices per code */
   function deviceId(){ let id=store.get('device',''); if(!id){ try{ const b=new Uint8Array(16); crypto.getRandomValues(b); id=[...b].map(x=>x.toString(16).padStart(2,'0')).join(''); store.set('device',id); }catch(e){ id=''; } } return id; }
-  /* pass on the device: {code, kind:'48h'|'forever', ends_at(ms), token, email_masked, device_id}
+  /* pass on the device: {code, kind:'48h'|'30d'|'7d'|'holder'|'forever', ends_at(ms), token, email_masked, device_id}
+     Release 1.4 #32: 30d is the paid pass, 7d a gift, holder the free-week family's gift holder (free week plus bonus days).
      Honored only when its token carries a valid signature (WebCrypto, ECDSA P-256) and matches kind and end time.
      Checked once per token and cached. No network. */
   const vcache={token:null,payload:null,pending:null};
+  const KINDS=['48h','30d','7d','holder','forever'];
+  const paidTimed=p=>!!p&&(p.kind==='30d'||p.kind==='48h');
   function b64u(s){ s=s.replace(/-/g,'+').replace(/_/g,'/'); while(s.length%4) s+='='; const bin=atob(s), a=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) a[i]=bin.charCodeAt(i); return a; }
   async function checkToken(tok){
     if(!PASS_PUBLIC_JWK||typeof tok!=='string'||!window.crypto||!crypto.subtle) return null;
     const parts=tok.split('.'); if(parts.length!==2) return null;
     try{ const key=await crypto.subtle.importKey('jwk',{kty:'EC',crv:'P-256',x:PASS_PUBLIC_JWK.x,y:PASS_PUBLIC_JWK.y,ext:true},{name:'ECDSA',namedCurve:'P-256'},false,['verify']);
       if(!(await crypto.subtle.verify({name:'ECDSA',hash:'SHA-256'},key,b64u(parts[1]),new TextEncoder().encode(parts[0])))) return null;
-      const p=JSON.parse(new TextDecoder().decode(b64u(parts[0]))); return p&&p.v===1&&(p.k==='48h'||p.k==='forever')&&typeof p.e==='number'&&(p.x===undefined||typeof p.x==='number')?p:null; }catch(e){ return null; } }
+      const p=JSON.parse(new TextDecoder().decode(b64u(parts[0]))); return p&&p.v===1&&KINDS.includes(p.k)&&typeof p.e==='number'&&(p.x===undefined||typeof p.x==='number')?p:null; }catch(e){ return null; } }
   function verifyStored(){ const p=store.get('pass',null), tok=p&&typeof p==='object'&&typeof p.token==='string'?p.token:null;
     if(tok===vcache.token) return vcache.pending||Promise.resolve();
     vcache.token=tok; vcache.payload=null;
     vcache.pending=checkToken(tok).then(r=>{ if(vcache.token===tok){ vcache.payload=r; vcache.pending=null; paintChips(); syncManifest(); } });
     return vcache.pending; }
-  function getPass(){ const p=store.get('pass',null); if(!p||typeof p!=='object'||(p.kind!=='48h'&&p.kind!=='forever')) return null;
+  function getPass(){ const p=store.get('pass',null); if(!p||typeof p!=='object'||!KINDS.includes(p.kind)) return null;
     if(p.token!==vcache.token){ verifyStored(); return null; }
     const v=vcache.payload; if(!v||v.k!==p.kind||v.e!==(p.kind==='forever'?0:Number(p.ends_at))) return null;
     /* Release 1.1.1 #42: a Forever token works until x (30 days); the hourly pass check renews it */
@@ -4349,16 +4362,22 @@ const pay=(function(){
   const SID_RE=/^cs_(test|live)_[A-Za-z0-9]{1,200}$/;
   function graceInfo(){ const g=store.get('grace',null); return g&&typeof g==='object'&&SID_RE.test(String(g.sid||''))&&typeof g.until==='number'?g:null; }
   const graceOn=()=>{ const g=graceInfo(); return !!g&&g.until>Date.now()&&!passOn(getPass()); };
-  const passEnded=p=>!!p&&p.kind==='48h'&&p.ends_at<=Date.now();
+  const passEnded=p=>paidTimed(p)&&p.ends_at<=Date.now();
   const inCredit=p=>passEnded(p)&&Date.now()-p.ends_at<SETTINGS.credit_days*DAY;
 
   /* free play: minutes used, first visit done, last reset day (play day starts at daily_reset) */
   function resetMin(){ const m=/^(\d{1,2}):(\d{2})$/.exec(String(SETTINGS.daily_reset)); return m?(+m[1])*60+(+m[2]):240; }
   function playDay(t){ const d=new Date(t); if(d.getHours()*60+d.getMinutes()<resetMin()) d.setDate(d.getDate()-1); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
   function rollDay(){ const day=playDay(Date.now()), last=store.get('freeDay',''); if(last!==day){ if(last) store.set('firstDone',true); store.set('freeDay',day); store.set('freeUsed',0); } return day; }
-  const allowance=()=>(store.get('firstDone',false)?SETTINGS.daily_minutes:SETTINGS.first_visit_minutes)*MIN;
-  const freeLeft=()=>Math.max(0,allowance()-(Number(store.get('freeUsed',0))||0)*MIN);
-  /* a 48-hour pass that ends uses up free play for that play day */
+  /* Release 1.4 #32 (Danny, October 6 and 11): a free week from the first open of 1.4 on this device, every game, no limits.
+     Then the daily minutes. Devices that played before 1.4 get the free week once, from their first 1.4 open. */
+  function freeStart(){ let t=Number(store.get('freeStart',0))||0; if(!t||t>Date.now()+DAY){ t=Date.now(); store.set('freeStart',t); } return t; }
+  const freeEnd=()=>freeStart()+SETTINGS.free_days*DAY;
+  const inFreeWeek=()=>Date.now()<freeEnd();
+  const dayNum=()=>Math.floor((Date.now()-freeStart())/DAY)+1;
+  const allowance=()=>SETTINGS.daily_minutes*MIN;
+  const freeLeft=()=>inFreeWeek()?Infinity:Math.max(0,allowance()-(Number(store.get('freeUsed',0))||0)*MIN);
+  /* a paid timed pass that ends uses up free play for that play day */
   function ackEnd(p){ if(!passEnded(p)||store.get('passEndAck',0)===p.ends_at) return; store.set('passEndAck',p.ends_at); store.set('passEndDay',rollDay()); store.set('freeUsed',allowance()/MIN); }
   function endedToday(){ const p=getPass(); return passEnded(p)&&store.get('passEndAck',0)===p.ends_at&&store.get('passEndDay','')===playDay(Date.now()); }
   function blocked(){ return !passOn(getPass())&&!graceOn()&&freeLeft()<=0; }
@@ -4366,7 +4385,8 @@ const pay=(function(){
   /* corner chip */
   function paintChips(){ const p=getPass(); let cls='pw-chip', txt, arc=null;
     if(!passOn(p)&&graceOn()){ cls+=' pass'; txt='⏳ '+Math.max(1,Math.ceil((graceInfo().until-Date.now())/MIN))+' min'; }
-    else if(passOn(p)){ cls+=' pass'; if(p.kind==='forever') txt='⭐ Forever'; else { const left=p.ends_at-Date.now(); if(left<=SETTINGS.warning_minutes*MIN){ cls+=' low'; txt='⏳ '+Math.max(1,Math.ceil(left/MIN))+' min'; } else txt='⏳ '+Math.ceil(left/HOUR)+'h left'; } }
+    else if(passOn(p)){ cls+=' pass'; if(p.kind==='forever') txt='⭐ Forever'; else { const left=p.ends_at-Date.now(); if(left<=SETTINGS.warning_minutes*MIN){ cls+=' low'; txt='⏳ '+Math.max(1,Math.ceil(left/MIN))+' min'; } else txt=left>48*HOUR?'⏳ '+Math.ceil(left/DAY)+'d left':'⏳ '+Math.ceil(left/HOUR)+'h left'; } }
+    else if(inFreeWeek()){ cls+=' pass'; txt='⏳ '+Math.max(1,Math.ceil((freeEnd()-Date.now())/DAY))+'d free'; }
     else { const left=freeLeft(), s=Math.ceil(left/1000); txt=Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); arc=(88*(1-left/allowance())).toFixed(1); }
     $$('[data-chip]').forEach(c=>{ if(c.className!==cls) c.className=cls; const t=c.querySelector('.t'); if(t.textContent!==txt) t.textContent=txt; c.setAttribute('aria-label',p&&passOn(p)?'Pass: '+txt:'Free play left: '+txt); if(arc!==null) c.querySelector('.arc').setAttribute('stroke-dashoffset',arc); }); }
 
@@ -4383,7 +4403,7 @@ const pay=(function(){
   let last=Date.now();
   const counting=()=>!document.hidden&&PLAY.has(current)&&!splashOn();
   function tick(){ const now=Date.now(), dt=Math.max(0,Math.min(now-last,5000)); last=now; rollDay(); const p=getPass(); ackEnd(p);
-    if(!passOn(p)&&!graceOn()&&counting()){ store.set('freeUsed',Math.min(allowance(),(Number(store.get('freeUsed',0))||0)*MIN+dt)/MIN); }
+    if(!passOn(p)&&!graceOn()&&!inFreeWeek()&&counting()){ store.set('freeUsed',Math.min(allowance(),(Number(store.get('freeUsed',0))||0)*MIN+dt)/MIN); }
     if(PLAY.has(current)&&blocked()) showRest();
     else if(current==='rest'&&!blocked()) go('home');
     paintChips(); if(current==='gate') paintStatus(); syncGrace(); }
@@ -4416,21 +4436,21 @@ const pay=(function(){
     $('#pwWhyMore').hidden=true; $('#pwWhyBtn').setAttribute('aria-expanded','false');
     if(passOn(p)&&p.kind==='forever'){ $('#pwPlansTitle').textContent='You have Forever'; $('#pwPlansSub').textContent='Nothing to buy. Enjoy.'; $('#pwCards').innerHTML=''; $('#pwPay').hidden=true; return; }
     $('#pwPay').hidden=false;
-    if(passOn(p)){ keys=['up','add']; $('#pwPlansTitle').textContent='Add time or keep it forever'; $('#pwPlansSub').textContent='Your pass ends '+fmtT(p.ends_at)+'. Nothing changes unless you pick below.';
+    if(passOn(p)&&paidTimed(p)){ keys=['up','add']; $('#pwPlansTitle').textContent='Add time or keep it forever'; $('#pwPlansSub').textContent='Your pass ends '+fmtT(p.ends_at)+'. Nothing changes unless you pick below.';
       if(!keys.includes(plan)) plan='up';
-      html=card('up','Forever','Your '+money(PRICES.pass)+' pass counts toward Forever.',true,true)+card('add','Add 48 hours','New end time: '+fmtT(p.ends_at+48*HOUR)+'.'); }
-    else if(inCredit(p)){ keys=['up','pass']; $('#pwPlansTitle').textContent='Welcome back'; $('#pwPlansSub').textContent='Your last pass ended. Your '+money(PRICES.pass)+' still counts toward Forever this week.';
+      html=card('up','Forever','Your pass counts toward Forever.',true,true)+card('add','Add 30 days','New end time: '+fmtT(p.ends_at+30*DAY)+'. Never renews by itself.'); }
+    else if(inCredit(p)){ keys=['up','pass']; $('#pwPlansTitle').textContent='Welcome back'; $('#pwPlansSub').textContent='Your last pass ended. It still counts toward Forever this week.';
       if(!keys.includes(plan)) plan='up';
-      html=card('up','Forever','Your last '+money(PRICES.pass)+' counts. Pay once, yours for good.',true,true)+card('pass','48-hour pass','Two more days. Never renews by itself.'); }
-    else { keys=['pass','life']; $('#pwPlansTitle').textContent='Keep playing!'; $('#pwPlansSub').textContent='Pick a pass. No account needed.';
-      if(!keys.includes(plan)) plan='pass';
-      html=card('pass','48-hour pass','Two days of everything.')+card('life','Forever','Pay once, play for good.',true); }
+      html=card('up','Forever','Your last pass counts. Pay once, yours for good.',true,true)+card('pass','30-day pass','30 days of everything. Never renews by itself.'); }
+    else { keys=['life','pass']; $('#pwPlansTitle').textContent='Keep playing!'; $('#pwPlansSub').textContent='Pick a pass. No account needed.';
+      if(!keys.includes(plan)) plan='life';
+      html=card('life','Forever','Pay once, play for good.',true)+card('pass','30-day pass','30 days of everything. Never renews by itself.'); }
     $('#pwCards').innerHTML=html; syncPlan(); }
-  function syncPlan(){ $$('#pwCards .pw-plan').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.plan===plan))); $('#pwPay').textContent={pass:'Start 48 hours',life:'Get Forever',add:'Add 48 hours',up:'Upgrade to Forever'}[plan]+' · '+money(priceOf(plan)); }
+  function syncPlan(){ $$('#pwCards .pw-plan').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.plan===plan))); $('#pwPay').textContent={pass:'Start 30 days',life:'Get Forever',add:'Add 30 days',up:'Upgrade to Forever'}[plan]+' · '+money(priceOf(plan)); }
   $('#pwCards').addEventListener('click',e=>{ const b=e.target.closest('.pw-plan'); if(!b) return; plan=b.dataset.plan; syncPlan(); });
   $('#pwWhyBtn').addEventListener('click',()=>{ const open=$('#pwWhyMore').hidden; $('#pwWhyMore').hidden=!open; $('#pwWhyBtn').setAttribute('aria-expanded',String(open)); });
   $('#pwPlansBack').addEventListener('click',()=>{ ctx(); sfx.boop(); back(); });
-  $('#pwPay').addEventListener('click',()=>{ const url='/pass/?plan='+encodeURIComponent(plan)+(promo?'&promo='+encodeURIComponent(promo.code):''); try{ if(window.top&&window.top!==window.self){ window.top.location.href=url; return; } }catch(e){} location.href=url; });
+  $('#pwPay').addEventListener('click',()=>{ const url='/pass/?plan='+encodeURIComponent(plan)+(promo?'&promo='+encodeURIComponent(promo.code):'')+(store.get('fromGift',false)?'&gift=1':''); try{ if(window.top&&window.top!==window.self){ window.top.location.href=url; return; } }catch(e){} location.href=url; });
   function soon(title){ $('#pwSoonTitle').textContent='Coming soon'; $('#pwSoonText').textContent=title+' is on the way. It arrives in the next update.'; $('#pwOvSoon').classList.remove('hidden'); }
   $('#pwCode').addEventListener('click',()=>openCode());
   $('#pwHelp').addEventListener('click',()=>openContact());
@@ -4449,7 +4469,7 @@ const pay=(function(){
   /* All set: shown once after /pass/done/ saves a verified pass */
   function showAllset(){ const a=store.get('allset',null); try{ localStorage.removeItem('mojia.allset'); }catch(e){}
     const p=getPass(); if(!a||typeof a!=='object'||!passOn(p)||!(Date.now()-Number(a.at)<30*MIN)) return false;
-    $('#pwOkTitle').textContent=a.plan==='redeem'?'Mojialand is on!':p.kind==='forever'?'Mojialand is yours for good':(a.plan==='add'?'Added 48 hours':"You're all set for 48 hours");
+    $('#pwOkTitle').textContent=a.plan==='redeem'?'Mojialand is on!':p.kind==='forever'?'Mojialand is yours for good':a.plan==='add'?(p.kind==='48h'?'Added 48 hours':'Added 30 days'):(p.kind==='48h'?"You're all set for 48 hours":"You're all set for 30 days");
     const mail=a.plan==='redeem'?'':String(a.email_masked||p.email_masked||'');
     $('#pwOkText').textContent=(p.kind==='forever'?'Forever pass on.':'Pass on until '+fmtT(p.ends_at)+'.')+(mail?' Code emailed to '+mail+'.':'');
     const touch=(navigator.maxTouchPoints||0)>0, ipad=/iPad/.test(navigator.userAgent)||(/Macintosh/.test(navigator.userAgent)&&touch);
@@ -4479,8 +4499,32 @@ const pay=(function(){
     el.querySelector('[data-gift="share"]').onclick=async()=>{ ctx(); sfx.boop(); if(navigator.share){ try{ await navigator.share({title:'48 free hours of Mojialand',text:GIFT_MSG,url:d.link}); return; }catch(e){ if(e&&e.name==='AbortError') return; } } try{ await navigator.clipboard.writeText(GIFT_MSG+' '+d.link); toast('Link copied'); }catch(e){ toast('Press and hold the link to copy'); } };
     el.querySelector('[data-gift="copy"]').onclick=async()=>{ ctx(); sfx.boop(); try{ await navigator.clipboard.writeText(GIFT_MSG+' '+d.link); toast('Link copied'); }catch(e){ toast('Press and hold the link to copy'); } };
     return true; }
-  async function showGiftOnAllset(){ const el=$('#pwOkGift'), d=await loadGift(); if(!d||d.state!=='ready'){ el.hidden=true; return; }
+  async function showGiftOnAllset(){ const el=$('#pwOkGift'), pp=getPass();
+    if(pp&&pp.kind!=='48h'&&pp.kind!=='holder'){ el.textContent='🎁 Share Mojialand: from day 3, Grown-ups holds 3 gifts of 7 free days for friends.'; el.hidden=false; return; }
+    const d=await loadGift(); if(!d||d.state!=='ready'){ el.hidden=true; return; }
     el.textContent='🎁 Your pass includes 48 free hours for a friend. Find the link in Grown-ups'+(okMail?' or your email.':'.'); el.hidden=false; }
+  /* Release 1.4 #32: 3 gifts of 7 free days for every family from day 3, behind the grown-up check.
+     A gift works once, on a device new to Mojialand, within 30 days. When a friend turns one on, this family
+     gets 7 more days, up to 21. A free-week family gets a gift holder from the server on this tap only. */
+  const GIFT7_MSG='Here are 7 free days of Mojialand, emoji games for kids 3 and up. No ads. Tap to play:';
+  let gifts7=null;
+  async function loadGifts7(){ const raw=store.get('pass',null); const tok=raw&&typeof raw.token==='string'?raw.token:'';
+    try{ const res=await fetch('/api/gifts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:tok||undefined,device_id:deviceId(),fv_end:freeEnd()}),credentials:'same-origin',cache:'no-store'});
+      let d={}; try{ d=await res.json(); }catch(e){}
+      if(res.status!==200||!d||!Array.isArray(d.gifts)) return {error:d&&typeof d.error==='string'&&d.error.length<200?d.error:'We could not get the gifts. Please try again in a minute.'};
+      if(!tok&&typeof d.token==='string') await savePass({token:d.token,kind:d.kind,ends_at:d.ends_at});
+      gifts7=d; return d; }catch(e){ return {error:'No connection. Please try again.'}; } }
+  function paintGifts7(el,d){ if(d.error){ el.innerHTML='<h4>🎁 Give 3 friends 7 free days</h4><p>'+d.error.replace(/</g,'&lt;')+'</p>'; return; }
+    const forever=d.kind==='forever', left=Math.max(0,(d.cap||21)-(d.reward_days||0));
+    let h='<h4>🎁 Give 3 friends 7 free days</h4><p>Each gift works once, on a device new to Mojialand, within 30 days.'+(forever?'':' When a friend turns one on, you get 7 more days of play, up to '+(d.cap||21)+'.')+'</p>';
+    if(!forever) h+='<p class="pw-giftreward">Bonus days earned: '+(d.reward_days||0)+' of '+(d.cap||21)+(left?'':' (all earned)')+'</p>';
+    d.gifts.forEach((g,i)=>{ h+='<div class="pw-gift1" data-i="'+i+'"><b>Gift '+(i+1)+'</b>'+(g.state==='ready'?'<div class="pw-giftbtns"><button class="pw-giftshare" type="button" data-g="share">Share</button><button class="pw-giftcopy" type="button" data-g="copy">Copy link</button></div><span class="pw-giftlink"></span>':g.state==='used'?'<span>A friend turned this one on. Thank you!</span>':'<span>This gift expired.</span>')+'</div>'; });
+    el.innerHTML=h;
+    el.querySelectorAll('.pw-gift1').forEach(box=>{ const g=d.gifts[+box.dataset.i]; const ln=box.querySelector('.pw-giftlink'); if(ln) ln.textContent=g.link;
+      const sh=box.querySelector('[data-g="share"]'), cp=box.querySelector('[data-g="copy"]');
+      if(sh) sh.onclick=async()=>{ ctx(); sfx.boop(); if(navigator.share){ try{ await navigator.share({title:'7 free days of Mojialand',text:GIFT7_MSG,url:g.link}); return; }catch(e){ if(e&&e.name==='AbortError') return; } } try{ await navigator.clipboard.writeText(GIFT7_MSG+' '+g.link); toast('Link copied'); }catch(e){ toast('Press and hold the link to copy'); } };
+      if(cp) cp.onclick=async()=>{ ctx(); sfx.boop(); try{ await navigator.clipboard.writeText(GIFT7_MSG+' '+g.link); toast('Link copied'); }catch(e){ toast('Press and hold the link to copy'); } }; }); }
+  async function openGifts7(){ const el=$('#pwGuGift'); el.hidden=false; el.innerHTML='<p>One moment…</p>'; $('#pwOvGift').classList.remove('hidden'); paintGifts7(el,await loadGifts7()); }
   async function openGift(){ const el=$('#pwGuGift'); el.hidden=false; el.innerHTML='<p>One moment…</p>'; $('#pwOvGift').classList.remove('hidden'); const d=await loadGift(); if(!paintGift(el,d)){ el.hidden=false; el.innerHTML='<h4>🎁 Give a friend 48 free hours</h4><p>This pass has no friend pass to give. Friend passes come with each pass and work for 30 days.</p>'; } }
   $('#pwOkBack').addEventListener('click',()=>{ ctx(); sfx.boop(); go('home'); });
   $$('.pw-ov').forEach(ov=>ov.addEventListener('click',e=>{ if(e.target===ov||e.target.closest('[data-pw-close]')){ ov.classList.add('hidden'); } }));
@@ -4504,6 +4548,7 @@ const pay=(function(){
     const old=store.get('pass',null)||{}; const code=typeof d.code==='string'&&d.code?d.code:(typeof old.code==='string'?old.code:'');
     try{ localStorage.setItem('mojia.pass',JSON.stringify({code:code,kind:v.k,ends_at:v.e,token:d.token,email_masked:String(d.email_masked||old.email_masked||''),device_id:deviceId()})); }catch(e){ return false; }
     try{ localStorage.removeItem('mojia.grace'); localStorage.removeItem('mojia.passOff'); }catch(e){}
+    if(v.k==='7d') store.set('fromGift',true);
     await verifyStored(); paintChips(); if(current==='gate') buildGU(); return true; }
   /* Release 1.1.1 #28 with #42: ask the server about the saved pass when the game opens or returns to the front,
      at most once an hour, and when a grown-up opens Grown-ups (at most once a minute). Sends only the signed pass and the device id. A fresh signed copy comes back, so
@@ -4513,13 +4558,13 @@ const pay=(function(){
   async function checkPass(force){ const raw=store.get('pass',null); if(!raw||typeof raw!=='object'||typeof raw.token!=='string'||checkingPass) return;
     const since=Date.now()-(Number(store.get('passCheckAt',0))||0); if(since<(force?MIN:60*MIN)) return;
     const v=await checkToken(raw.token); if(!v) return;
-    if(v.k==='48h'&&v.e&&Date.now()-v.e>30*DAY) return;
+    if(v.k!=='forever'&&v.e&&Date.now()-v.e>30*DAY) return;
     checkingPass=true; store.set('passCheckAt',Date.now());
     try{ const res=await fetch('/.netlify/functions/pass-check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:raw.token,device_id:deviceId()}),credentials:'same-origin',cache:'no-store'});
       let d={}; try{ d=await res.json(); }catch(e){}
       if(res.status===200&&d&&d.state==='on'&&typeof d.token==='string') await savePass({token:d.token,kind:d.kind,ends_at:d.ends_at});
-      else if(res.status===200&&d&&d.state==='off'&&!(d.reason==='ended'&&v.k==='48h'&&v.e<=Date.now())){
-        store.set('passOff',{reason:String(d.reason||'ended'),at:Date.now()});
+      else if(res.status===200&&d&&d.state==='off'&&!(d.reason==='ended'&&v.k!=='forever'&&v.k!=='holder'&&v.e<=Date.now())){
+        if(v.k!=='holder') store.set('passOff',{reason:String(d.reason||'ended'),at:Date.now()});
         try{ localStorage.removeItem('mojia.pass'); }catch(e){}
         await verifyStored(); syncManifest(); paintChips(); if(current==='gate') buildGU(); }
     }catch(e){}
@@ -4547,7 +4592,7 @@ const pay=(function(){
     const rawIn=$('#pwCodeIn').value.trim();
     if(!c&&!/^[A-Za-z0-9_-]{2,40}$/.test(rawIn)){ $('#pwCodeErr').textContent='Pass codes look like MOJI-XXXX-XXXX-XXXX. Discount codes are one word.'; return; }
     b.disabled=true; b.textContent='Checking…'; $('#pwCodeErr').textContent='';
-    try{ const res=await fetch('/.netlify/functions/redeem-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:c||rawIn,device_id:deviceId(),camp:PS.label()||undefined}),credentials:'same-origin',cache:'no-store'});
+    try{ const res=await fetch('/.netlify/functions/redeem-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:c||rawIn,device_id:deviceId(),camp:PS.label()||undefined,fv_end:freeEnd()}),credentials:'same-origin',cache:'no-store'});
       let d={}; try{ d=await res.json(); }catch(e){}
       if(res.status===200&&d&&d.discount&&d.discount.code){ promo=d.discount; $('#pwOvCode').classList.add('hidden'); toast(promo.code+': '+(promo.percent_off?promo.percent_off+'% off':'discount')+'. Pick your pass.'); if(current==='plans') buildPlans(); else go('plans'); }
       else if(res.status===200&&d&&typeof d.token==='string'&&await savePass(d)){ $('#pwOvCode').classList.add('hidden'); store.set('allset',{plan:'redeem',email_masked:'',at:Date.now()}); showAllset(); }
@@ -4572,29 +4617,41 @@ const pay=(function(){
   /* Grown-ups additions */
   function paintStatus(){ const p=getPass(); let h;
     if(passOn(p)&&p.kind==='forever') h='<b>Forever pass on</b><span>Code '+p.code+'</span>';
-    else if(passOn(p)){ const m=Math.max(0,Math.ceil((p.ends_at-Date.now())/MIN)); h='<b>48-hour pass on</b><span>Ends '+fmtT(p.ends_at)+(m<=60?' ('+m+' min left)':'')+(p.code?' · Code '+p.code:'')+'</span>'; }
+    else if(passOn(p)){ const m=Math.max(0,Math.ceil((p.ends_at-Date.now())/MIN)); const label={'48h':'48-hour pass on','30d':'30-day pass on','7d':'Gift days on','holder':'Free days on'}[p.kind]||'Pass on'; h='<b>'+label+'</b><span>Ends '+fmtT(p.ends_at)+(m<=60?' ('+m+' min left)':'')+(p.code?' · Code '+p.code:'')+'</span>'+(p.kind==='holder'?'<span>Your free week plus bonus days from gifts. Then '+SETTINGS.daily_minutes+' minutes a day.</span>':''); }
     else if(graceOn()){ const m=Math.max(1,Math.ceil((graceInfo().until-Date.now())/MIN)); h='<b>Your pass is on its way</b><span>Payment received. Free play for '+m+' more min while it arrives. Your code also comes by email.</span>'; }
-    else { const s=Math.ceil(freeLeft()/1000); h=passOffLine()+'<b>Free play</b><span>'+SETTINGS.first_visit_minutes+' minutes on the first visit, then '+SETTINGS.daily_minutes+' minutes a day. Resets each morning.</span><span>Left today: '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0')+'</span>'+(standalone()?'<span>Paid already? Type the code from your email under Have a code? below.</span>':''); }
-    if(/displayedux\.com$|netlify\.app$/.test(location.hostname)){ h+='<span style="opacity:.6">Staging check: '+(standalone()?'Home Screen app':'browser')+' · opened with pass in address: '+dbgRestore+' · address carries pass now: '+(/restore=/.test(location.search)?'yes':'no')+'</span>'; }
+    else if(inFreeWeek()){ h=passOffLine()+'<b>Free week</b><span>Every game, no limits, until '+fmtT(freeEnd())+'. Then '+SETTINGS.daily_minutes+' minutes a day.</span>'+(standalone()?'<span>Paid already? Type the code from your email under Have a code? below.</span>':''); }
+    else { const s=Math.ceil(freeLeft()/1000); h=passOffLine()+'<b>Free play</b><span>'+SETTINGS.daily_minutes+' minutes a day. Resets each morning.</span><span>Left today: '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0')+'</span>'+(standalone()?'<span>Paid already? Type the code from your email under Have a code? below.</span>':''); }
+    if(STAGING_HOST){ h+='<span style="opacity:.6">Staging check: '+(standalone()?'Home Screen app':'browser')+' · opened with pass in address: '+dbgRestore+' · address carries pass now: '+(/restore=/.test(location.search)?'yes':'no')+' · free week day '+dayNum()+'</span>'
+      +'<span class="pw-stagedays">Staging test date: <button type="button" data-day="1">Day 1</button><button type="button" data-day="3">Day 3</button><button type="button" data-day="5">Day 5</button><button type="button" data-day="8">Day 8</button></span>'; }
     const el=$('#pwStatus'); if(el.innerHTML!==h) el.innerHTML=h; }
+  /* Release 1.4 #32: staging only, jump the free week to a test day (never on mojialand.com). */
+  const STAGING_HOST=/displayedux\.com$|netlify\.app$|^localhost$|^127\.0\.0\.1$/.test(location.hostname);
+  $('#pwStatus').addEventListener('click',e=>{ const b=e.target.closest('[data-day]'); if(!b||!STAGING_HOST) return; ctx(); sfx.boop();
+    store.set('freeStart',Date.now()-(Number(b.dataset.day)-1)*DAY-60e3); store.set('freeUsed',0); gifts7=null; paintChips(); buildGU(); toast('Test date: day '+b.dataset.day); });
   function buildGU(){ paintStatus(); checkPass(true); const p=getPass(), rows=[]; let nudge='';
+    /* Release 1.4 #32: the offer on day 5 for families with no paid pass; time's up keeps its own offer. */
+    if(!(p&&(p.kind==='forever'||paidTimed(p)&&passOn(p)))&&dayNum()>=5){ const end=p&&passOn(p)&&p.ends_at>freeEnd()?p.ends_at:freeEnd();
+      nudge+='<div class="pw-gunudge pw-offer">'+(end>Date.now()?'Your free days end '+fmtT(end)+'.':'Your free week ended.')+' Keep playing with Forever, '+money(PRICES.life)+', or 30 days, '+money(PRICES.pass)+'. Never renews by itself.<button type="button" class="pw-offerbtn" data-a="buy">See passes</button></div>'; }
     /* Give a friend shows only when the server says this pass has a friend pass (Release 1.1.1 #37: friend passes and support passes have none). */
-    if(p){ const raw=store.get('pass',null), gc=raw&&giftCache&&giftCache.token===raw.token?giftCache:null;
+    /* Release 1.4 #32: 3 gifts of 7 days from day 3 for every family (48-hour passes keep their one old friend pass). */
+    if(dayNum()>=3&&!(p&&p.kind==='48h')&&!(p&&['refunded','disputed'].includes(p.status))) rows.push(['🎁 Give 3 friends 7 free days','›','gifts']);
+    if(p&&p.kind==='48h'){ const raw=store.get('pass',null), gc=raw&&giftCache&&giftCache.token===raw.token?giftCache:null;
       if(gc&&gc.data&&gc.data.state!=='expired') rows.push(['🎁 Give a friend 48 hours','›','gift']);
       else if(!gc) loadGift().then(d=>{ if(d&&d.state!=='expired') buildGU(); });
       const left=p.kind==='48h'?p.ends_at-Date.now():0, nk=(p.code||'')+':'+p.ends_at;
       if(gc&&gc.data&&gc.data.state==='ready'&&left>0&&left<=6*60*MIN&&store.get('giftNudge','')!==nk){ store.set('giftNudge',nk); nudge='<div class="pw-gunudge">🎁 Your pass ends soon. Know a family who would enjoy 48 free hours? Tap Give a friend below.</div>'; } }
-    if(passOn(p)){ if(p.code) rows.push(['📲 Send code to another device','›','share']); /* a pass that arrived by address token has no code here; the code stays in the email */ if(p.kind==='48h') rows.push(['Add 48 hours',money(PRICES.add),'add'],['Upgrade to Forever',money(PRICES.up),'up']); }
-    else rows.push(['Get a pass',money(PRICES.pass)+' or '+money(PRICES.life),'buy']);
+    if(passOn(p)&&p.code) rows.push(['📲 Send code to another device','›','share']); /* a pass that arrived by address token has no code here; the code stays in the email */
+    if(passOn(p)&&paidTimed(p)) rows.push(['Add 30 days',money(PRICES.add),'add'],['Upgrade to Forever',money(PRICES.up),'up']);
+    else if(!(passOn(p)&&p.kind==='forever')) rows.push(['Get a pass',money(PRICES.life)+' or '+money(PRICES.pass),'buy']);
     rows.push(['🖼️ Save drawings to Photos','›','photos'],['Have a code?','›','code'],['Contact us','›','help']);
     $('#pwGuList').innerHTML=nudge+rows.map(r=>'<button class="pw-gurow'+(r[2]==='share'?' share':'')+'" data-a="'+r[2]+'"><span>'+r[0]+'</span><span>'+r[1]+'</span></button>').join('');
     const on=standalone(), hb=$('#pwHS'); hb.classList.toggle('done',on); $('#pwHSt').textContent=on?'On your Home Screen':'Mojialand on your Home Screen!';
     $('#pwHSbody').textContent=on?'Mojialand sits next to your other apps on this device. Open it from the icon for full screen play.':'Add Mojialand to your Home Screen. Your kids find it next to your other apps, and it opens full screen.';
     $('#pwHSbtn').hidden=on;
     }
-  $('#pwGuList').addEventListener('click',e=>{ const b=e.target.closest('.pw-gurow'); if(!b) return; ctx(); sfx.boop(); const a=b.dataset.a;
-    if(a==='add'||a==='up') openGate('plans','gate',a); else if(a==='buy') openGate('plans','gate','pass');
-    else if(a==='share') sharePass(); else if(a==='gift') openGift(); else if(a==='photos') games.draw.openPhotos(); else if(a==='code') openCode(); else if(a==='help') openContact(); });
+  $('#pwGuList').addEventListener('click',e=>{ const b=e.target.closest('.pw-gurow,.pw-offerbtn'); if(!b) return; ctx(); sfx.boop(); const a=b.dataset.a;
+    if(a==='add'||a==='up') openGate('plans','gate',a); else if(a==='buy') openGate('plans','gate','life');
+    else if(a==='share') sharePass(); else if(a==='gift') openGift(); else if(a==='gifts') openGifts7(); else if(a==='photos') games.draw.openPhotos(); else if(a==='code') openCode(); else if(a==='help') openContact(); });
 
   function onScreen(name){ if(name==='ngate'){ newGate(); } else if(name==='plans') buildPlans(); else if(name==='gate') buildGU(); if(name!=='rest') $('#pwZeroChip').classList.remove('shake'); $$('.pw-ov').forEach(o=>o.classList.add('hidden')); paintChips(); }
   async function start(route){ deviceId(); rollDay(); await restoreFromUrl(); await verifyStored(); ackEnd(getPass()); paintChips(); checkPass();

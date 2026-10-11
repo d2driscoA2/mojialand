@@ -162,7 +162,7 @@ textarea{resize:vertical;min-height:80px}
     <h2>Gift and support codes</h2>
     <p>One code turns on one family's pass, on up to 5 devices. It starts the first time it is used. The code shows once here and is never stored. <button class="textbtn" id="cHist" type="button">Code history</button></p>
     <div class="row">
-      <label>Kind<select id="cKind"><option value="48h">48 hours</option><option value="forever">Forever</option></select></label>
+      <label>Kind<select id="cKind"><option value="7d">7 free days</option><option value="30d">30 days</option><option value="forever">Forever</option></select></label>
       <label>Reason<select id="cSource"><option value="gift">Gift</option><option value="support">Support (something went wrong)</option></select></label>
       <label>Use within (days)<input id="cDays" type="number" min="1" max="365" value="90"></label>
     </div>
@@ -293,13 +293,13 @@ $('tabs').addEventListener('click',e=>{ const b=e.target.closest('[data-tab]'); 
 
 /* ---- passes */
 const maskMail=e=>{ const s=String(e||''), at=s.lastIndexOf('@'); return at<1?'':s[0]+'•••'+s.slice(at); };
-/* Release 1.2 #27: Add 48 hours and Make Forever ask first, then tell the family.
+/* Release 1.2 #27: Add 30 days (Release 1.4) and Make Forever ask first, then tell the family.
    Paid passes with an email get the pass email unless Skip email is checked.
    Passes with no email get a message to share. */
 function tellAsk(item,act){ item.querySelectorAll('.tellbox').forEach(x=>x.remove()); const box=document.createElement('div'); box.className='tellbox';
-  const what=act==='passes.add48'?'Add 48 hours to this pass?':'Make this pass Forever?', m=item.dataset.mail;
+  const what=act==='passes.add30'?'Add 30 days to this pass?':'Make this pass Forever?', m=item.dataset.mail;
   box.innerHTML='<b>'+what+'</b>'+(m?'<span>We email '+esc(m)+' with the change and the Turn on Mojialand button.</span><label><input type="checkbox" class="skipmail"> Skip email</label>':'<span>No email on file. You get a message to share after.</span>')
-    +'<div class="acts"><button class="primary" type="button" data-tell="'+esc(act)+'">'+(act==='passes.add48'?'Add 48 hours':'Make Forever')+'</button><button class="secondary" type="button" data-tell="cancel">Cancel</button></div>';
+    +'<div class="acts"><button class="primary" type="button" data-tell="'+esc(act)+'">'+(act==='passes.add30'?'Add 30 days':'Make Forever')+'</button><button class="secondary" type="button" data-tell="cancel">Cancel</button></div>';
   item.insertBefore(box,item.querySelector('.acts')); }
 function tellResult(item,t){ if(!t) return; const box=document.createElement('div'); box.className='tellbox'; box.setAttribute('role','status');
   if(t.email==='sent') box.innerHTML='<b>Email sent to '+esc(t.to)+'.</b>';
@@ -309,11 +309,11 @@ function tellResult(item,t){ if(!t) return; const box=document.createElement('di
   item.insertBefore(box,item.querySelector('.acts')); }
 function passItem(p){ const st=p.status; const voided=st==='ended'&&!p.starts_at; const ends=p.kind==='forever'?'Forever':(p.ends_at?'Ends '+fmt(p.ends_at):'Not started');
   const mail=!!(p.email&&p.source==='stripe'&&p.stripe_session_id);
-  return '<div class="item" data-id="'+esc(p.id)+'"'+(mail?' data-mail="'+esc(maskMail(p.email))+'"':'')+'><div class="top"><b>'+esc(p.prefix)+'-…'+esc(p.code_last4)+' · '+(p.kind==='forever'?'Forever':'48h')+'</b><span class="pill '+esc(st)+'">'+(voided?'ended unused':esc(st))+'</span></div>'
+  return '<div class="item" data-id="'+esc(p.id)+'"'+(mail?' data-mail="'+esc(maskMail(p.email))+'"':'')+'><div class="top"><b>'+esc(p.prefix)+'-…'+esc(p.code_last4)+' · '+(KINDS_SHORT[p.kind]||esc(p.kind))+'</b><span class="pill '+esc(st)+'">'+(voided?'ended unused':esc(st))+'</span></div>'
     +'<div class="meta">'+esc(p.email||'(no email)')+' · '+esc(p.source)+(p.amount_cents?' · '+money(p.amount_cents):'')+' · made '+fmt(p.created_at)+'</div>'
     +'<div class="meta">'+esc(ends)+(p.use_by&&st==='unused'?' · use by '+fmt(p.use_by):'')+(typeof p.devices==='number'?' · '+p.devices+' of '+p.device_limit+' devices':'')+(p.stripe_session_id?' · '+esc(p.stripe_session_id):'')+'</div>'
     +(p.batch?'<div class="meta">Batch: '+esc(p.batch)+'</div>':'')+(p.note?'<div class="meta">Note: '+esc(p.note)+'</div>':'')
-    +'<div class="acts">'+(p.kind!=='forever'&&!voided?'<button class="secondary" data-act="passes.add48">Add 48 hours</button><button class="secondary" data-act="passes.forever">Make Forever</button>':'')
+    +'<div class="acts">'+(p.kind!=='forever'&&!voided?'<button class="secondary" data-act="passes.add30">Add 30 days</button><button class="secondary" data-act="passes.forever">Make Forever</button>':'')
     +(p.source==='stripe'&&p.stripe_session_id?'<button class="secondary" data-act="passes.code">Show code</button><button class="secondary" data-act="passes.email">Email code</button>':'')+(st==='unused'&&p.prefix==='GIFT'&&(p.source==='gift'||p.source==='support')&&String(p.batch||'').toUpperCase()!=='FRIEND'?'<button class="secondary" data-act="codes.replace">Lost code? Cancel and replace</button>':'')+'<button class="secondary" data-act="passes.devices_reset">Reset devices</button><button class="secondary" data-act="note">Note</button>'
     +(st==='active'?'<button class="danger" data-act="passes.end">End pass</button>':'')+(p.source==='stripe'&&p.stripe_session_id&&st!=='refunded'?'<button class="danger" data-act="passes.refund">Refund</button>':'')+'</div></div>'; }
 /* Release 1.2 #2: tabs, sort, Campaigns and schools. Counts cards, never people. */
@@ -350,11 +350,11 @@ $('pList').addEventListener('click',async e=>{ const cp=e.target.closest('[data-
     try{ const d=await api(tb.dataset.tell,{id:item.dataset.id,skip_email:!!(box.querySelector('.skipmail')||{}).checked}); const wrap=document.createElement('div'); wrap.innerHTML=passItem(d.pass); const fresh=wrap.firstChild; item.replaceWith(fresh); tellResult(fresh,d.tell); }
     catch(err){ $('pErr').textContent=err.message; tb.disabled=false; } return; }
   const b=e.target.closest('[data-act]'); if(!b) return; const item=b.closest('.item'), id=item.dataset.id, act=b.dataset.act; $('pErr').textContent='';
-  if(act==='passes.add48'||act==='passes.forever'){ tellAsk(item,act); return; }
+  if(act==='passes.add30'||act==='passes.forever'){ tellAsk(item,act); return; }
   let extra={id:id};
   if(act==='note'){ const cur=(item.querySelector('.meta:last-of-type')||{}).textContent||''; const n=prompt('Note for this pass:',/^Note: /.test(cur)?cur.slice(6):''); if(n===null) return; extra.note=n; }
   else if(act==='passes.end'&&!confirm('End this pass now?')) return;
-  else if(act==='passes.refund'&&!confirm('Refund the full '+(item.textContent.match(/\$\d+\.\d\d/)||['amount'])[0]+' to the card and end this pass? Add 48 hours and upgrade payments are separate; refund those in Stripe.')) return;
+  else if(act==='passes.refund'&&!confirm('Refund the full '+(item.textContent.match(/\$\d+\.\d\d/)||['amount'])[0]+' to the card and end this pass? Add 30 days and upgrade payments are separate; refund those in Stripe.')) return;
   else if(act==='passes.devices_reset'&&!confirm('Forget every device on this pass? The family taps the email button or types the code again on each device.')) return;
   else if(act==='passes.email'){ const t=prompt('Send the code email to which address? Use the parent\'s real email if the one on file is a Hide My Email address.',((item.querySelector('.meta')||{}).textContent||'').split(' · ')[0].replace('(no email)','')); if(t===null) return; extra.to=t.trim(); }
   if(act==='codes.replace'){ if(made){ $('pErr').textContent='Finish the open code card under Codes first (Done).'; return; }
@@ -374,7 +374,9 @@ $('pList').addEventListener('click',async e=>{ const cp=e.target.closest('[data-
    until Done. Done unlocks after Share, Copy, Text, Email, or I saved it. Make a code waits until Done, and leaving
    the page asks first, so a code never disappears unsaved. A lost code: Passes, Gifts, Cancel and replace. */
 let made=null;
-const KINDN={'48h':'48 hours',forever:'Forever'}, SRCN={gift:'Gift',support:'Support'};
+const KINDN={'48h':'48 hours','30d':'30 days','7d':'7 free days',holder:'Gift holder',forever:'Forever'}, SRCN={gift:'Gift',support:'Support'};
+/* Release 1.4 #32: pass kinds in the Passes list */
+const KINDS_SHORT={'48h':'48h','30d':'30 days','7d':'7-day gift',holder:'gift holder',forever:'Forever'};
 function showMade(code,info,head){ made={code,kind:info.kind,label:info.batch||'',saved:false};
   lastLabel=made.label; $('cHead').textContent=head||'Your new code. Save or share it now: it shows only once.';
   $('cCode').textContent=code; const link=linkFor(code); $('cLink').textContent=link; $('cLink').href=link; setShareLinks(code);
@@ -399,7 +401,7 @@ const curLabel=()=>$('cBatch').value.trim().toLowerCase();
 const linkFor=(c,lb)=>location.origin+'/r/'+c.replace(/-/g,'')+((lb===undefined?lastLabel:lb)?'?c='+encodeURIComponent(lb===undefined?lastLabel:lb):'');
 async function loadLabels(){ try{ const d=await api('codes.labels',{}); $('cLabels').innerHTML=d.labels.map(l=>'<button class="secondary" type="button" data-label="'+esc(l)+'">'+esc(l)+'</button>').join(''); }catch(e){} }
 $('cLabels').addEventListener('click',e=>{ const b=e.target.closest('[data-label]'); if(b) $('cBatch').value=b.dataset.label; });
-const msgFor=c=>'A Mojialand gift: a free '+(((made&&made.kind)||$('cKind').value)==='forever'?'Forever':'48-hour')+' pass for your family. Tap to turn it on: '+linkFor(c)+' Or open Mojialand, tap Grown-ups, then Have a code? and type '+c;
+const msgFor=c=>'A Mojialand gift: '+({forever:'a free Forever pass','30d':'a free 30-day pass'}[((made&&made.kind)||$('cKind').value)]||'7 free days')+' for your family. Tap to turn it on: '+linkFor(c)+' Or open Mojialand, tap Grown-ups, then Have a code? and type '+c;
 async function copy(t){ try{ await navigator.clipboard.writeText(t); return true; }catch(e){ return false; } }
 $('cShare').addEventListener('click',async e=>{ const b=e.target.closest('[data-share]'); if(!b) return; const c=$('cCode').textContent; $('cOk').textContent='';
   if(b.dataset.share==='share'){ if(navigator.share){ try{ await navigator.share({title:'Mojialand gift pass',text:msgFor(c),url:linkFor(c)}); markSaved(); }catch(err){} } else { $('cOk').textContent=(await copy(msgFor(c)))?'Copied the message. This computer has no share sheet; paste it anywhere.':'Copy failed.'; } }
@@ -412,7 +414,7 @@ function setShareLinks(c){ $('cSms').href='sms:?&body='+encodeURIComponent(msgFo
 let batch=[], bLabel='';
 function qrImg(url){ try{ const q=qrcode(0,'M'); q.addData(url); q.make(); return q.createDataURL(4,0); }catch(e){ return ''; } }
 function bPer(){ return $('bPer').value==='3'?3:1; }
-function cardTitle(kind,per){ if(kind==='forever') return per===1?'A free Forever pass':'Free Forever passes'; return per===1?'A free 48-hour pass':'3 free 48-hour passes'; }
+function cardTitle(kind,per){ if(kind==='forever') return per===1?'A free Forever pass':'Free Forever passes'; if(kind==='30d') return per===1?'A free 30-day pass':'3 free 30-day passes'; if(kind==='48h') return per===1?'A free 48-hour pass':'3 free 48-hour passes'; return per===1?'7 free days of Mojialand':'7 free days for 3 families'; }
 function buildSheet(codes,kind,lb,per){ per=per===3?3:1; const cards=[]; for(let i=0;i<codes.length;i+=per) cards.push(codes.slice(i,i+per));
   const host=location.hostname==='mojialand.com'?'mojialand.com':location.host;
   $('sheet').innerHTML=cards.map(cs=>'<div class="bc'+(per===1?' one':'')+'"><div class="l"><img src="/logo/logo-3d-1000.webp" alt="Mojialand"><b>'+cardTitle(kind,per)+'</b><small>Emoji games for kids 3 and up. No ads, nothing collected from your child. '+(per===1?'One family, up to 5 devices. Scan the code':'One code per family, up to 5 devices. Scan a code')+', or type it at '+esc(host)+' under Grown-ups.</small>'+(lb?'<em class="blabel">'+esc(lb)+'</em>':'')+'</div><div class="r">'

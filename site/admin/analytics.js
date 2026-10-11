@@ -654,7 +654,7 @@
         <div class="anStep"><div class="l">QR opens</div><div class="n">${fmtN(c.open)}</div><div class="s">first open per device</div></div>
         <div class="anStep"><div class="l">Played a game</div><div class="n">${fmtN(c.play)}</div><div class="s">${pctO(c.play)} of opens</div></div>
         <div class="anStep"><div class="l">Gift codes used</div><div class="n">${fmtN(c.gift)}</div><div class="s">${pctO(c.gift)} of opens</div></div>
-        <div class="anStep"><div class="l">Passes bought</div><div class="n">${fmtN(bought)}</div><div class="s">${c.pass48} 48-hour, ${c.forever} Forever · ${pctO(bought)}</div></div>
+        <div class="anStep"><div class="l">Passes bought</div><div class="n">${fmtN(bought)}</div><div class="s">${c.pass48} 30-day or 48-hour, ${c.forever} Forever · ${pctO(bought)}</div></div>
         <div class="anStep"><div class="l">Open to purchase</div><div class="n">${c.avgDays == null ? '-' : c.avgDays.toFixed(1)}</div><div class="s">days, average</div></div>
       </div>
       <div class="anGrid2" style="align-items:start">

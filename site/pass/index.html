@@ -43,7 +43,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--blue);outline-offse
 <body>
 <header class="hdr"><img src="/logo/wordmark.png" width="150" height="55" alt="Mojialand"></header>
 <main class="sheet" aria-labelledby="coItem">
-  <div class="sum"><span id="coItem">48-hour pass</span><span id="coPrice">$1.50</span></div>
+  <div class="sum"><span id="coItem">Forever</span><span id="coPrice">$14.99</span></div>
   <p class="sub">One-time charge to MOJIALAND. Your card goes straight to Stripe. We never see it.</p>
   <p class="sub">Your email is only for your code and receipt. Private relay emails work fine.</p>
   <div class="loading" id="coLoading" role="status"><span class="spin" aria-hidden="true"></span>Opening secure checkout…</div>
@@ -62,7 +62,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--blue);outline-offse
 <script>
 (function(){
 'use strict';
-var PLANS={pass:['48-hour pass','$1.50'],life:['Forever','$14.99'],add:['Add 48 hours','$1.50'],up:['Forever upgrade','$13.49']};
+var PLANS={pass:['30-day pass','$4.99'],life:['Forever','$14.99'],add:['Add 30 days','$4.99'],up:['Forever upgrade','$10.00']}; /* Release 1.4 #32 */
 var DEFAULT_ERR='Something went wrong on our side. Your card was not charged.';
 var $=function(id){return document.getElementById(id);};
 var q=new URLSearchParams(location.search);
@@ -84,6 +84,8 @@ async function start(){
   var body={plan:plan};
   if(plan==='add'||plan==='up'){ var code=readCode(); if(!code) return showError("That pass can't be changed. Pick a new pass."); body.code=code; }
   if(promo) body.promo=promo;
+  /* Release 1.4 #58: the device started from a gift (yes or no only) */
+  try{ if(new URLSearchParams(location.search).get('gift')==='1'||JSON.parse(localStorage.getItem('mojia.fromGift')||'false')===true) body.from_gift=true; }catch(e){}
   try{ var cp=JSON.parse(localStorage.getItem('mojia.camp')||'null'); if(cp&&typeof cp.l==='string'&&/^[a-z0-9][a-z0-9-]{1,23}$/.test(cp.l)&&Date.now()-cp.t<7*864e5) body.camp={l:cp.l,d:Math.round((Date.now()-cp.t)/864e4)/10}; }catch(e){}
   var res, data={};
   try{

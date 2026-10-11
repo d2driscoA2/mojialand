@@ -116,7 +116,7 @@ async function verifyToken(tok){
     const ok=await crypto.subtle.verify({name:'ECDSA',hash:'SHA-256'},key,b64u(parts[1]),new TextEncoder().encode(parts[0]));
     if(!ok) return null;
     const p=JSON.parse(new TextDecoder().decode(b64u(parts[0])));
-    if(!p||p.v!==1||(p.k!=='48h'&&p.k!=='forever')||typeof p.e!=='number') return null;
+    if(!p||p.v!==1||['48h','30d','7d','holder','forever'].indexOf(p.k)<0||typeof p.e!=='number') return null;
     return p;
   }catch(e){ return null; }
 }
