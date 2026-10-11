@@ -9,7 +9,7 @@ import { LABEL_RE } from './_lib/analytics.mjs';
 
 const REQUIRED = [
   'STRIPE_SECRET_KEY', 'STRIPE_PUBLISHABLE_KEY',
-  'STRIPE_PRICE_PASS_48H', 'STRIPE_PRICE_FOREVER', 'STRIPE_PRICE_UPGRADE',
+  'STRIPE_PRICE_PASS_30D', 'STRIPE_PRICE_FOREVER', 'STRIPE_PRICE_UPGRADE',
   'SUPABASE_URL', 'SUPABASE_SERVICE_KEY', 'RESTORE_CODE_PEPPER',
 ];
 const DAY = 864e5;
@@ -38,6 +38,8 @@ export const handler = async (event) => {
       metadata.camp = camp.l;
       metadata.camp_days = String(Number.isFinite(d) && d >= 0 && d <= 7 ? Math.round(d * 10) / 10 : 0);
     }
+    // Release 1.4 #58: the device started from a gift (yes or no only, for the Gifts tab count).
+    if (input.from_gift === true) metadata.from_gift = '1';
 
     if (plan === 'add' || plan === 'up') {
       const hash = typeof input.code === 'string' ? codeHash(process.env.RESTORE_CODE_PEPPER, input.code) : null;
@@ -46,7 +48,7 @@ export const handler = async (event) => {
       const now = Date.now();
       const ends = pass && pass.ends_at ? new Date(pass.ends_at).getTime() : 0;
       let ok = false;
-      if (pass && pass.kind === '48h') {
+      if (pass && (pass.kind === '30d' || pass.kind === '48h')) {
         if (plan === 'add') ok = pass.status === 'active' && ends > now;
         else {
           const creditDays = await getSetting('credit_days', 7);

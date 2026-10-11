@@ -2,6 +2,7 @@
 // public key and check the signature with WebCrypto. Signature format is
 // IEEE P1363 (r||s, 64 bytes), which is what WebCrypto expects.
 import crypto from 'node:crypto';
+import { KINDS } from './kinds.mjs';
 
 const b64u = (buf) => Buffer.from(buf).toString('base64url');
 
@@ -16,7 +17,7 @@ export function makeTokenPayload(pass, env, now = Date.now()) {
   const forever = pass.kind === 'forever';
   const payload = {
     v: 1,
-    k: forever ? 'forever' : '48h',
+    k: forever ? 'forever' : (KINDS.includes(pass.kind) ? pass.kind : '48h'), // Release 1.4: 30d, 7d and holder too
     e: forever || !pass.ends_at ? 0 : new Date(pass.ends_at).getTime(),
     t: b64u(crypto.randomBytes(16)),
     p: pass.id,

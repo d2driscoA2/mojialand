@@ -10,8 +10,8 @@ export function fmtDetroit(iso) {
   });
 }
 
-// Release 1.2 #27: wording for passes changed by hand in admin (Add 48 hours,
-// Make Forever). Kept in one place: Release 1.4 (#32, 30-day pass) changes it here.
+// Release 1.2 #27: wording for passes changed by hand in admin (Add 30 days since
+// Release 1.4, Make Forever). Kept in one place.
 export const ADMIN_CHANGE = {
   how: 'New phone or tablet? Open this email there and tap the button.',
   already: 'Phones and tablets with Mojialand on show the change the next time Mojialand opens.',
@@ -19,23 +19,25 @@ export const ADMIN_CHANGE = {
 // Message for a pass with no email on file (gift and manual codes): the admin shares it.
 export function adminShareText(plan, pass) {
   if (plan === 'up') return 'Good news: your Mojialand pass is Forever now. Open Mojialand on each phone or tablet and Forever shows up.';
-  return 'Good news: we added 48 hours to your Mojialand pass. It now runs until ' + fmtDetroit(pass.ends_at) + '. Open Mojialand on each phone or tablet and the new time shows up.';
+  return 'Good news: we added 30 days to your Mojialand pass. It now runs until ' + fmtDetroit(pass.ends_at) + '. Open Mojialand on each phone or tablet and the new time shows up.';
 }
 
 // Builds {subject, text, html}. The button carries the code and turns the
 // pass on for the device that taps it. The code also shows for typing by hand.
 export function buildEmail({ plan, pass, code, origin, friend, byAdmin }) {
   const forever = pass.kind === 'forever';
+  // Release 1.4 #32: 30-day pass. A 48-hour pass bought before 1.4 keeps its own words.
+  const old = pass.kind === '48h' && plan === 'pass';
   const subject = {
-    pass: 'Mojialand: your 48-hour pass',
+    pass: old ? 'Mojialand: your 48-hour pass' : 'Mojialand: your 30-day pass',
     life: 'Mojialand: your Forever pass',
-    add: 'Mojialand: 48 hours added',
+    add: 'Mojialand: 30 days added',
     up: 'Mojialand: you have Forever',
   }[plan];
   const head = {
-    pass: 'You\'re all set for 48 hours!',
+    pass: old ? 'You\'re all set for 48 hours!' : 'You\'re all set for 30 days!',
     life: 'Mojialand is yours for good!',
-    add: 'We added 48 hours!',
+    add: 'We added 30 days!',
     up: 'You have Forever now!',
   }[plan];
   const when = !forever && pass.ends_at ? 'Your pass is on until ' + fmtDetroit(pass.ends_at) + '.' : 'Your Forever pass never ends.';
@@ -49,6 +51,8 @@ export function buildEmail({ plan, pass, code, origin, friend, byAdmin }) {
     : 'The device you paid on is updated already.';
   const byHand = 'Or type the code in Mojialand: open Grown-ups, then tap Have a code?';
   const keep = 'Keep this email. You only need the code if you ever have to show you paid.';
+  // Release 1.4 #32: gifts live in Grown-ups, behind the grown-up check, from day 3.
+  const giftLine = fresh && !byAdmin ? 'Share Mojialand: from day 3, Grown-ups holds 3 gifts of 7 free days for friends.' : '';
   const preheader = link ? how : when;
   // Friend pass (Release 1.1 #3): one free 48-hour pass to give another family.
   const fLink = friend && friend.code ? origin + friend.path : null;
@@ -61,6 +65,7 @@ export function buildEmail({ plan, pass, code, origin, friend, byAdmin }) {
   const text = [
     head, '', when, '',
     ...(link ? [how, 'Turn on Mojialand: ' + link, '', already, '', byHand, 'Your code: ' + code, '', keep, ''] : []),
+    ...(giftLine ? [giftLine, ''] : []),
     ...(fLink ? [fHead, fWhy, 'Send this link to a friend: ' + fLink, ''] : []),
     'Questions? Reply to this email.', '',
     'Mojialand is made by DisplayedUX: https://displayedux.com',
@@ -97,6 +102,7 @@ ${fLink ? `<tr><td style="padding:16px 0 0"><table role="presentation" cellpaddi
 </td></tr></table>
 <p style="margin:0;font:700 13px/1.45 ${F};color:${SOFT};text-align:center">Or send this link any way you like:<br><a href="${esc(fLink)}" style="color:${P};font-weight:800;word-break:break-all">${esc(fLink)}</a></p>
 </td></tr></table></td></tr>` : ''}
+${giftLine ? `<tr><td style="padding:16px 8px 0"><p style="margin:0;font:800 15px/1.45 ${F};color:#FF5FA2;text-align:center">&#127873; ${esc(giftLine)}</p></td></tr>` : ''}
 ${link ? `<tr><td style="padding:16px 8px 0"><p style="margin:0;font:700 14px/1.45 ${F};color:${SOFT};text-align:center">${esc(keep)}</p></td></tr>` : ''}
 <tr><td style="padding:14px 8px 0"><p style="margin:0;font:700 14px/1.45 ${F};color:${SOFT};text-align:center">Questions? Reply to this email.</p></td></tr>
 <tr><td style="padding:6px 8px 0"><p style="margin:0;font:700 13px/1.45 ${F};color:${SOFT};text-align:center">Mojialand is made by <a href="https://displayedux.com" style="color:${P};font-weight:800">DisplayedUX</a></p></td></tr>

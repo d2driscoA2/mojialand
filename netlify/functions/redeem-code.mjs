@@ -5,7 +5,8 @@ import { guard, envName } from './_lib/env.mjs';
 import { json, fail, readJson, clientIp, maskEmail, tail6 } from './_lib/http.mjs';
 import { rateHit, getPassBy, patchPass, addDevice, safeErr, DEVICE_RE, rest } from './_lib/db.mjs';
 import { sha256hex } from './_lib/http.mjs';
-import { FRIEND_BATCH } from './_lib/friend.mjs';
+import { FRIEND_BATCH, rewardGiver } from './_lib/friend.mjs';
+import { lengthOf, freeWeekEnd, GIFT_DAYS, DAY } from './_lib/kinds.mjs';
 import { normalizeCode, codeHash } from './_lib/codes.mjs';
 import { makeTokenPayload, signToken } from './_lib/token.mjs';
 import { getStripe } from './_lib/stripe.mjs';
@@ -14,7 +15,6 @@ import { notify } from './_lib/push.mjs';
 
 const REQUIRED = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY', 'RESTORE_CODE_PEPPER', 'PASS_SIGNING_PRIVATE_KEY', 'STRIPE_SECRET_KEY'];
 const PROMO_RE = /^[A-Za-z0-9_-]{2,40}$/;
-const HOUR = 3600e3;
 const NOT_FOUND = 'We could not find that code. Check each letter and try again.';
 
 export const handler = async (event) => {
@@ -64,12 +64,18 @@ export const handler = async (event) => {
         if (Array.isArray(seen) && seen.length) return fail(403, 'Friend passes are for families new to Mojialand. This device had a pass before, so please share this one with a new friend.');
       }
       // Gift and support codes start on first use.
+      // Release 1.4 #32 (A1): a 7-day gift adds 7 days after the device's free week (14 free days on a new device).
       const now = Date.now();
+      const ends = pass.kind === 'forever' ? null
+        : pass.kind === '7d' ? freeWeekEnd(input.fv_end, now) + GIFT_DAYS * DAY
+        : now + (lengthOf(pass.kind) || lengthOf('48h'));
       const rows = await patchPass('id=eq.' + encodeURIComponent(pass.id) + '&status=eq.unused', {
         status: 'active',
         starts_at: new Date(now).toISOString(),
-        ends_at: pass.kind === 'forever' ? null : new Date(now + 48 * HOUR).toISOString(),
+        ends_at: ends === null ? null : new Date(ends).toISOString(),
       });
+      // The giver gets 7 days, at most 21 in all (first use only).
+      if (rows[0] && pass.giver_id) await rewardGiver(pass.giver_id);
       pass = rows[0] || (await getPassBy('id', pass.id));
       // First use of a gift code from a QR campaign counts toward that event.
       if (rows[0] && pass.source === 'gift' && typeof input.camp === 'string' && LABEL_RE.test(input.camp)) await campaignHit(input.camp, 'gift');
@@ -78,7 +84,7 @@ export const handler = async (event) => {
     }
     const ended = pass.kind !== 'forever' && pass.ends_at && new Date(pass.ends_at).getTime() <= Date.now();
     if (pass.status === 'ended' && !pass.starts_at) return fail(410, 'This gift code has ended. A grown-up can get a pass in Mojialand.');
-    if (pass.status === 'ended' || ended) return fail(410, 'This 48-hour pass has ended. A grown-up can get a new pass in Mojialand.');
+    if (pass.status === 'ended' || ended) return fail(410, 'This pass has ended. A grown-up can get a new pass in Mojialand.');
     if (pass.status !== 'active') return fail(403, 'This code does not work right now. Please contact us.');
 
     const dev = await addDevice(pass, device);

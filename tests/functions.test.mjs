@@ -149,7 +149,7 @@ test('create-checkout: add and up check the pass', async () => {
   let r = await createCheckout(ev({ plan: 'add', code: code.toLowerCase() }));
   assert.equal(r.statusCode, 200);
   assert.deepEqual(stripe.calls.create.at(-1).metadata, { plan: 'add', env: 'staging', pass_id: id });
-  assert.deepEqual(stripe.calls.create.at(-1).line_items, [{ price: 'price_48h', quantity: 1 }]);
+  assert.deepEqual(stripe.calls.create.at(-1).line_items, [{ price: 'price_30d', quantity: 1 }], '1.4: add buys 30 days');
   // ended 3 days ago: add refused, up allowed
   db.passes[0].status = 'ended'; db.passes[0].ends_at = new Date(Date.now() - 3 * 864e5).toISOString();
   assert.equal((await createCheckout(ev({ plan: 'add', code }))).statusCode, 400);
@@ -159,6 +159,17 @@ test('create-checkout: add and up check the pass', async () => {
   // ended 8 days ago: up refused
   db.passes[0].ends_at = new Date(Date.now() - 8 * 864e5).toISOString();
   assert.equal((await createCheckout(ev({ plan: 'up', code }))).statusCode, 400);
+  db.rate.clear();
+  // Release 1.4: a 30-day pass adds and upgrades; a gift of 7 days and a gift holder never take the $10 upgrade.
+  db.passes[0].kind = '30d'; db.passes[0].status = 'active'; db.passes[0].ends_at = new Date(Date.now() + 864e5).toISOString();
+  assert.equal((await createCheckout(ev({ plan: 'add', code }))).statusCode, 200);
+  assert.equal((await createCheckout(ev({ plan: 'up', code }))).statusCode, 200);
+  db.rate.clear();
+  for (const k of ['7d', 'holder', 'forever']) { db.passes[0].kind = k; assert.equal((await createCheckout(ev({ plan: 'up', code }))).statusCode, 400, k + ' cannot take the upgrade price'); }
+  // from_gift rides along as yes or no only
+  await createCheckout(ev({ plan: 'pass', from_gift: true }));
+  assert.equal(stripe.calls.create.at(-1).metadata.from_gift, '1');
+  assert.deepEqual(stripe.calls.create.at(-1).line_items, [{ price: 'price_30d', quantity: 1 }], '1.4: the pass is the 30-day price');
 });
 
 test('create-checkout: rate limit 5 per minute', async () => {
@@ -176,12 +187,13 @@ test('grantPass: idempotent for pass, life, add, up', async () => {
   assert.equal(a.pass.id, b.pass.id);
   assert.equal(db.passes[0].code_hash, codeHash(process.env.RESTORE_CODE_PEPPER, a.code));
   assert.equal(db.passes[0].code_last4, a.code.slice(-4));
-  assert.equal(db.passes[0].kind, '48h');
+  assert.equal(db.passes[0].kind, '30d', '1.4: a paid pass is 30 days');
+  assert.ok(Math.abs(new Date(db.passes[0].ends_at).getTime() - Date.now() - 30 * 864e5) < 5000);
   assert.ok(!JSON.stringify(db.passes).includes(a.code), 'code itself never stored');
   const ends0 = new Date(db.passes[0].ends_at).getTime();
   const add = paidSession('cs_test_add', 'add', { pass_id: a.pass.id });
   await grantPass(add); await grantPass(add);
-  assert.equal(new Date(db.passes[0].ends_at).getTime(), ends0 + 48 * 3600e3);
+  assert.equal(new Date(db.passes[0].ends_at).getTime(), ends0 + 30 * 864e5, 'add puts 30 more days on, once');
   const up = paidSession('cs_test_up', 'up', { pass_id: a.pass.id });
   const u1 = await grantPass(up), u2 = await grantPass(up);
   assert.equal(u1.pass.kind, 'forever'); assert.equal(u2.pass.kind, 'forever');
@@ -202,7 +214,7 @@ test('confirm-session: pending, paid, bad ids', async () => {
   assert.equal(r.statusCode, 200);
   const d = JSON.parse(r.body);
   assert.equal(d.code, deriveCode(process.env.RESTORE_CODE_PEPPER, 'cs_test_paid0001'));
-  assert.equal(d.kind, '48h'); assert.equal(d.plan, 'pass'); assert.equal(d.email_masked, 'p•••@example.com');
+  assert.equal(d.kind, '30d'); assert.equal(d.plan, 'pass'); assert.equal(d.email_masked, 'p•••@example.com');
   const payload = verifyToken(d.token, KEYS.jwk);
   assert.ok(payload); assert.equal(payload.e, d.ends_at); assert.equal(payload.env, 'staging');
   r = await confirmSession(ev({ session_id: 'cs_test_paid0001', device_id: DEV('e') }));
@@ -221,7 +233,7 @@ test('#46 free promo checkout (no_payment_required) grants with amount 0', async
   stripe.sessions.set('cs_test_free1', free('cs_test_free1'));
   const r = await confirmSession(ev({ session_id: 'cs_test_free1', device_id: DEV('f') }));
   assert.equal(r.statusCode, 200);
-  assert.equal(JSON.parse(r.body).kind, '48h');
+  assert.equal(JSON.parse(r.body).kind, '30d');
   assert.equal(db.passes[0].amount_cents, 0);
   const s2 = free('cs_test_free2');
   stripe.sessions.set(s2.id, s2);
@@ -260,12 +272,12 @@ test('webhook: completed grants once and emails once; base64 body; refund; dispu
   assert.equal(dup.statusCode, 200); assert.equal(JSON.parse(dup.body).duplicate, true);
   assert.equal((await webhook(signed({ ...evt, id: 'evt_2b' }))).statusCode, 200);
   assert.equal(db.passes.filter((p) => p.source === 'stripe').length, 1);
-  { const fr = db.passes.filter((p) => p.batch === 'FRIEND'); assert.equal(fr.length, 1, 'one friend pass made with the email'); assert.equal(fr[0].status, 'unused'); assert.equal(fr[0].source, 'gift'); }
-  assert.match(db.emails.at(-1).text, /Give a friend 48 free hours/); assert.match(db.emails.at(-1).html, /sms:\?&(amp;)?body=/);
+  assert.equal(db.passes.filter((p) => p.batch === 'FRIEND').length, 0, '1.4: no old 48-hour friend pass for a 30-day pass');
+  assert.doesNotMatch(db.emails.at(-1).text, /48 free hours/); assert.match(db.emails.at(-1).text, /3 gifts of 7 free days/);
   assert.equal(db.emails.length, 1);
   const m = db.emails[0];
   const code = deriveCode(process.env.RESTORE_CODE_PEPPER, s.id);
-  assert.equal(m.subject, 'Mojialand: your 48-hour pass');
+  assert.equal(m.subject, 'Mojialand: your 30-day pass');
   assert.deepEqual(m.to, ['parent@example.com']);
   assert.equal(m.reply_to, 'hello@mojialand.com');
   assert.ok(m.html.includes(code) && m.text.includes(code));
@@ -283,7 +295,7 @@ test('webhook: completed grants once and emails once; base64 body; refund; dispu
   await webhook(signed({ id: 'evt_3', type: 'checkout.session.completed', data: { object: add } }));
   await webhook(signed({ id: 'evt_3b', type: 'checkout.session.completed', data: { object: add } }));
   assert.equal(db.emails.length, 2);
-  assert.equal(db.emails[1].subject, 'Mojialand: 48 hours added');
+  assert.equal(db.emails[1].subject, 'Mojialand: 30 days added');
   assert.ok(db.emails[1].text.includes('/r/' + code.replace(/-/g, '')), 'add email carries the same code link');
   // refund
   await webhook(signed({ id: 'evt_4', type: 'charge.refunded', data: { object: { object: 'charge', refunded: true, payment_intent: s.payment_intent } } }));
@@ -369,7 +381,7 @@ test('pass-check (Release 1.1.1 #28 with #42): fresh copy on each check; admin c
   assert.equal((await passCheck(ev({ token: tok(pass) }))).statusCode, 400, 'device id needed');
   assert.equal((await passCheck(ev({ token: signToken(makeTokenPayload(pass, 'live'), process.env.PASS_SIGNING_PRIVATE_KEY), device_id: DEV('1') }))).statusCode, 403, 'live token on staging');
   let [st, d] = await check(tok(pass));
-  assert.equal(st, 200); assert.equal(d.state, 'on'); assert.equal(d.kind, '48h');
+  assert.equal(st, 200); assert.equal(d.state, 'on'); assert.equal(d.kind, '30d');
   assert.equal(verifyToken(d.token, KEYS.jwk).p, pass.id);
   // admin adds 48 hours: the next check carries the new end time
   const row = db.passes.find((x) => x.id === pass.id);
@@ -408,7 +420,7 @@ test('redeem-code: turns a pass on, counts devices, limit 5, refunds stop it', a
   let r = await redeem(ev({ code: plain, device_id: DEV('1') }));
   assert.equal(r.statusCode, 200);
   const d = JSON.parse(r.body);
-  assert.equal(d.code, code); assert.equal(d.kind, '48h');
+  assert.equal(d.code, code); assert.equal(d.kind, '30d');
   assert.ok(verifyToken(d.token, KEYS.jwk));
   for (const n of ['2', '3', '4', '5']) assert.equal((await redeem(ev({ code, device_id: DEV(n) }))).statusCode, 200);
   assert.equal((await redeem(ev({ code, device_id: DEV('1') }))).statusCode, 200, 'a counted device can come back');
@@ -619,7 +631,7 @@ test('#2 gift codes by batch: labels, campaigns, tabs, sort, batch rows, notes',
   [st, d] = await A('passes.batches', {});
   { const f2 = d.batches.find((b) => b.label === 'in-fair-oct'); assert.equal(f2.used, 2, 'ended codes never count as used'); assert.equal(f2.open, 0); assert.equal(f2.voided, 4); }
   { const voided = db.passes.find((p) => p.batch === 'in-fair-oct' && p.status === 'ended');
-    let [s8, r8] = await A('passes.add48', { id: voided.id, skip_email: true }); assert.equal(s8, 400, 'Add 48 hours refuses a code ended before use'); assert.match(r8.error, /ended before anyone used/);
+    let [s8, r8] = await A('passes.add30', { id: voided.id, skip_email: true }); assert.equal(s8, 400, 'Add 48 hours refuses a code ended before use'); assert.match(r8.error, /ended before anyone used/);
     [s8] = await A('passes.forever', { id: voided.id, skip_email: true }); assert.equal(s8, 400, 'Make Forever refuses it too');
     assert.equal(db.passes.find((p) => p.id === voided.id).status, 'ended'); }
   [st, d] = await A('codes.end_unused', { batch: 'friend' }); assert.equal(st, 400, 'friend label refused');
@@ -654,16 +666,16 @@ test('#27 admin Add 48 hours and Make Forever email the family; skip; gift passe
   const A = (action, extra) => adminApi(withCookie({ action, ...extra }, cookie)).then((r) => [r.statusCode, JSON.parse(r.body)]);
   const { pass, code } = await grantPass(paidSession('cs_test_tell1', 'pass'));
   const n0 = db.emails.length;
-  let [st, d] = await A('passes.add48', { id: pass.id });
+  let [st, d] = await A('passes.add30', { id: pass.id });
   assert.equal(st, 200); assert.equal(d.tell.email, 'sent'); assert.equal(d.tell.to, 'p•••@example.com');
   let m = db.emails.at(-1);
   assert.equal(db.emails.length, n0 + 1);
-  assert.deepEqual(m.to, ['parent@example.com']); assert.equal(m.subject, 'Mojialand: 48 hours added');
+  assert.deepEqual(m.to, ['parent@example.com']); assert.equal(m.subject, 'Mojialand: 30 days added');
   assert.ok(m.text.includes(code) && m.html.includes('Turn on Mojialand'));
   assert.ok(m.text.includes('Phones and tablets with Mojialand on show the change the next time Mojialand opens.'));
   assert.ok(!/paid on/.test(m.text), 'admin change never says "the device you paid on"');
   assert.ok(!/\u2014/.test(m.html + m.text), 'no em dashes');
-  [st, d] = await A('passes.add48', { id: pass.id, skip_email: true });
+  [st, d] = await A('passes.add30', { id: pass.id, skip_email: true });
   assert.equal(d.tell.email, 'skipped'); assert.equal(db.emails.length, n0 + 1, 'skip sends nothing');
   [st, d] = await A('passes.forever', { id: pass.id });
   assert.equal(d.pass.kind, 'forever'); assert.equal(d.tell.email, 'sent');
@@ -674,8 +686,8 @@ test('#27 admin Add 48 hours and Make Forever email the family; skip; gift passe
   // gift pass: no email on file, share text instead, no email sent
   [st, d] = await A('codes.create', { kind: '48h', source: 'gift', days_valid: 30, note: 'school' });
   const gid = d.pass.id; const n1 = db.emails.length;
-  [st, d] = await A('passes.add48', { id: gid });
-  assert.equal(d.tell.email, 'none'); assert.match(d.tell.share, /^Good news: we added 48 hours to your Mojialand pass\. It now runs until /);
+  [st, d] = await A('passes.add30', { id: gid });
+  assert.equal(d.tell.email, 'none'); assert.match(d.tell.share, /^Good news: we added 30 days to your Mojialand pass\. It now runs until /);
   [st, d] = await A('passes.forever', { id: gid });
   assert.equal(d.tell.email, 'none'); assert.match(d.tell.share, /Forever now/);
   assert.equal(db.emails.length, n1);
@@ -694,8 +706,8 @@ test('admin-api: needs the cookie; passes, codes, support, settings', async () =
   [st, d] = await A('passes.list', { q: code.slice(-4).toLowerCase() });
   assert.equal(d.passes.length, 1);
   const ends0 = new Date(d.passes[0].ends_at).getTime();
-  [st, d] = await A('passes.add48', { id: pass.id });
-  assert.equal(new Date(d.pass.ends_at).getTime(), ends0 + 48 * 3600e3);
+  [st, d] = await A('passes.add30', { id: pass.id });
+  assert.equal(new Date(d.pass.ends_at).getTime(), ends0 + 30 * 864e5, '1.4: Add 30 days');
   // show and re-send the paid code (hotfix September 30): rebuilt from the Stripe session, never stored
   [st, d] = await A('passes.code', { id: pass.id });
   assert.equal(st, 200); assert.equal(d.code, code); assert.ok(d.link.endsWith('/r/' + code.replace(/-/g, '')));
@@ -726,7 +738,7 @@ test('admin-api: needs the cookie; passes, codes, support, settings', async () =
   assert.deepEqual(stripe.calls.refunds, [{ payment_intent: 'pi_cs_test_adm1' }]);
   [st, d] = await A('passes.refund', { id: pass.id });
   assert.equal(st, 400, 'no double refund');
-  [st, d] = await A('passes.add48', { id: 'nope' });
+  [st, d] = await A('passes.add30', { id: 'nope' });
   assert.equal(st, 400);
   // gift code: shown once, works in redeem-code, never stored
   [st, d] = await A('codes.create', { kind: '48h', source: 'gift', days_valid: 30, note: 'grandma' });
@@ -981,6 +993,7 @@ test('admin analytics: 90-day range compares with the 90 days before; bad ranges
 
 test('friend pass: one per pass, from the pass token; only for devices new to Mojialand; 30 days', async () => {
   const { pass } = await grantPass(paidSession('cs_test_fr1', 'pass'));
+  pass.kind = '48h'; db.passes.find((p) => p.id === pass.id).kind = '48h'; // 1.4: only 48-hour passes keep the old friend pass
   const tok = signToken(makeTokenPayload(pass, 'staging'), process.env.PASS_SIGNING_PRIVATE_KEY);
   assert.equal((await friendFn(ev({ token: 'nope.nope' }))).statusCode, 403);
   assert.equal((await friendFn(ev({ token: signToken(makeTokenPayload(pass, 'live'), process.env.PASS_SIGNING_PRIVATE_KEY) }))).statusCode, 403, 'live token on staging');
@@ -1167,4 +1180,88 @@ test('admin-api: alerts subscribe, mode, test; settings list hides the alerts ro
   assert.equal(g.mode, 'daily'); assert.equal(g.phones.length, 1); assert.ok(g.publicKey.length > 80);
   r = await call2({ action: 'alerts.unsubscribe', endpoint: p.endpoint });
   assert.equal(db.push_subs.length, 0);
+});
+
+// Release 1.4 #32: gifts of 7 days, gift holder, giver reward up to 21 days, free week plus gift (A1).
+import { handler as giftsFn } from '../netlify/functions/gifts.mjs';
+test('1.4 gifts: holder on tap, 3 gifts, new devices only, giver reward capped at 21, gift families get gifts too', async () => {
+  const G = async (body) => { const r = await giftsFn(ev(body)); return [r.statusCode, JSON.parse(r.body)]; };
+  assert.equal((await giftsFn(ev({}))).statusCode, 400, 'device id needed');
+  const fvEnd = Date.now() + 4 * 864e5; // day 3 of the free week
+  // free-week family taps Give a friend: one holder row, no email, no name
+  let [st, d] = await G({ device_id: DEV('a'), fv_end: fvEnd });
+  assert.equal(st, 200); assert.equal(d.kind, 'holder'); assert.equal(d.gifts.length, 3); assert.equal(d.reward_days, 0); assert.equal(d.cap, 21);
+  assert.ok(d.gifts.every((g) => /^GIFT-/.test(g.code) && g.state === 'ready' && /\/g\/GIFT/.test(g.link)));
+  const holder = db.passes.find((p) => p.kind === 'holder');
+  assert.ok(holder && holder.email == null && holder.source === 'free' && holder.device_limit === 1);
+  assert.ok(Math.abs(new Date(holder.ends_at).getTime() - fvEnd) < 5000, 'holder ends with the free week');
+  assert.ok(d.token && verifyToken(d.token, KEYS.jwk).k === 'holder');
+  const holderTok = d.token; const codes = d.gifts.map((g) => g.code);
+  assert.equal(db.passes.filter((p) => p.giver_id === holder.id && p.kind === '7d' && p.status === 'unused').length, 3);
+  assert.ok(!JSON.stringify(db.passes).includes(codes[0]), 'gift codes never stored');
+  // same device again: same holder, same codes
+  [st, d] = await G({ device_id: DEV('a') });
+  assert.deepEqual(d.gifts.map((g) => g.code), codes); assert.equal(db.passes.filter((p) => p.kind === 'holder').length, 1);
+  // a far-future free week end is clamped to 7 days
+  [st, d] = await G({ device_id: DEV('9'), fv_end: Date.now() + 90 * 864e5 });
+  assert.ok(new Date(db.passes.filter((p) => p.kind === 'holder')[1].ends_at).getTime() <= Date.now() + 7 * 864e5 + 5000);
+  // the giver's own device is refused (had Mojialand before)
+  let r = await redeem(ev({ code: codes[0], device_id: DEV('a') }));
+  assert.equal(r.statusCode, 403); assert.match(JSON.parse(r.body).error, /new to Mojialand/);
+  // a new device: free week plus 7 gift days (A1), giver gets 7 days
+  const friendFv = Date.now() + 7 * 864e5;
+  r = await redeem(ev({ code: codes[0], device_id: DEV('b'), fv_end: friendFv }));
+  assert.equal(r.statusCode, 200);
+  const g0 = db.passes.find((p) => p.giver_id === holder.id && p.status === 'active');
+  assert.ok(Math.abs(new Date(g0.ends_at).getTime() - (friendFv + 7 * 864e5)) < 5000, 'friend plays free 14 days');
+  assert.equal(JSON.parse(r.body).kind, '7d');
+  assert.equal(holder.reward_days, 7); assert.ok(Math.abs(new Date(holder.ends_at).getTime() - (fvEnd + 7 * 864e5)) < 5000, 'reward added to the free week');
+  // a second redeem of the same gift never rewards twice
+  await redeem(ev({ code: codes[0], device_id: DEV('c') }));
+  assert.equal(holder.reward_days, 7);
+  // the holder's next pass check carries the new end time
+  const pc = JSON.parse((await passCheck(ev({ token: holderTok, device_id: DEV('a') }))).body);
+  assert.equal(pc.state, 'on'); assert.equal(pc.kind, 'holder'); assert.equal(pc.ends_at, new Date(holder.ends_at).getTime());
+  // the friend (gift family) gets 3 gifts of their own (B1), one generation down
+  const friendTok = JSON.parse(r.body).token;
+  [st, d] = await G({ token: friendTok, device_id: DEV('b') });
+  assert.equal(st, 200); assert.equal(d.gifts.length, 3); assert.equal(d.kind, '7d');
+  assert.ok(db.passes.filter((p) => p.giver_id === g0.id).every((p) => p.gen === 2), 'second round of gifts');
+  // rewards stop at 21: three more friends of the holder (the third gift plus one from the friend family does not count for the holder)
+  await redeem(ev({ code: codes[1], device_id: DEV('d') }));
+  await redeem(ev({ code: codes[2], device_id: DEV('e') }));
+  assert.equal(holder.reward_days, 21);
+  const ends21 = holder.ends_at;
+  // cap: a forced extra reward call changes nothing
+  const { rewardGiver } = await import('../netlify/functions/_lib/friend.mjs');
+  assert.equal(await rewardGiver(holder.id), -1); assert.equal(holder.ends_at, ends21);
+  // a paid 30-day family: gifts from the pass token; reward goes on the pass
+  const { pass } = await grantPass(paidSession('cs_test_gift30', 'pass'));
+  const ptok = signToken(makeTokenPayload(pass, 'staging'), process.env.PASS_SIGNING_PRIVATE_KEY);
+  [st, d] = await G({ token: ptok, device_id: DEV('f') });
+  assert.equal(d.kind, '30d'); assert.equal(d.token, undefined, 'paid passes keep their own token');
+  const end0 = new Date(db.passes.find((p) => p.id === pass.id).ends_at).getTime();
+  await redeem(ev({ code: d.gifts[0].code, device_id: DEV('6') }));
+  assert.equal(new Date(db.passes.find((p) => p.id === pass.id).ends_at).getTime(), end0 + 7 * 864e5);
+  // refunded passes and support passes give no gifts
+  db.passes.find((p) => p.id === pass.id).status = 'refunded';
+  assert.equal((await giftsFn(ev({ token: ptok, device_id: DEV('f') }))).statusCode, 410);
+});
+
+test('1.4 printed cards: new codes are 7 days and add 7 days after the free week; old 48-hour codes still work', async () => {
+  const cookie = await adminSignIn();
+  const made = JSON.parse((await adminApi(withCookie({ action: 'codes.create', source: 'gift', days_valid: 30 }, cookie))).body);
+  assert.equal(made.pass.kind, '7d', 'gift codes default to 7 days');
+  const fv = Date.now() + 2 * 864e5;
+  const r = await redeem(ev({ code: made.code, device_id: DEV('7'), fv_end: fv }));
+  assert.equal(r.statusCode, 200);
+  assert.ok(Math.abs(new Date(db.passes.find((p) => p.id === made.pass.id).ends_at).getTime() - (fv + 7 * 864e5)) < 5000);
+  const thirty = JSON.parse((await adminApi(withCookie({ action: 'codes.create', kind: '30d', source: 'support' }, cookie))).body);
+  assert.equal(thirty.pass.kind, '30d');
+  // a 48-hour code printed before 1.4
+  const old = randomCode('GIFT');
+  db.passes.push({ id: crypto.randomUUID(), code_hash: codeHash(process.env.RESTORE_CODE_PEPPER, old), code_last4: codeLast4(old), prefix: 'GIFT', kind: '48h', source: 'gift', status: 'unused', device_limit: 5, ends_at: null });
+  const o = await redeem(ev({ code: old, device_id: DEV('8') }));
+  assert.equal(o.statusCode, 200); assert.equal(JSON.parse(o.body).kind, '48h');
+  assert.ok(Math.abs(new Date(db.passes.at(-1).ends_at).getTime() - Date.now() - 48 * 3600e3) < 5000);
 });

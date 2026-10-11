@@ -10,6 +10,7 @@ import { getStripe } from './_lib/stripe.mjs';
 import { pushReady, readSubscription, MODES, alertMode, pushAll, sendPush, summaryText, michiganDay } from './_lib/push.mjs';
 import { liveView, historyView, campaignsView, createCampaign, setCampaignActive } from './_lib/analytics-admin.mjs';
 import { LABEL_RE } from './_lib/analytics.mjs';
+import { lengthOf } from './_lib/kinds.mjs';
 import { FRIEND_BATCH } from './_lib/friend.mjs';
 
 const REQUIRED = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY', 'RESTORE_CODE_PEPPER', 'STRIPE_SECRET_KEY'];
@@ -171,13 +172,14 @@ const actions = {
     if (!UUID.test(String(id || ''))) throw new Error('bad id');
     return { pass: await passWithDevices(id) };
   },
-  async 'passes.add48'({ id, skip_email }, event) {
+  // Release 1.4 #32: Add 30 days in place of Add 48 hours.
+  async 'passes.add30'({ id, skip_email }, event) {
     if (!UUID.test(String(id || ''))) throw new Error('bad id');
     const p = await passWithDevices(id);
     if (p && p.status === 'ended' && !p.starts_at) throw new Error('this code ended before anyone used it. Make a new code instead.');
-    if (!p || p.kind === 'forever') throw new Error('not a 48-hour pass');
+    if (!p || p.kind === 'forever') throw new Error('this pass is Forever already');
     const base = Math.max(Date.now(), p.ends_at ? new Date(p.ends_at).getTime() : 0);
-    await patchPass('id=eq.' + enc(id), { ends_at: new Date(base + 48 * HOUR).toISOString(), status: 'active', starts_at: p.starts_at || new Date().toISOString() });
+    await patchPass('id=eq.' + enc(id), { ends_at: new Date(base + lengthOf('30d')).toISOString(), status: 'active', starts_at: p.starts_at || new Date().toISOString() });
     const pass = await passWithDevices(id);
     return { pass, tell: await tellFamily(pass, 'add', event, skip_email === true) };
   },
@@ -228,7 +230,8 @@ const actions = {
   async 'codes.create'({ kind, source, days_valid, note, batch }, _event, opts = {}) {
     const lb = cleanBatch(batch);
     if (lb && !opts.ensured) await ensureCampaign(lb);
-    const k = kind === 'forever' ? 'forever' : '48h';
+    // Release 1.4 #32: gift and support codes are 7 days (default, printed cards), 30 days, or Forever.
+    const k = kind === 'forever' ? 'forever' : kind === '30d' ? '30d' : '7d';
     const src = source === 'support' ? 'support' : 'gift';
     const days = Math.min(365, Math.max(1, parseInt(days_valid, 10) || 90));
     const code = randomCode('GIFT');

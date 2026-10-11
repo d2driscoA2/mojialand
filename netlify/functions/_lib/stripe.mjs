@@ -13,8 +13,9 @@ export function setStripe(fake) {
 }
 
 export const PLANS = {
-  pass: { env: 'STRIPE_PRICE_PASS_48H', label: '48-hour pass', description: 'Mojialand 48-hour pass' },
+  // Release 1.4 #32: the pass is 30 days ($4.99, STRIPE_PRICE_PASS_30D). STRIPE_PRICE_UPGRADE holds the $10.00 price.
+  pass: { env: 'STRIPE_PRICE_PASS_30D', label: '30-day pass', description: 'Mojialand 30-day pass' },
   life: { env: 'STRIPE_PRICE_FOREVER', label: 'Forever', description: 'Mojialand Forever pass' },
-  add: { env: 'STRIPE_PRICE_PASS_48H', label: 'Add 48 hours', description: 'Mojialand 48 hours added' },
+  add: { env: 'STRIPE_PRICE_PASS_30D', label: 'Add 30 days', description: 'Mojialand 30 days added' },
   up: { env: 'STRIPE_PRICE_UPGRADE', label: 'Forever upgrade', description: 'Mojialand Forever upgrade' },
 };

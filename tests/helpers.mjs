@@ -19,6 +19,7 @@ export function setEnv(extra = {}) {
     STRIPE_PUBLISHABLE_KEY: 'pk_test_fake',
     STRIPE_WEBHOOK_SECRET: 'whsec_fake_secret',
     STRIPE_PRICE_PASS_48H: 'price_48h',
+    STRIPE_PRICE_PASS_30D: 'price_30d',
     STRIPE_PRICE_FOREVER: 'price_forever',
     STRIPE_PRICE_UPGRADE: 'price_upgrade',
     SUPABASE_URL: 'https://db.example.test',
@@ -103,6 +104,13 @@ export function fakeDb() {
       if (db.devices.filter((r) => r.pass_id === body.p_pass).length >= body.p_limit) return reply(200, 'limit');
       db.devices.push({ id: crypto.randomUUID(), pass_id: body.p_pass, device_id_hash: body.p_hash });
       return reply(200, 'ok');
+    }
+    if (table === 'rpc/gift_reward') {
+      const r = db.passes.find((x) => x.id === body.p_giver);
+      if (!r || ['refunded', 'disputed'].includes(r.status) || r.kind === 'forever' || (r.reward_days || 0) >= body.p_cap) return reply(200, -1);
+      const base = Math.max(Date.now(), r.ends_at ? new Date(r.ends_at).getTime() : Date.now());
+      r.ends_at = new Date(base + body.p_days * 864e5).toISOString(); r.reward_days = Math.min(body.p_cap, (r.reward_days || 0) + body.p_days); r.status = 'active';
+      return reply(200, r.reward_days);
     }
     if (table === 'rpc/alert_add') { db.alerts.push(body); return reply(200, 1); }
     if (table === 'rpc/analytics_add') { db.analytics.push(body); return reply(204); }

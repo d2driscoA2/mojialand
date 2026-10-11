@@ -2,8 +2,10 @@
 // for the same session (webhook retries, confirm-session reloads).
 import { rest, getPassBy, claimEvent, releaseEvent, patchPass } from './db.mjs';
 import { deriveCode, codeHash, codeLast4 } from './codes.mjs';
+import { lengthOf } from './kinds.mjs';
 
-const HOUR = 3600e3;
+// Release 1.4 #32: the pass plan is 30 days ($4.99). Add puts 30 more days on a running 30-day or 48-hour pass.
+const PASS_KIND = '30d';
 
 export class GrantError extends Error {
   constructor(msg, code) { super(msg); this.code = code || ''; }
@@ -51,15 +53,17 @@ export async function grantPass(session) {
       code_hash: codeHash(pepper, code),
       code_last4: codeLast4(code),
       prefix: 'MOJI',
-      kind: plan === 'life' ? 'forever' : '48h',
+      kind: plan === 'life' ? 'forever' : PASS_KIND,
       source: 'stripe',
       email: (session.customer_details && session.customer_details.email) || null,
       stripe_session_id: session.id,
       amount_cents: Number(session.amount_total) || 0,
       starts_at: now.toISOString(),
-      ends_at: plan === 'life' ? null : new Date(now.getTime() + 48 * HOUR).toISOString(),
+      ends_at: plan === 'life' ? null : new Date(now.getTime() + lengthOf(PASS_KIND)).toISOString(),
       device_limit: 5,
       status: 'active',
+      // Release 1.4 #58: bought on a device that started from a gift (yes or no only).
+      from_gift: !!(session.metadata && session.metadata.from_gift === '1'),
     };
     const had = await getPassBy('stripe_session_id', session.id);
     if (had) return { plan, pass: had, code };
@@ -89,7 +93,7 @@ export async function grantPass(session) {
       let patch;
       if (plan === 'add') {
         const base = Math.max(Date.now(), pass.ends_at ? new Date(pass.ends_at).getTime() : 0);
-        patch = { ends_at: new Date(base + 48 * HOUR).toISOString(), status: 'active' };
+        patch = { ends_at: new Date(base + lengthOf(PASS_KIND)).toISOString(), status: 'active', kind: PASS_KIND };
       } else {
         patch = { kind: 'forever', ends_at: null, status: 'active' };
       }
