@@ -1960,9 +1960,12 @@ for (const [w, h, name] of [[390, 844, 'phone'], [820, 1180, 'ipad'], [1180, 820
 {
   const { ctx, page } = await newPage();
   await page.addInitScript(() => { localStorage.setItem('mojia.welcomed', 'true'); localStorage.setItem('mojia.demos', 'false'); window.__loads = (Number(sessionStorage.getItem('loads')) || 0) + 1; sessionStorage.setItem('loads', String(window.__loads)); });
-  await page.route('**/play/build.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '{"b":"abcdef0123456789"}' }));
-  await page.goto(base + '/play/'); await page.click('#splash'); await page.waitForTimeout(400);
+  const html49 = fs.readFileSync(path.join(site, 'play', 'index.html'), 'utf8'), id49 = (/<meta name="mojia-build" content="([0-9a-f]{16})">/.exec(html49) || [])[1];
+  let served49 = id49;
+  await page.route('**/play/build.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ b: served49 }) }));
+  await page.goto(base + '/play/'); await page.click('#splash'); await page.waitForTimeout(800);
   const cv = await page.locator('#canvas').boundingBox(); await page.mouse.click(cv.x + 60, cv.y + 60); await page.waitForTimeout(200);
+  served49 = 'abcdef0123456789';
   await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange'))); await page.waitForTimeout(800);
   check('#49 stamps on the home canvas: no reload until the kid clears them', (await page.evaluate(() => window.__loads)) === 1);
   const nav = page.waitForEvent('load', { timeout: 6000 }).then(() => true).catch(() => false);
@@ -1985,6 +1988,36 @@ for (const [w, h, name] of [[390, 844, 'phone'], [820, 1180, 'ipad'], [1180, 820
   const ov = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
   check('1.3 website: no sideways scroll at 390 px', !ov);
   check('1.3 website: no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
+  await ctx.close();
+}
+// Release 1.3 #49, sturdier check (Danny, October 10): a failed ask on return tries again after 3 seconds;
+// a return to the home screen from a game also asks.
+{
+  const { ctx, page } = await newPage();
+  await page.addInitScript(() => { localStorage.setItem('mojia.welcomed', 'true'); localStorage.setItem('mojia.demos', 'false'); window.__loads = (Number(sessionStorage.getItem('loads')) || 0) + 1; sessionStorage.setItem('loads', String(window.__loads)); });
+  let fails = 1, asks = 0;
+  await page.route('**/play/build.json', (r) => { asks++; if (fails > 0) { fails--; return r.abort(); } r.fulfill({ status: 200, contentType: 'application/json', body: '{"b":"abcdef0123456789"}' }); });
+  await page.goto(base + '/play/'); await page.click('#splash'); await page.waitForTimeout(400);
+  const nav = page.waitForEvent('load', { timeout: 8000 }).then(() => true).catch(() => false);
+  await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+  check('#49 sturdier: the first ask fails (no connection yet), the retry 3 seconds later finds the new build and reloads', await nav && asks === 2, 'asks ' + asks);
+  await ctx.close();
+}
+{
+  const { ctx, page } = await newPage();
+  await page.addInitScript(() => { localStorage.setItem('mojia.welcomed', 'true'); localStorage.setItem('mojia.demos', 'false'); window.__loads = (Number(sessionStorage.getItem('loads')) || 0) + 1; sessionStorage.setItem('loads', String(window.__loads)); });
+  const html = fs.readFileSync(path.join(site, 'play', 'index.html'), 'utf8'), id = (/<meta name="mojia-build" content="([0-9a-f]{16})">/.exec(html) || [])[1];
+  let served = id;
+  await page.route('**/play/build.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ b: served }) }));
+  await page.goto(base + '/play/'); await page.click('#splash'); await page.waitForTimeout(400);
+  await page.evaluate(() => document.querySelector('[data-go="bounce"]').click()); await page.waitForTimeout(500);
+  await page.evaluate(() => { const g = document.querySelector('#glass'); if (g && !g.classList.contains('hidden')) document.querySelector('#gGo').click(); });
+  served = 'abcdef0123456789';
+  // The home-screen ask runs at most once a minute; move the page clock past the minute since the first ask.
+  await page.evaluate(() => { const real = Date.now.bind(Date); Date.now = () => real() + 61000; });
+  const nav = page.waitForEvent('load', { timeout: 6000 }).then(() => true).catch(() => false);
+  await page.click('#s-bounce [data-go="home"]');
+  check('#49 sturdier: back on the home screen from a game, the game asks and reloads to the new build (no background trip needed)', await nav && (await page.evaluate(() => window.__loads)) === 2);
   await ctx.close();
 }
 // Release 1.3 #51: a Forever pass from before 1.1.1 (no x) works 30 days from the first 1.3 open, then the pass check renews it

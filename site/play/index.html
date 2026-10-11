@@ -1218,7 +1218,7 @@ const PS=(function(){
 const screens={home:'#s-home',pattern:'#s-pattern',bounce:'#s-bounce',match:'#s-match',parade:'#s-parade',share:'#s-share',feelings:'#s-feelings',draw:'#s-draw',gate:'#s-gate',rest:'#s-rest',ngate:'#s-ngate',plans:'#s-plans',allset:'#s-allset'};
 let current='home';
 const games={};
-function go(name){ stopDemo(); closeGlass(); if(games[current]&&games[current].leave) games[current].leave(); $$('.screen').forEach(s=>s.classList.add('hidden')); $(screens[name]).classList.remove('hidden'); PS.screen(name); current=name; document.body.classList.toggle('in-draw',name==='draw'); homeNote(name); if(name==='home'){ homeRefresh(); setTimeout(()=>{ if(typeof maybeReload==='function') maybeReload(); },400); } onScreen(name); if(games[name]&&games[name].enter) games[name].enter(); if(games[name]&&settings.demos&&!demoDone[name]) setTimeout(()=>showGlass(name),350); }
+function go(name){ stopDemo(); closeGlass(); if(games[current]&&games[current].leave) games[current].leave(); $$('.screen').forEach(s=>s.classList.add('hidden')); $(screens[name]).classList.remove('hidden'); PS.screen(name); current=name; document.body.classList.toggle('in-draw',name==='draw'); homeNote(name); if(name==='home'){ homeRefresh(); setTimeout(()=>{ try{ maybeReload(); checkBuild(false); }catch(e){} },400); } onScreen(name); if(games[name]&&games[name].enter) games[name].enter(); if(games[name]&&settings.demos&&!demoDone[name]) setTimeout(()=>showGlass(name),350); }
 document.addEventListener('click',e=>{ const b=e.target.closest('[data-go]'); if(b){ ctx(); sfx.boop(); if(b.dataset.go==='home'&&b.closest('.bar')&&games[current]&&games[current].back&&games[current].back()) return; go(b.dataset.go);} const d=e.target.closest('[data-demo]'); if(d){ ctx(); sfx.boop(); showGlass(d.dataset.demo);} });
 
 /* ---------- how-to-play glass cards ---------- */
@@ -4622,13 +4622,18 @@ function unlock(){ setPlayback(); keepSession(); if(unlocked) return; unlocked=t
    so no game, drawing, or grown-up screen is ever cut off. Passes (localStorage) and drawings (IndexedDB) stay. */
 const BUILD=((document.querySelector('meta[name="mojia-build"]')||{}).content)||'', BUILD_RE=/^[0-9a-f]{16}$/;
 let newBuild='', buildAskAt=0;
-async function checkBuild(){ if(!BUILD_RE.test(BUILD)||newBuild||Date.now()-buildAskAt<60e3) return; buildAskAt=Date.now();
-  try{ const r=await fetch('/play/build.json',{cache:'no-store',credentials:'same-origin'}); if(!r.ok) return; const d=await r.json();
-    if(d&&BUILD_RE.test(String(d.b||''))&&d.b!==BUILD){ newBuild=d.b; maybeReload(); } }catch(e){} }
+/* Sturdier check (Danny, October 10): when the app returns to the front, a failed ask (the phone's connection not back yet)
+   tries once more after 3 seconds. A return to the home screen from a game also asks, at most once a minute.
+   A return to the front always asks (one tiny no-store request), so a home-screen ask never blocks it. */
+async function checkBuild(retry){ if(!BUILD_RE.test(BUILD)||newBuild||(!retry&&Date.now()-buildAskAt<60e3)) return; buildAskAt=Date.now();
+  let ok=false;
+  try{ const r=await fetch('/play/build.json',{cache:'no-store',credentials:'same-origin'}); if(r.ok){ const d=await r.json(); ok=true;
+    if(d&&BUILD_RE.test(String(d.b||''))&&d.b!==BUILD){ newBuild=d.b; maybeReload(); } } }catch(e){}
+  if(!ok){ buildAskAt=0; if(retry) setTimeout(()=>{ if(!document.hidden) checkBuild(false); },3000); } }
 function maybeReload(){ if(!newBuild||document.hidden||current!=='home'||!$('#glass').classList.contains('hidden')||$$('#canvas .stamp').length) return;
   let tried=''; try{ tried=sessionStorage.getItem('mojia.reloadFor')||''; }catch(e){ return; } if(tried===newBuild) return;
   try{ sessionStorage.setItem('mojia.reloadFor',newBuild); }catch(e){ return; } location.reload(); }
-document.addEventListener('visibilitychange',()=>{ if(!document.hidden) checkBuild(); });
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) checkBuild(true); });
 document.addEventListener('visibilitychange',()=>{ if(document.hidden) return; setPlayback(); if(unlocked) keepSession(); if(ac&&ac.state!=='running') ac.resume(); });
 /* no double-tap zoom, no pinch */
 document.addEventListener('dblclick',e=>e.preventDefault(),{passive:false});
