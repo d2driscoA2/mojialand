@@ -963,7 +963,7 @@ body.in-draw #app{max-width:none}
   <div class="row"><div><div class="l">Sound check</div><div class="s" id="sndInfo">Tap to play a chime</div></div><button class="small" id="sndTest">Test</button></div>
   <div class="row"><div><div class="l">How-to-play cards</div><div class="s" id="demosInfo">Show a how-to card the first time each game opens</div></div><button class="sw" id="swDemos" role="switch" aria-checked="true" aria-label="How-to-play cards"></button></div>
   <div class="row"><div><div class="l">Show cards again</div><div class="s">Replay the how-to cards for every game</div></div><button class="small" id="resetDemos">Reset</button></div>
-  <div class="note"><div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="width:28px;height:28px;border-radius:999px;background:var(--purple);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px">✓</span><b style="color:var(--ink);font-size:13px">No accounts · No ads · No chat</b></div>Nothing about your child leaves your phone. Just a safe, fun place to play, create and explore.<br><span id="voiceInfo"></span></div>
+  <div class="note"><div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="width:28px;height:28px;border-radius:999px;background:var(--purple);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px">✓</span><b style="color:var(--ink);font-size:13px">No accounts · No ads · No chat</b></div>Just a safe, fun place to play, create and explore.<br><span id="voiceInfo"></span></div>
 </section>
 
 <!-- TIME'S UP (kid-facing, no price) -->
@@ -4616,7 +4616,6 @@ function keepSession(){ if(navigator.audioSession) return; try{ if(!keepAlive){ 
 function unlock(){ setPlayback(); keepSession(); if(unlocked) return; unlocked=true; const a=ctx(); if(a){ try{ const b=a.createBuffer(1,1,22050), s=a.createBufferSource(); s.buffer=b; s.connect(a.destination); s.start(0); }catch(e){} } if('speechSynthesis' in window){ try{ const u=new SpeechSynthesisUtterance(' '); u.volume=0; speechSynthesis.speak(u); }catch(e){} } }
 ['touchend','click','pointerup'].forEach(ev=>document.addEventListener(ev,unlock,{passive:true}));
 /* Release 1.3 #49 (Danny, October 7): a Home Screen app picks up a new release by itself.
-   Checked on Danny's iPhone Home Screen app, October 10 (this comment line is the test change, round 3).
    When the app returns to the front, the game asks this site for build.json (a short build id, no data sent).
    A new build reloads the page once, only on the home screen with no how-to card and no stamps on the canvas,
    so no game, drawing, or grown-up screen is ever cut off. Passes (localStorage) and drawings (IndexedDB) stay. */

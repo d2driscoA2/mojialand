@@ -1892,7 +1892,7 @@ for (const [w, h, name] of [[390, 844, 'phone'], [820, 1180, 'ipad'], [1180, 820
   check('#21 no page says "No tracking"', hits.length === 0, hits.join(' '));
   const home = fs.readFileSync(path.join(site, 'index.html'), 'utf8');
   check('#21 the safety line sits in the website lede', home.includes('No accounts. No ads. No chat. Nothing collected from your child.</p>'));
-  check('#22 FAQ refund sentence', home.includes('Something went wrong? Tell us within 7 days of buying what happened, with the email you used at checkout, and we will make it right, including a refund.') && !home.includes('we refund the full amount'));
+  check('#22 FAQ refund sentence', home.includes('Something went wrong? Tell us within 7 days of buying what happened, with the email you used at checkout, and we fix it or refund it.') && !home.includes('we refund the full amount'));
 }
 // Release 1.3 #16: lost gift code, Cancel and replace from Passes, Gifts
 {
@@ -2019,6 +2019,13 @@ for (const [w, h, name] of [[390, 844, 'phone'], [820, 1180, 'ipad'], [1180, 820
   await page.click('#s-bounce [data-go="home"]');
   check('#49 sturdier: back on the home screen from a game, the game asks and reloads to the new build (no background trip needed)', await nav && (await page.evaluate(() => window.__loads)) === 2);
   await ctx.close();
+}
+// Release 1.3 Legal review (October 10): 3 wording changes
+{
+  const home = fs.readFileSync(path.join(site, 'index.html'), 'utf8'), game = fs.readFileSync(path.join(site, 'play', 'index.html'), 'utf8');
+  check('1.3 Legal 1: Grown-ups no longer says nothing leaves the phone; the safety line stays', !/leaves your phone/.test(game) && /Nothing collected from your child\.<\/b> Ever\. No names, no photos, no voice\./.test(game));
+  check('1.3 Legal 2: FAQ refund sentence ends "we fix it or refund it."', home.includes('and we fix it or refund it.') && !home.includes('make it right'));
+  check('1.3 Legal 3: privacy lists game settings and progress, stars and the last scene', home.includes('game settings and progress (sound, voice, how-to cards, stars, the last scene)'));
 }
 // Release 1.3 #51: a Forever pass from before 1.1.1 (no x) works 30 days from the first 1.3 open, then the pass check renews it
 {
