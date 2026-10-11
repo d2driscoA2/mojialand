@@ -226,6 +226,17 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   await ctx.close();
 }
 
+// 4b. Release 1.4 #14 step 5: the host fails with no JSON (Netlify busy page) -> Busy, try again soon
+{
+  const { ctx, page } = await newPage();
+  await page.route('https://js.stripe.com/**', (r) => r.fulfill({ contentType: 'application/javascript', body: FAKE_STRIPE }));
+  await page.route('**/.netlify/functions/create-checkout', (r) => r.fulfill({ status: 503, contentType: 'text/html', body: '<html>Site not available</html>' }));
+  await page.goto(base + '/pass/?plan=pass');
+  await page.waitForSelector('#coError:not([hidden])');
+  check('1.4 #14 /pass/ busy host: Busy, try again soon, card not charged, Try again shown', (await page.textContent('#coErrorText')) === 'Busy, try again soon. Your card was not charged.' && await page.isVisible('#coRetry'));
+  await ctx.close();
+}
+
 // 5. /pass/done/ -> pending, then paid -> /play/#allset -> All set -> home chip green
 {
   const { ctx, page } = await newPage();

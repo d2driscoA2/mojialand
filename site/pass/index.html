@@ -92,6 +92,7 @@ async function start(){
     res=await fetch('/.netlify/functions/create-checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),credentials:'same-origin',cache:'no-store'});
     try{ data=await res.json(); }catch(e){ data={}; }
   }catch(e){ return showError('We could not reach checkout. Check your connection and try again.'); }
+  if(!res.ok&&(res.status===429||res.status>=500)&&!(data&&data.error)) return showError('Busy, try again soon. Your card was not charged.'); /* Release 1.4 #14 step 5 */
   if(!res.ok||!data||typeof data.clientSecret!=='string'||typeof data.publishableKey!=='string') return showError(data&&data.error);
   try{
     var stripe=window.Stripe(data.publishableKey);
