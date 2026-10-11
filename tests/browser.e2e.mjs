@@ -1583,7 +1583,13 @@ for (const [w, h, name] of [[375, 667, 'se'], [820, 1180, 'ipad']]) {
   }
   await page.waitForTimeout(5200);
   check('1.3 share: a fair share finishes puzzle 1 and opens puzzle 2', await page.evaluate(() => { const d = [...document.querySelectorAll('#sharestage .sh-dots i')]; return d[0].className === 'on' && d[1].className === 'cur'; }));
+  // Back goes up one step (Danny, October 10): from a level to the Share Party map, then from the map to home.
+  check('1.3 share: in a level, the back button says Back to the levels', (await page.getAttribute('#s-share .bar [data-go="home"]', 'aria-label')) === 'Back to the levels');
   await page.click('#s-share [data-go="home"]'); await page.waitForTimeout(300);
+  check('1.3 share: back from a level opens the Share Party map, not home', await page.isVisible('#s-share') && (await page.locator('#sharestage .sh-root.map').count()) === 1 && (await page.getAttribute('#s-share .bar [data-go="home"]', 'aria-label')) === 'Back to home');
+  check('1.3 share: the map shows all 9 levels after back', (await page.locator('#sharestage .sh-lv').count()) === 9);
+  await page.click('#s-share [data-go="home"]'); await page.waitForTimeout(300);
+  check('1.3 share: back from the map goes home', await page.isVisible('#s-home'));
   check('1.3 home: after Share Party, Feelings Faces is featured with New!', (await page.getAttribute('#hfeat .hfeat', 'data-go')) === 'feelings' && /New!/.test(await page.textContent('#hfeat')));
   await page.evaluate(() => localStorage.setItem('mojia.shareStars', JSON.stringify([0, 1, 99, 'x'])));
   await page.click('#hgrid [data-go="share"]'); await page.waitForSelector('#s-share:not(.hidden)'); await page.waitForTimeout(300);
@@ -1643,6 +1649,8 @@ for (const [w, h, name, rm] of [[390, 844, '390', false], [375, 667, 'se', true]
   await page.screenshot({ path: path.join(SHOTS, 'share-map-' + name + '.png') });
   await page.click('#sharestage .sh-lv[data-lv="3"]'); await page.waitForTimeout(900);
   await page.screenshot({ path: path.join(SHOTS, 'share-break-' + name + '.png') });
+  await page.click('#s-share [data-go="home"]'); await page.waitForTimeout(300);
+  check('1.3 layout ' + name + ': back from a level lands on the Share Party map', (await page.locator('#sharestage .sh-root.map').count()) === 1);
   await page.click('#s-share [data-go="home"]'); await page.waitForTimeout(300);
   await page.evaluate(() => document.querySelector('[data-go="feelings"]').click());
   await page.waitForSelector('#feelingsstage .pick', { timeout: 12000 }); await page.waitForTimeout(800);

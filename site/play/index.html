@@ -1219,7 +1219,7 @@ const screens={home:'#s-home',pattern:'#s-pattern',bounce:'#s-bounce',match:'#s-
 let current='home';
 const games={};
 function go(name){ stopDemo(); closeGlass(); if(games[current]&&games[current].leave) games[current].leave(); $$('.screen').forEach(s=>s.classList.add('hidden')); $(screens[name]).classList.remove('hidden'); PS.screen(name); current=name; document.body.classList.toggle('in-draw',name==='draw'); homeNote(name); if(name==='home'){ homeRefresh(); setTimeout(()=>{ if(typeof maybeReload==='function') maybeReload(); },400); } onScreen(name); if(games[name]&&games[name].enter) games[name].enter(); if(games[name]&&settings.demos&&!demoDone[name]) setTimeout(()=>showGlass(name),350); }
-document.addEventListener('click',e=>{ const b=e.target.closest('[data-go]'); if(b){ ctx(); sfx.boop(); go(b.dataset.go);} const d=e.target.closest('[data-demo]'); if(d){ ctx(); sfx.boop(); showGlass(d.dataset.demo);} });
+document.addEventListener('click',e=>{ const b=e.target.closest('[data-go]'); if(b){ ctx(); sfx.boop(); if(b.dataset.go==='home'&&b.closest('.bar')&&games[current]&&games[current].back&&games[current].back()) return; go(b.dataset.go);} const d=e.target.closest('[data-demo]'); if(d){ ctx(); sfx.boop(); showGlass(d.dataset.demo);} });
 
 /* ---------- how-to-play glass cards ---------- */
 const glass=$('#glass'), gcard=$('#gcard');
@@ -2128,10 +2128,13 @@ const NGA=(function(){
   function fx(name,arg){ try{ (S[name]||S.tap)(arg); }catch(e){} }
   /* Demo confetti used page coordinates; the app's confetti draws inside #app. */
   function party(x,y,n){ if(matchMedia('(prefers-reduced-motion: reduce)').matches) return; const host=$('#app'), r=host.getBoundingClientRect(); confetti(host,(x==null?r.width/2:x-r.left),(y==null?r.height/3:y-r.top),Math.min(n||40,60)); }
-  const api={ sfx:fx, say:()=>{}, confetti:party, audio:ctx };
+  let backFn=null;
+  const api={ sfx:fx, say:()=>{}, confetti:party, audio:ctx, onBack:f=>{ backFn=f; } };
   function host(id){ let undo=null; const st=$('#'+id+'stage');
     return { enter(){ if(undo) return; st.innerHTML=''; st.classList.add('g-'+id); try{ undo=NG[id].mount(st,api)||null; }catch(e){ st.innerHTML='<p style="padding:24px;font-weight:800">Something went wrong. Tap back and try again.</p>'; } },
-      leave(){ if(undo){ try{ undo(); }catch(e){} undo=null; } st.innerHTML=''; } }; }
+      leave(){ backFn=null; if(undo){ try{ undo(); }catch(e){} undo=null; } st.innerHTML=''; },
+      /* Release 1.3 (Danny, October 10): the bar's back button goes up one step. Inside a level it returns to the game's own map. */
+      back(){ try{ return !!(backFn&&backFn()); }catch(e){ return false; } } }; }
   return {host};
 })();
 
@@ -2427,8 +2430,9 @@ const NGA=(function(){
         });
         pathLine.setAttribute("points", pts.join(" "));
       }
+      function backLabel(){ const b = document.querySelector('#s-share .bar [data-go="home"]'); if(b) b.setAttribute("aria-label", view==="play" ? "Back to the levels" : "Back to home"); }
       function showMap(){
-        clearTimers(); clearPlay(); view = "map"; root.className = "sh-root map"; layout();
+        clearTimers(); clearPlay(); view = "map"; root.className = "sh-root map"; layout(); backLabel();
         if(newStar >= 0){ later(()=>{ newStar = -1; badges.forEach(b=>b.classList.remove("new")); }, 1200); }
       }
 
@@ -2439,7 +2443,7 @@ const NGA=(function(){
         selected = null; busy = false; unfairOn = false; clearTimeout(evalT);
         bowl.classList.remove("show"); labelEl.classList.remove("show"); hands.classList.remove("show"); hidePoint();
       }
-      function startLevel(i){ lv = i; pz = 0; view = "play"; root.className = "sh-root play"; startPuzzle(); }
+      function startLevel(i){ lv = i; pz = 0; view = "play"; root.className = "sh-root play"; startPuzzle(); backLabel(); }
       function startPuzzle(){
         clearPlay();
         puzzle = JSON.parse(JSON.stringify(LEVELS[lv].puzzles[pz]));
@@ -2895,6 +2899,9 @@ const NGA=(function(){
       }
 
       $(".sh-tomap").addEventListener("click", ()=>{ api.sfx("tap"); showMap(); });
+      /* Back in the game bar: from a level, back to the Share Party map; from the map, home. */
+
+      if(api.onBack) api.onBack(()=>{ if(view!=="play") return false; showMap(); return true; });
 
       let ro = null;
       if(window.ResizeObserver){ ro = new ResizeObserver(()=>layout()); ro.observe(stage); }
@@ -2908,6 +2915,7 @@ const NGA=(function(){
         stage.removeEventListener("pointerdown", markAct, true);
         stage.removeEventListener("pointerdown", hidePoint, true); hidePoint();
         if(ro) ro.disconnect();
+        view = "map"; backLabel();
         stage.innerHTML = "";
       };
     }
