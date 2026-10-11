@@ -609,7 +609,17 @@ test('#2 gift codes by batch: labels, campaigns, tabs, sort, batch rows, notes',
   [st, d] = await A('passes.batches', {});
   assert.equal(st, 200);
   const fair = d.batches.find((b) => b.label === 'in-fair-oct');
-  assert.equal(fair.codes, 6); assert.equal(fair.cards, 2); assert.equal(fair.used, 2); assert.equal(fair.pct, 33); assert.equal(fair.bought, 2);
+  assert.equal(fair.codes, 6); assert.equal(fair.used, 2); assert.equal(fair.open, 4); assert.equal(fair.voided, 0); assert.equal(fair.pct, 33); assert.equal(fair.bought, 2);
+  // Release 1.4 #57: End unused codes in a batch. Used codes keep working; ended codes never turn on.
+  [st, d] = await A('codes.end_unused', { batch: 'in-fair-oct' });
+  assert.equal(st, 200); assert.equal(d.ended, 4);
+  assert.equal(db.passes.filter((p) => p.batch === 'in-fair-oct' && p.status === 'active').length, 2, 'used codes untouched');
+  assert.equal(db.passes.filter((p) => p.batch === 'in-fair-oct' && p.status === 'ended').length, 4);
+  { const r = await redeemFn(ev({ code: codes[5], device_id: 'e'.repeat(32) })); assert.equal(r.statusCode, 410); assert.match(JSON.parse(r.body).error, /gift code has ended/); }
+  [st, d] = await A('passes.batches', {});
+  { const f2 = d.batches.find((b) => b.label === 'in-fair-oct'); assert.equal(f2.used, 2, 'ended codes never count as used'); assert.equal(f2.open, 0); assert.equal(f2.voided, 4); }
+  [st, d] = await A('codes.end_unused', { batch: 'friend' }); assert.equal(st, 400, 'friend label refused');
+  [st, d] = await A('codes.end_unused', {}); assert.equal(st, 400, 'a batch is required');
   assert.ok(typeof fair.avgDays === 'number');
   assert.ok(!JSON.stringify(d).match(/device|email|code_hash/), 'batch rows carry counts only');
   [st, d] = await A('passes.batches', { q: 'lincoln' });
@@ -742,9 +752,11 @@ test('admin-api: needs the cookie; passes, codes, support, settings', async () =
     const [s7] = await A('codes.create', { kind: '48h', source: 'gift', days_valid: 30, batch: 'Friend' }); assert.equal(s7, 400, 'label friend reserved'); }
   // batch for printed cards
   [st, d] = await A('codes.batch', { kind: '48h', source: 'gift', days_valid: 365, note: 'school', count: 7 });
+  assert.equal(st, 400, 'printed cards need a batch label'); assert.match(d.error, /batch label/);
+  [st, d] = await A('codes.batch', { kind: '48h', source: 'gift', days_valid: 365, note: 'school', count: 7, batch: 'oak-elem' });
   assert.equal(st, 200); assert.equal(d.codes.length, 7); assert.equal(new Set(d.codes.map((c) => c.code)).size, 7);
   assert.ok(d.codes.every((c) => /^GIFT-/.test(c.code) && c.id));
-  [st, d] = await A('codes.batch', { count: 999 });
+  [st, d] = await A('codes.batch', { count: 999, batch: 'oak-elem' });
   assert.equal(d.codes.length, 30, 'capped at 30 per call');
   // support
   await contact(ev({ email: 'p@example.com', topic: 'pass', message: 'Help me' }));

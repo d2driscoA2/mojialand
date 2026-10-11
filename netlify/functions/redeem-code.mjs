@@ -77,6 +77,7 @@ export const handler = async (event) => {
       if (rows[0] && pass.source === 'gift') await notify('gift', pass.batch || '');
     }
     const ended = pass.kind !== 'forever' && pass.ends_at && new Date(pass.ends_at).getTime() <= Date.now();
+    if (pass.status === 'ended' && !pass.starts_at) return fail(410, 'This gift code has ended. A grown-up can get a pass in Mojialand.');
     if (pass.status === 'ended' || ended) return fail(410, 'This 48-hour pass has ended. A grown-up can get a new pass in Mojialand.');
     if (pass.status !== 'active') return fail(403, 'This code does not work right now. Please contact us.');
 

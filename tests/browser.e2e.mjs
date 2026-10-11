@@ -742,7 +742,7 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
     }
     if (!signedIn) return r.fulfill({ status: 401, contentType: 'application/json', body: '{"error":"Please sign in."}' });
     const out = { 'passes.list': { passes: [pass] }, 'passes.note': { pass: { ...pass, note: b.note } }, 'passes.add48': { pass: { ...pass, ends_at: new Date(Date.now() + 49 * 3600e3).toISOString() }, tell: b.skip_email ? { email: 'skipped' } : { email: 'sent', to: 'p•••@example.com' } },
-      'passes.batches': { batches: [{ label: 'in-fair-oct', name: 'in-fair-oct', note: 'Busy table', made: new Date().toISOString(), codes: 30, cards: 10, used: 12, pct: 40, avgDays: 2.5, bought: 3 }] },
+      'passes.batches': { batches: [{ label: 'in-fair-oct', name: 'in-fair-oct', note: 'Busy table', made: new Date().toISOString(), codes: 30, used: 12, open: 18, voided: 0, pct: 40, avgDays: 2.5, bought: 3 }] }, 'codes.end_unused': { ended: 18 },
       'codes.labels': { labels: ['in-fair-oct', 'lincoln-elem'] }, 'campaigns.note': { ok: true },
       'passes.forever': { pass: { ...pass, kind: 'forever', ends_at: null, email: null, source: 'gift', stripe_session_id: null }, tell: { email: 'none', share: 'Good news: your Mojialand pass is Forever now. Open Mojialand on each phone or tablet and Forever shows up.' } },
       'codes.create': { code: 'GIFT-ABCD-EFGH-JKMN', pass: {} }, 'passes.code': { code: 'MOJI-ABCD-EFGH-JKMN', link: 'https://mojialand.com/r/MOJIABCDEFGHJKMN' }, 'passes.email': b.to === 'real.parent@example.com' ? { pass, sent: true } : null, 'passes.refund': { pass: { ...pass, status: 'refunded' } }, 'codes.batch': { codes: Array.from({ length: b.count }, (_, i) => ({ code: 'GIFT-B' + String(i).padStart(3, '0') + '-EFGH-JKMN', id: 'id' + i })) }, 'support.list': { messages: [{ id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', email: 'mom@example.com', topic: 'pass', message: 'Code not working\n\nCode ending AB12: pass ...', created_at: new Date().toISOString(), status: 'open' }] },
@@ -800,8 +800,11 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   check('#2 admin: sort menu sends Ends soonest', bodiesBy['passes.list'].sort === 'ends');
   await page.click('#pTabs [data-ptab="camps"]');
   await page.waitForSelector('#pList [data-label="in-fair-oct"]');
-  check('#2 admin: Campaigns and schools shows one row per batch with counts', /30 codes · 10 cards · 12 used · 2.5 days from making to use · 3 passes bought after/.test(await page.textContent('#pList')) && /40% used/.test(await page.textContent('#pList')) && await page.isHidden('#pSortL'));
+  check('#2 admin: Campaigns and schools shows one row per batch with counts', /30 codes · 12 used · 18 open · 2.5 days from making to use · 3 passes bought after/.test(await page.textContent('#pList')) && /40% used/.test(await page.textContent('#pList')) && await page.isHidden('#pSortL'));
   await page.screenshot({ path: path.join(SHOTS, 'admin-campaigns.png') });
+  check('1.4 #57 admin: a batch with open codes offers End 18 unused', (await page.textContent('#pList [data-batch="end"]')) === 'End 18 unused');
+  await page.click('#pList [data-batch="end"]'); await page.waitForTimeout(300);
+  check('1.4 #57 admin: End unused asks first, sends the batch, and reports the count', bodiesBy['codes.end_unused'] && bodiesBy['codes.end_unused'].batch === 'in-fair-oct' && /18 unused codes in in-fair-oct ended/.test(await page.textContent('#pList')));
   await page.click('#pList [data-batch="view"]');
   await page.waitForSelector('#pBatchHead:not([hidden])');
   check('#2 admin: tapping a batch lists its codes', bodiesBy['passes.list'].batch === 'in-fair-oct' && /Codes in in-fair-oct/.test(await page.textContent('#pBatchHead')));
@@ -840,7 +843,9 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   await page.click('#cHist'); await page.waitForTimeout(200);
   check('#16 admin: Code history opens Passes, Gifts', bodiesBy['passes.list'].tab === 'gifts' && !(await page.isHidden('[data-panel="passes"]')));
   await page.click('[data-tab="codes"]');
-  await page.fill('#cBatch', 'lincoln-elem');
+  await page.click('#bGo');
+  check('1.4 #57 admin: Make cards asks for a batch label first', /batch label first/.test(await page.textContent('#bErr')) && (await page.locator('#bList > div').count()) === 0);
+  await page.fill('#bBatch', 'lincoln-elem');
   check('1.4 #57 admin: cards default to 1 code per card and count before making', (await page.inputValue('#bPer')) === '1' && (await page.textContent('#bCount')) === '10 cards, 10 codes');
   await page.fill('#bCards', '3'); await page.click('#bGo');
   await page.waitForSelector('#bOut:not([hidden])');
@@ -867,8 +872,8 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   check('1.4 #57 admin: printing the PDF turns Done on', await page.isEnabled('#bDone'));
   await page.fill('#bNote', 'Lincoln Elementary, Oct 2026');
   await page.click('#bDone');
-  check('1.4 #57 admin: Done clears the codes, the note and the batch label, and turns Make cards back on', await page.isHidden('#bOut') && (await page.locator('#bList > div').count()) === 0 && (await page.inputValue('#bNote')) === '' && (await page.inputValue('#cBatch')) === '' && await page.isEnabled('#bGo') && (await page.inputValue('#bPer')) === '1');
-  await page.fill('#cBatch', 'lincoln-elem');
+  check('1.4 #57 admin: Done clears the codes, the note and the batch label, and turns Make cards back on', await page.isHidden('#bOut') && (await page.locator('#bList > div').count()) === 0 && (await page.inputValue('#bNote')) === '' && (await page.inputValue('#bBatch')) === '' && await page.isEnabled('#bGo') && (await page.inputValue('#bPer')) === '1');
+  await page.fill('#bBatch', 'lincoln-elem');
   await page.selectOption('#bPer', '3');
   check('1.4 #57 admin: switching to 3 per card updates the count line', (await page.textContent('#bCount')) === '3 cards, 9 codes');
   await page.fill('#bCards', '4'); await page.click('#bGo');

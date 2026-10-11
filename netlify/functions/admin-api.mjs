@@ -128,9 +128,12 @@ const actions = {
     const by = new Map();
     for (const p of rows) {
       if (!p.batch) continue;
-      const b = by.get(p.batch) || { label: p.batch, codes: 0, used: 0, daysSum: 0, daysN: 0, made: p.created_at };
+      const b = by.get(p.batch) || { label: p.batch, codes: 0, used: 0, open: 0, voided: 0, daysSum: 0, daysN: 0, made: p.created_at };
       b.codes++;
-      if (p.status !== 'unused') {
+      // Release 1.4 #57: a code ended before use counts as voided, never as used.
+      if (p.status === 'unused') b.open++;
+      else if (!p.starts_at) b.voided++;
+      if (p.status !== 'unused' && p.starts_at) {
         b.used++;
         if (p.starts_at && p.created_at) { b.daysSum += Math.max(0, (new Date(p.starts_at) - new Date(p.created_at)) / DAY); b.daysN++; }
       }
@@ -141,7 +144,7 @@ const actions = {
       const c = cBy.get(b.label);
       return {
         label: b.label, name: c ? c.name : '', note: c ? c.note : '', made: b.made,
-        codes: b.codes, cards: Math.ceil(b.codes / 3), used: b.used,
+        codes: b.codes, used: b.used, open: b.open, voided: b.voided,
         pct: b.codes ? Math.round((b.used / b.codes) * 100) : 0,
         avgDays: b.daysN ? Math.round((b.daysSum / b.daysN) * 10) / 10 : null,
         bought: c ? (c.pass48 || 0) + (c.forever || 0) : null,
@@ -262,10 +265,20 @@ const actions = {
     return { code: made.code, pass: made.pass, old: await passWithDevices(id) };
   },
 
+  // Release 1.4 #57: end every unused code in one batch (a school or event). Used codes keep working.
+  async 'codes.end_unused'({ batch }) {
+    const lb = cleanBatch(batch);
+    if (!lb) throw new Error('pick a batch');
+    const rows = await patchPass('batch=eq.' + enc(lb) + '&status=eq.unused', { status: 'ended', ends_at: new Date().toISOString() });
+    console.log('admin-api: ended ' + rows.length + ' unused codes in a batch');
+    return { ended: rows.length };
+  },
+
   // Many codes at once, for printed cards. Up to 30 per call (function time limit); the page loops for more.
   async 'codes.batch'({ kind, source, days_valid, note, count, batch }) {
     const n = Math.min(30, Math.max(1, parseInt(count, 10) || 1));
     const lb = cleanBatch(batch);
+    if (!lb) throw new Error('printed cards need a batch label, like lincoln-oct26');
     if (lb) await ensureCampaign(lb);
     const out = [];
     for (let i = 0; i < n; i++) out.push(await actions['codes.create']({ kind, source, days_valid, note, batch: lb }, null, { ensured: true }));

@@ -169,7 +169,7 @@ textarea{resize:vertical;min-height:80px}
     <label style="margin-top:10px">Note (who it is for)<input id="cNote" maxlength="500" placeholder="Grandma's iPad, contact form Sep 27"></label>
     <label style="margin-top:10px">Batch label (event or school, optional)<input id="cBatch" maxlength="24" autocapitalize="none" spellcheck="false" placeholder="in-fair-oct"></label>
     <div class="labels" id="cLabels" aria-label="Recent batch labels"></div>
-    <p style="margin-top:6px"><b>Name the event or the school, never a family or a child.</b> Lowercase letters, numbers and dashes. Codes with a label count under Passes, Campaigns and schools. Used for single codes and printed cards.</p>
+    <p style="margin-top:6px"><b>Name the event or the school, never a family or a child.</b> Lowercase letters, numbers and dashes. Codes with a label count under Passes, Campaigns and schools. Printed cards take their own label below.</p>
     <div class="row" style="margin-top:12px"><button class="primary" id="cGo" type="button">Make a code</button></div>
     <p class="err" id="cErr"></p>
     <div id="cOut" class="rescard" hidden role="region" aria-label="Your new code">
@@ -194,9 +194,11 @@ textarea{resize:vertical;min-height:80px}
     <div class="row">
       <label>Codes per card<select id="bPer" aria-describedby="bCount"><option value="1">1 code, one big QR</option><option value="3">3 codes</option></select></label>
       <label>Cards<input id="bCards" type="number" min="1" max="100" value="10" aria-describedby="bCount"><span class="meta" id="bCount">10 cards, 10 codes</span></label>
+      <label>Batch label (required)<input id="bBatch" maxlength="24" autocapitalize="none" spellcheck="false" placeholder="lincoln-oct26" aria-describedby="bBatchHint"></label>
       <label>Note for these codes<input id="bNote" maxlength="500" placeholder="Lincoln Elementary, Oct 2026"></label>
       <button class="primary" id="bGo" type="button">Make cards</button>
     </div>
+    <p class="meta" id="bBatchHint">One label per school or event, for example lincoln-oct26. Lowercase letters, numbers and dashes. Passes, Campaigns and schools tracks each label: codes used, open, and passes bought after.</p>
     <p class="err" id="bErr"></p>
     <div id="bOut" hidden>
       <p class="ok" id="bOk"></p>
@@ -318,9 +320,9 @@ function passItem(p){ const st=p.status; const ends=p.kind==='forever'?'Forever'
 let pTab='all', pBatch='';
 function batchItem(b){ const n=v=>v==null?'–':v;
   return '<div class="item" data-label="'+esc(b.label)+'"><div class="top"><b>'+esc(b.label)+(b.name&&b.name!==b.label?' · '+esc(b.name):'')+'</b><span class="pill active">'+b.pct+'% used</span></div>'
-    +'<div class="meta">'+b.codes+' codes · '+b.cards+' cards · '+b.used+' used · '+(b.avgDays==null?'no uses yet':b.avgDays+' days from making to use')+' · '+n(b.bought)+' passes bought after</div>'
+    +'<div class="meta">'+b.codes+' codes · '+b.used+' used · '+n(b.open)+' open'+(b.voided?' · '+b.voided+' ended unused':'')+' · '+(b.avgDays==null?'no uses yet':b.avgDays+' days from making to use')+' · '+n(b.bought)+' passes bought after</div>'
     +'<div class="meta">Made '+fmt(b.made)+'</div>'+(b.note?'<div class="meta">Note: '+esc(b.note)+'</div>':'')
-    +'<div class="acts"><button class="secondary" type="button" data-batch="view">View codes</button><button class="secondary" type="button" data-batch="note">Note</button></div></div>'; }
+    +'<div class="acts"><button class="secondary" type="button" data-batch="view">View codes</button><button class="secondary" type="button" data-batch="note">Note</button>'+(b.open?'<button class="danger" type="button" data-batch="end" data-open="'+b.open+'">End '+b.open+' unused</button>':'')+'</div></div>'; }
 async function loadPasses(){ $('pErr').textContent=''; $('pList').innerHTML='<p>Loading…</p>';
   const camps=pTab==='camps'&&!pBatch; $('pSortL').hidden=camps; $('pBatchHead').hidden=!pBatch;
   $('pq').placeholder=camps?'Campaign or school label':'Email, Hide My Email, last 4 (AB12), cs_ session, or batch label';
@@ -338,6 +340,8 @@ $('pq').addEventListener('keydown',e=>{ if(e.key==='Enter') loadPasses(); });
 $('pList').addEventListener('click',async e=>{ const cp=e.target.closest('[data-copy]'); if(cp){ try{ await navigator.clipboard.writeText(cp.dataset.copy); cp.textContent='Copied'; }catch(_){ const r=document.createRange(); const v=cp.parentElement.querySelector('.codeval'); if(v){ r.selectNodeContents(v); const sel=getSelection(); sel.removeAllRanges(); sel.addRange(r); } } return; }
   const bb=e.target.closest('[data-batch]'); if(bb){ const label=bb.closest('.item').dataset.label;
     if(bb.dataset.batch==='view'){ pBatch=label; $('pBatchName').textContent='Codes in '+label+' (last 4 only)'; loadPasses(); return; }
+    if(bb.dataset.batch==='end'){ if(!confirm('End all '+bb.dataset.open+' unused codes in '+label+'? Codes families already turned on keep working. Ended codes never work again.')) return;
+      bb.disabled=true; try{ const d=await api('codes.end_unused',{batch:label}); $('pErr').textContent=''; await loadPasses(); const ok=document.createElement('p'); ok.className='ok'; ok.textContent=d.ended+' unused codes in '+label+' ended.'; $('pList').prepend(ok); }catch(err){ bb.disabled=false; $('pErr').textContent=err.message; } return; }
     const cur=(bb.closest('.item').querySelector('.meta:last-of-type')||{}).textContent||''; const n=prompt('How did '+label+' go?',/^Note: /.test(cur)?cur.slice(6):''); if(n===null) return;
     try{ await api('campaigns.note',{label:label,note:n}); loadPasses(); }catch(err){ $('pErr').textContent=err.message; } return; }
   const sm=e.target.closest('[data-sharemsg]'); if(sm){ const t=sm.closest('.tellbox').dataset.msg; if(navigator.share){ try{ await navigator.share({text:t}); }catch(_){} } else { try{ await navigator.clipboard.writeText(t); sm.textContent='Copied'; }catch(_){} } return; }
@@ -414,7 +418,8 @@ function buildSheet(codes,kind,lb,per){ per=per===3?3:1; const cards=[]; for(let
   $('sheet').innerHTML=cards.map(cs=>'<div class="bc'+(per===1?' one':'')+'"><div class="l"><img src="/logo/logo-3d-1000.webp" alt="Mojialand"><b>'+cardTitle(kind,per)+'</b><small>Emoji games for kids 3 and up. No ads, nothing collected from your child. '+(per===1?'One family, up to 5 devices. Scan the code':'One code per family, up to 5 devices. Scan a code')+', or type it at '+esc(host)+' under Grown-ups.</small>'+(lb?'<em class="blabel">'+esc(lb)+'</em>':'')+'</div><div class="r">'
     +cs.map(c=>'<div class="q"><img src="'+qrImg(linkFor(c,lb||''))+'" alt=""><div><code>'+esc(c)+'</code><i>'+esc(host)+'/r/'+esc(c.replace(/-/g,''))+'</i></div></div>').join('')+'</div></div>').join(''); }
 $('bGo').addEventListener('click',async()=>{ const b=$('bGo'); const cards=Math.min(100,Math.max(1,parseInt($('bCards').value,10)||1)); const per=bPer(); const want=cards*per; b.disabled=true; $('bErr').textContent=''; $('bOut').hidden=true; batch=[];
-  const lb=curLabel(); bLabel=lb;
+  const lb=$('bBatch').value.trim().toLowerCase(); bLabel=lb;
+  if(!/^[a-z0-9][a-z0-9-]{1,23}$/.test(lb)||lb==='friend'){ $('bErr').textContent='Add a batch label first: lowercase letters, numbers and dashes, like lincoln-oct26.'; b.disabled=false; $('bBatch').focus(); return; }
   try{ while(batch.length<want){ const d=await api('codes.batch',{kind:$('cKind').value,source:$('cSource').value,days_valid:$('cDays').value,note:$('bNote').value,count:Math.min(30,want-batch.length),batch:lb}); batch=batch.concat(d.codes.map(x=>x.code)); b.textContent='Making… '+batch.length+' of '+want; }
     $('bOk').textContent=cards+(cards===1?' card, ':' cards, ')+batch.length+(batch.length===1?' code':' codes')+' made ('+per+' on each card). Print now; the codes never show again.';
     $('bList').innerHTML=batch.map(c=>'<div><span>'+esc(c)+'</span><span class="acts"><button class="secondary" type="button" data-c="'+esc(c)+'">Copy link</button></span></div>').join('');
@@ -431,7 +436,7 @@ function bLock(){ $('bSaved').checked=false; $('bDone').disabled=true; $('bDoneH
 function bSavedNow(){ if(!lastCards) return; lastCards.saved=true; $('bDone').disabled=false; $('bDoneHint').hidden=true; }
 $('bSaved').addEventListener('change',()=>{ if($('bSaved').checked) bSavedNow(); });
 $('bDone').addEventListener('click',()=>{ if(!lastCards||!lastCards.saved) return; lastCards=null; batch=[]; $('bOut').hidden=true; $('bList').innerHTML=''; $('bOk').textContent=''; $('bErr').textContent=''; $('sheet').innerHTML='';
-  $('bNote').value=''; $('cBatch').value=''; $('bGo').disabled=false; try{ $('cBatch').dispatchEvent(new Event('input')); }catch(e){} $('bNote').focus(); });
+  $('bNote').value=''; $('bBatch').value=''; $('bGo').disabled=false; $('bBatch').focus(); });
 addEventListener('beforeunload',e=>{ if(lastCards&&!lastCards.saved){ e.preventDefault(); e.returnValue=''; } });
 /* Release 1.4 #57: a real PDF prints at true size on every device, and the share sheet works inside the admin Home Screen app. */
 let cardLogo=null; try{ MojiCardPdf.loadLogo('/logo/logo-3d-1000.webp').then(l=>{ cardLogo=l; }); }catch(e){}
