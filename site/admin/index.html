@@ -307,13 +307,13 @@ function tellResult(item,t){ if(!t) return; const box=document.createElement('di
   else { const head=t.email==='none'?'No email on file. Share this message with the family:':'The email did not go out. Share this message instead:';
     box.innerHTML='<b>'+head+'</b><div class="msg">'+esc(t.share||'')+'</div><div class="acts"><button class="secondary" type="button" data-sharemsg>Share</button><button class="secondary" type="button" data-copy="'+esc(t.share||'')+'">Copy message</button></div>'; box.dataset.msg=t.share||''; }
   item.insertBefore(box,item.querySelector('.acts')); }
-function passItem(p){ const st=p.status; const ends=p.kind==='forever'?'Forever':(p.ends_at?'Ends '+fmt(p.ends_at):'Not started');
+function passItem(p){ const st=p.status; const voided=st==='ended'&&!p.starts_at; const ends=p.kind==='forever'?'Forever':(p.ends_at?'Ends '+fmt(p.ends_at):'Not started');
   const mail=!!(p.email&&p.source==='stripe'&&p.stripe_session_id);
-  return '<div class="item" data-id="'+esc(p.id)+'"'+(mail?' data-mail="'+esc(maskMail(p.email))+'"':'')+'><div class="top"><b>'+esc(p.prefix)+'-…'+esc(p.code_last4)+' · '+(p.kind==='forever'?'Forever':'48h')+'</b><span class="pill '+esc(st)+'">'+esc(st)+'</span></div>'
+  return '<div class="item" data-id="'+esc(p.id)+'"'+(mail?' data-mail="'+esc(maskMail(p.email))+'"':'')+'><div class="top"><b>'+esc(p.prefix)+'-…'+esc(p.code_last4)+' · '+(p.kind==='forever'?'Forever':'48h')+'</b><span class="pill '+esc(st)+'">'+(voided?'ended unused':esc(st))+'</span></div>'
     +'<div class="meta">'+esc(p.email||'(no email)')+' · '+esc(p.source)+(p.amount_cents?' · '+money(p.amount_cents):'')+' · made '+fmt(p.created_at)+'</div>'
     +'<div class="meta">'+esc(ends)+(p.use_by&&st==='unused'?' · use by '+fmt(p.use_by):'')+(typeof p.devices==='number'?' · '+p.devices+' of '+p.device_limit+' devices':'')+(p.stripe_session_id?' · '+esc(p.stripe_session_id):'')+'</div>'
     +(p.batch?'<div class="meta">Batch: '+esc(p.batch)+'</div>':'')+(p.note?'<div class="meta">Note: '+esc(p.note)+'</div>':'')
-    +'<div class="acts">'+(p.kind!=='forever'?'<button class="secondary" data-act="passes.add48">Add 48 hours</button><button class="secondary" data-act="passes.forever">Make Forever</button>':'')
+    +'<div class="acts">'+(p.kind!=='forever'&&!voided?'<button class="secondary" data-act="passes.add48">Add 48 hours</button><button class="secondary" data-act="passes.forever">Make Forever</button>':'')
     +(p.source==='stripe'&&p.stripe_session_id?'<button class="secondary" data-act="passes.code">Show code</button><button class="secondary" data-act="passes.email">Email code</button>':'')+(st==='unused'&&p.prefix==='GIFT'&&(p.source==='gift'||p.source==='support')&&String(p.batch||'').toUpperCase()!=='FRIEND'?'<button class="secondary" data-act="codes.replace">Lost code? Cancel and replace</button>':'')+'<button class="secondary" data-act="passes.devices_reset">Reset devices</button><button class="secondary" data-act="note">Note</button>'
     +(st==='active'?'<button class="danger" data-act="passes.end">End pass</button>':'')+(p.source==='stripe'&&p.stripe_session_id&&st!=='refunded'?'<button class="danger" data-act="passes.refund">Refund</button>':'')+'</div></div>'; }
 /* Release 1.2 #2: tabs, sort, Campaigns and schools. Counts cards, never people. */

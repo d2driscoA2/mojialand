@@ -174,6 +174,7 @@ const actions = {
   async 'passes.add48'({ id, skip_email }, event) {
     if (!UUID.test(String(id || ''))) throw new Error('bad id');
     const p = await passWithDevices(id);
+    if (p && p.status === 'ended' && !p.starts_at) throw new Error('this code ended before anyone used it. Make a new code instead.');
     if (!p || p.kind === 'forever') throw new Error('not a 48-hour pass');
     const base = Math.max(Date.now(), p.ends_at ? new Date(p.ends_at).getTime() : 0);
     await patchPass('id=eq.' + enc(id), { ends_at: new Date(base + 48 * HOUR).toISOString(), status: 'active', starts_at: p.starts_at || new Date().toISOString() });
@@ -183,6 +184,7 @@ const actions = {
   async 'passes.forever'({ id, skip_email }, event) {
     if (!UUID.test(String(id || ''))) throw new Error('bad id');
     const p = await passWithDevices(id);
+    if (p && p.status === 'ended' && !p.starts_at) throw new Error('this code ended before anyone used it. Make a new code instead.');
     if (!p) throw new Error('pass not found');
     if (p.kind === 'forever') throw new Error('this pass is Forever already');
     await patchPass('id=eq.' + enc(id), { kind: 'forever', ends_at: null, status: 'active', starts_at: new Date().toISOString() });

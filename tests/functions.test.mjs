@@ -618,6 +618,10 @@ test('#2 gift codes by batch: labels, campaigns, tabs, sort, batch rows, notes',
   { const r = await redeemFn(ev({ code: codes[5], device_id: 'e'.repeat(32) })); assert.equal(r.statusCode, 410); assert.match(JSON.parse(r.body).error, /gift code has ended/); }
   [st, d] = await A('passes.batches', {});
   { const f2 = d.batches.find((b) => b.label === 'in-fair-oct'); assert.equal(f2.used, 2, 'ended codes never count as used'); assert.equal(f2.open, 0); assert.equal(f2.voided, 4); }
+  { const voided = db.passes.find((p) => p.batch === 'in-fair-oct' && p.status === 'ended');
+    let [s8, r8] = await A('passes.add48', { id: voided.id, skip_email: true }); assert.equal(s8, 400, 'Add 48 hours refuses a code ended before use'); assert.match(r8.error, /ended before anyone used/);
+    [s8] = await A('passes.forever', { id: voided.id, skip_email: true }); assert.equal(s8, 400, 'Make Forever refuses it too');
+    assert.equal(db.passes.find((p) => p.id === voided.id).status, 'ended'); }
   [st, d] = await A('codes.end_unused', { batch: 'friend' }); assert.equal(st, 400, 'friend label refused');
   [st, d] = await A('codes.end_unused', {}); assert.equal(st, 400, 'a batch is required');
   assert.ok(typeof fair.avgDays === 'number');
