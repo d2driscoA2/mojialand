@@ -188,7 +188,7 @@ textarea{resize:vertical;min-height:80px}
     <h2 style="margin-top:22px">Printable cards</h2>
     <p>Business cards, 10 to a letter sheet, 3 passes on each card. Every code is its own family pass with a QR code and the link. Use the kind, reason and use-by days above. The codes show once, here and on the sheet.</p>
     <div class="row">
-      <label>Cards<input id="bCards" type="number" min="1" max="100" value="10"></label>
+      <label>Cards (3 family codes each)<input id="bCards" type="number" min="1" max="100" value="10" aria-describedby="bCount"><span class="meta" id="bCount">10 cards, 30 codes</span></label>
       <label>Note for these codes<input id="bNote" maxlength="500" placeholder="Lincoln Elementary, Oct 2026"></label>
       <button class="primary" id="bGo" type="button">Make cards</button>
     </div>
@@ -405,12 +405,15 @@ function buildSheet(codes,kind,lb){ const cards=[]; for(let i=0;i<codes.length;i
 $('bGo').addEventListener('click',async()=>{ const b=$('bGo'); const cards=Math.min(100,Math.max(1,parseInt($('bCards').value,10)||1)); const want=cards*3; b.disabled=true; $('bErr').textContent=''; $('bOut').hidden=true; batch=[];
   const lb=curLabel(); bLabel=lb;
   try{ while(batch.length<want){ const d=await api('codes.batch',{kind:$('cKind').value,source:$('cSource').value,days_valid:$('cDays').value,note:$('bNote').value,count:Math.min(30,want-batch.length),batch:lb}); batch=batch.concat(d.codes.map(x=>x.code)); b.textContent='Making… '+batch.length+' of '+want; }
-    $('bOk').textContent=batch.length+' codes made, '+cards+' cards. Print now; the codes never show again.';
+    $('bOk').textContent=cards+' cards, '+batch.length+' codes made (3 on each card). Print now; the codes never show again.';
     $('bList').innerHTML=batch.map(c=>'<div><span>'+esc(c)+'</span><span class="acts"><button class="secondary" type="button" data-c="'+esc(c)+'">Copy link</button></span></div>').join('');
     buildSheet(batch,$('cKind').value,lb); $('bOut').hidden=false; loadLabels(); }
   catch(e){ $('bErr').textContent=e.message+(batch.length?' ('+batch.length+' codes were made before the error; they are listed below.)':''); if(batch.length){ $('bList').innerHTML=batch.map(c=>'<div><span>'+esc(c)+'</span></div>').join(''); buildSheet(batch,$('cKind').value,lb); $('bOut').hidden=false; } }
   b.disabled=false; b.textContent='Make cards'; });
 $('bList').addEventListener('click',async e=>{ const b=e.target.closest('[data-c]'); if(!b) return; b.textContent=(await copy(linkFor(b.dataset.c,bLabel)))?'Copied':'Copy failed'; setTimeout(()=>{ b.textContent='Copy link'; },1200); });
+/* Release 1.3 (Danny, October 10, option A): say up front how many codes the cards make. */
+function bCountLine(){ const n=Math.min(100,Math.max(1,parseInt($('bCards').value,10)||1)); $('bCount').textContent=n+(n===1?' card, ':' cards, ')+(n*3)+' codes'; }
+$('bCards').addEventListener('input',bCountLine); bCountLine();
 $('bCopy').addEventListener('click',async()=>{ $('bOk').textContent=(await copy(batch.join('\n')))?'All codes copied.':'Copy failed.'; });
 $('bPrint').addEventListener('click',()=>{ window.print(); });
 

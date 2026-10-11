@@ -843,7 +843,8 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   await page.fill('#cBatch', 'lincoln-elem');
   await page.fill('#bCards', '4'); await page.click('#bGo');
   await page.waitForSelector('#bOut:not([hidden])');
-  check('admin: cards batch makes 3 codes per card', (await page.locator('#bList > div').count()) === 12 && /12 codes made, 4 cards/.test(await page.textContent('#bOk')));
+  check('admin: cards batch makes 3 codes per card', (await page.locator('#bList > div').count()) === 12 && /4 cards, 12 codes made \(3 on each card\)/.test(await page.textContent('#bOk')));
+  check('1.3 admin: the Cards box says 3 family codes each and counts codes before making them', /Cards \(3 family codes each\)/.test(await page.textContent('[data-panel="codes"]')) && (await page.textContent('#bCount')) === '4 cards, 12 codes');
   const sheet = await page.evaluate(() => ({ cards: document.querySelectorAll('#sheet .bc').length, qrs: [...document.querySelectorAll('#sheet .q img')].filter((i) => i.src.startsWith('data:image/')).length, codes: document.querySelectorAll('#sheet .q code').length }));
   check('admin: print sheet has 4 cards, 12 QR codes, 12 codes', sheet.cards === 4 && sheet.qrs === 12 && sheet.codes === 12, JSON.stringify(sheet));
   check('#2 admin: cards carry the batch label in small print and in the batch call', bodiesBy['codes.batch'].batch === 'lincoln-elem' && (await page.locator('#sheet .blabel').count()) === 4 && /lincoln-elem/.test(await page.textContent('#sheet .blabel')));
