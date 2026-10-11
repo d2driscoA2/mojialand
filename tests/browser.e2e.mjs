@@ -857,12 +857,18 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   check('1.4 #57 admin: nothing spills out of a card in print, only the sheet prints', fitOne.fit && fitOne.shown.length === 0, JSON.stringify(fitOne));
   await page.emulateMedia({ media: 'screen' });
   await page.evaluate(() => { const s = document.getElementById('sheet'); s.innerHTML = s.dataset.keep; });
+  check('1.4 #57 admin: after Make cards, Make cards and Done stay gray until the codes are saved', await page.isDisabled('#bGo') && await page.isDisabled('#bDone'));
   const [dl1] = await Promise.all([page.waitForEvent('download'), page.click('#bPrint')]);
   const pdf1 = fs.readFileSync(await dl1.path()); fs.writeFileSync(path.join(SHOTS, 'admin-cards-one-real.pdf'), pdf1);
   const s1 = pdf1.toString('latin1');
   check('1.4 #57 admin: Print cards makes a real PDF, one letter page, every code on it', dl1.suggestedFilename() === 'mojialand-cards.pdf' && s1.startsWith('%PDF-1.4') && (s1.match(/\/Type \/Page /g) || []).length === 1 && s1.includes('/MediaBox [0 0 612 792]') && ['GIFT-B000-EFGH-JKMN', 'GIFT-B001-EFGH-JKMN', 'GIFT-B002-EFGH-JKMN'].every((c) => s1.includes('(' + c + ')')) && s1.includes('(A free 48-hour'));
   check('1.4 #57 admin: PDF cards are exact business cards, 252 by 144 points', /54 612 252 144 re S|54 \S+ 252 144 re S/.test(s1));
   check('1.4 #57 admin: PDF hint says actual size', /100 percent/.test(await page.textContent('#bPdfHint')));
+  check('1.4 #57 admin: printing the PDF turns Done on', await page.isEnabled('#bDone'));
+  await page.fill('#bNote', 'Lincoln Elementary, Oct 2026');
+  await page.click('#bDone');
+  check('1.4 #57 admin: Done clears the codes, the note and the batch label, and turns Make cards back on', await page.isHidden('#bOut') && (await page.locator('#bList > div').count()) === 0 && (await page.inputValue('#bNote')) === '' && (await page.inputValue('#cBatch')) === '' && await page.isEnabled('#bGo') && (await page.inputValue('#bPer')) === '1');
+  await page.fill('#cBatch', 'lincoln-elem');
   await page.selectOption('#bPer', '3');
   check('1.4 #57 admin: switching to 3 per card updates the count line', (await page.textContent('#bCount')) === '3 cards, 9 codes');
   await page.fill('#bCards', '4'); await page.click('#bGo');
