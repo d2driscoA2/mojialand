@@ -1265,3 +1265,24 @@ test('1.4 printed cards: new codes are 7 days and add 7 days after the free week
   assert.equal(o.statusCode, 200); assert.equal(JSON.parse(o.body).kind, '48h');
   assert.ok(Math.abs(new Date(db.passes.at(-1).ends_at).getTime() - Date.now() - 48 * 3600e3) < 5000);
 });
+
+test('1.4 #58 gifts.report: totals, rounds, bought after a gift, holder rows with no device or pairing data', async () => {
+  const cookie = await adminSignIn();
+  const G = async (body) => JSON.parse((await giftsFn(ev(body))).body);
+  const d1 = await G({ device_id: DEV('a') });
+  await redeem(ev({ code: d1.gifts[0].code, device_id: DEV('b') }));
+  const friendTok = JSON.parse((await redeem(ev({ code: d1.gifts[1].code, device_id: DEV('c') }))).body).token;
+  const d2 = await G({ token: friendTok, device_id: DEV('c') });
+  await redeem(ev({ code: d2.gifts[0].code, device_id: DEV('d') }));
+  db.passes.push({ id: crypto.randomUUID(), code_hash: 'fg1', code_last4: 'FG01', prefix: 'MOJI', kind: 'forever', source: 'stripe', status: 'active', amount_cents: 1499, from_gift: true });
+  const r = JSON.parse((await adminApi(withCookie({ action: 'gifts.report' }, cookie))).body);
+  assert.equal(r.totals.made, 6); assert.equal(r.totals.on, 3); assert.equal(r.totals.open, 3); assert.equal(r.totals.givers, 2); assert.equal(r.totals.holders, 1);
+  assert.equal(r.totals.reward_days, 21, 'holder 14 + friend family 7');
+  assert.deepEqual(r.rounds.map((x) => [x.round, x.made, x.on]), [[1, 3, 2], [2, 3, 1]]);
+  assert.deepEqual(r.bought, { passes: 1, forever: 1, cents: 1499 });
+  assert.equal(r.holders.length, 2);
+  assert.ok(r.holders.some((h) => h.started === 'free week' && h.on === 2 && h.left === 1 && h.reward_days === 14));
+  assert.ok(r.holders.some((h) => h.started === 'gift' && h.round === 1));
+  const txt = JSON.stringify(r);
+  assert.ok(!/device|code_hash|giver_id|"id"/.test(txt), 'no device values, hashes or pass IDs leave the server');
+});

@@ -270,6 +270,44 @@ const actions = {
     return { code: made.code, pass: made.pass, old: await passWithDevices(id) };
   },
 
+  // Release 1.4 #58: how gifts spread, counted by pass and round, never by person.
+  // No device values, no places, no play history, and never which family gifted which.
+  async 'gifts.report'() {
+    const now = Date.now();
+    const gifts = await allRows('passes?batch=eq.' + FRIEND_BATCH + '&kind=eq.7d&select=id,giver_id,gen,status,starts_at,use_by,created_at&order=created_at.asc');
+    const givers = new Map();
+    const rounds = new Map();
+    const t = { made: gifts.length, on: 0, open: 0, expired: 0 };
+    for (const g of gifts) {
+      const on = g.status !== 'unused' && !!g.starts_at;
+      const expired = g.status === 'unused' && g.use_by && new Date(g.use_by).getTime() < now;
+      if (on) t.on++; else if (expired) t.expired++; else if (g.status === 'unused') t.open++;
+      const r = Math.max(1, Number(g.gen) || 1);
+      const rr = rounds.get(r) || { round: r, made: 0, on: 0 }; rr.made++; if (on) rr.on++; rounds.set(r, rr);
+      if (g.giver_id) { const v = givers.get(g.giver_id) || { on: 0, left: 0, made: 0 }; v.made++; if (on) v.on++; else if (!expired && g.status === 'unused') v.left++; givers.set(g.giver_id, v); }
+    }
+    const ids = [...givers.keys()].filter((x) => UUID.test(x));
+    const rows = [];
+    for (let i = 0; i < ids.length; i += 50) {
+      const { data } = await rest('GET', 'passes?id=in.(' + ids.slice(i, i + 50).join(',') + ')&select=id,prefix,code_last4,kind,source,status,email,gen,reward_days,created_at');
+      if (Array.isArray(data)) rows.push(...data);
+    }
+    const holderCount = (await allRows('passes?kind=eq.holder&select=id')).length;
+    const bought = await allRows('passes?from_gift=eq.true&source=eq.stripe&select=kind,amount_cents');
+    const startedAs = (p) => p.kind === 'holder' ? 'free week' : p.source === 'stripe' ? 'paid' : p.kind === '7d' ? 'gift' : p.source;
+    const holders = rows.map((p) => {
+      const v = givers.get(p.id) || { on: 0, left: 0 };
+      return { last4: p.code_last4, prefix: p.prefix, started: startedAs(p), kind: p.kind, status: p.status, round: Number(p.gen) || 0,
+        on: v.on, left: v.left, reward_days: Number(p.reward_days) || 0, email: p.source === 'stripe' ? p.email : null, made: p.created_at };
+    }).sort((a, b) => (b.on - a.on) || String(b.made).localeCompare(String(a.made))).slice(0, 100);
+    return {
+      totals: { ...t, givers: givers.size, holders: holderCount, reward_days: rows.reduce((n, p) => n + (Number(p.reward_days) || 0), 0) },
+      rounds: [...rounds.values()].sort((a, b) => a.round - b.round),
+      bought: { passes: bought.length, forever: bought.filter((b) => b.kind === 'forever').length, cents: bought.reduce((n, b) => n + (Number(b.amount_cents) || 0), 0) },
+      holders,
+    };
+  },
+
   // Release 1.4 #57: end every unused code in one batch (a school or event). Used codes keep working.
   async 'codes.end_unused'({ batch }) {
     const lb = cleanBatch(batch);

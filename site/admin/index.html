@@ -109,6 +109,12 @@ textarea{resize:vertical;min-height:80px}
   .bc.one .q code{font-size:9.5pt}
   .bc:nth-child(10n){page-break-after:always}
 }
+/* Release 1.4 #58: Gifts tab */
+.gstats{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:10px}
+.gstats div{border:2px solid var(--line);border-radius:16px;padding:10px 12px}
+.gstats b{display:block;font-size:24px;color:var(--deep)}
+.gstats span{font-size:13px;font-weight:700;color:var(--soft,#6B6180)}
+.grounds{width:100%;border-collapse:collapse;margin-top:6px}.grounds td,.grounds th{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);font-size:14px}
 </style>
 </head>
 <body>
@@ -135,6 +141,7 @@ textarea{resize:vertical;min-height:80px}
   <div class="tabs" role="tablist" id="tabs">
     <button role="tab" data-tab="passes" aria-selected="true">Passes</button>
     <button role="tab" data-tab="codes" aria-selected="false">Gift codes</button>
+    <button role="tab" data-tab="gifts" aria-selected="false">Gifts</button>
     <button role="tab" data-tab="support" aria-selected="false">Support</button>
     <button role="tab" data-tab="settings" aria-selected="false">Settings</button>
     <button role="tab" data-tab="services" aria-selected="false">Services</button>
@@ -241,6 +248,18 @@ textarea{resize:vertical;min-height:80px}
     <div class="svc" id="svcList"></div>
   </section>
 
+  <section class="card" data-panel="gifts" hidden>
+    <h2>Gifts</h2>
+    <p>How the 3 gifts of 7 free days spread. Counts passes and rounds, never people: no names, devices, places or play history, and never which family gifted which.</p>
+    <div class="gstats" id="gStats"></div>
+    <h3 style="margin-top:18px">Spread by round</h3>
+    <p class="meta">Round 1: gifts from families who started alone. Round 2: gifts from families who started from a gift. Growing later rounds mean sharing spreads on its own.</p>
+    <div id="gRounds"></div>
+    <h3 style="margin-top:18px">Families sharing (newest and busiest first, up to 100)</h3>
+    <div id="gList"></div>
+    <p class="err" id="gErr"></p>
+  </section>
+
   <section data-panel="analytics" id="anRoot" hidden></section>
 </section>
 </main>
@@ -289,7 +308,7 @@ $('tabs').addEventListener('click',e=>{ const b=e.target.closest('[data-tab]'); 
   document.querySelectorAll('#tabs [data-tab]').forEach(x=>x.setAttribute('aria-selected',String(x===b)));
   document.querySelectorAll('[data-panel]').forEach(p=>{ p.hidden=p.dataset.panel!==t; });
   if(window.MojiAnalytics){ if(t==='analytics') window.MojiAnalytics.show(); else window.MojiAnalytics.hide(); }
-  if(t==='passes') loadPasses(); else if(t==='codes') loadLabels(); else if(t==='support') loadSupport(); else if(t==='settings'){ loadSettings(); loadAlerts(); } else if(t==='services') renderServices(); });
+  if(t==='passes') loadPasses(); else if(t==='gifts') loadGifts(); else if(t==='codes') loadLabels(); else if(t==='support') loadSupport(); else if(t==='settings'){ loadSettings(); loadAlerts(); } else if(t==='services') renderServices(); });
 
 /* ---- passes */
 const maskMail=e=>{ const s=String(e||''), at=s.lastIndexOf('@'); return at<1?'':s[0]+'•••'+s.slice(at); };
@@ -316,6 +335,14 @@ function passItem(p){ const st=p.status; const voided=st==='ended'&&!p.starts_at
     +'<div class="acts">'+(p.kind!=='forever'&&!voided?'<button class="secondary" data-act="passes.add30">Add 30 days</button><button class="secondary" data-act="passes.forever">Make Forever</button>':'')
     +(p.source==='stripe'&&p.stripe_session_id?'<button class="secondary" data-act="passes.code">Show code</button><button class="secondary" data-act="passes.email">Email code</button>':'')+(st==='unused'&&p.prefix==='GIFT'&&(p.source==='gift'||p.source==='support')&&String(p.batch||'').toUpperCase()!=='FRIEND'?'<button class="secondary" data-act="codes.replace">Lost code? Cancel and replace</button>':'')+'<button class="secondary" data-act="passes.devices_reset">Reset devices</button><button class="secondary" data-act="note">Note</button>'
     +(st==='active'?'<button class="danger" data-act="passes.end">End pass</button>':'')+(p.source==='stripe'&&p.stripe_session_id&&st!=='refunded'?'<button class="danger" data-act="passes.refund">Refund</button>':'')+'</div></div>'; }
+/* Release 1.4 #58: Gifts tab. Counts by pass and round; never people. */
+async function loadGifts(){ $('gErr').textContent=''; $('gStats').innerHTML='<p>Loading…</p>'; $('gRounds').innerHTML=''; $('gList').innerHTML='';
+  try{ const d=await api('gifts.report',{}); const T=d.totals||{}, B=d.bought||{};
+    const tile=(n,l)=>'<div><b>'+n+'</b><span>'+l+'</span></div>';
+    $('gStats').innerHTML=tile(T.givers||0,'families sharing')+tile(T.holders||0,'free-week gift holders')+tile(T.made||0,'gifts made')+tile(T.on||0,'turned on')+tile(T.open||0,'open')+tile(T.expired||0,'expired')+tile(T.reward_days||0,'bonus days given')+tile(B.passes||0,'passes bought after a gift')+tile(B.forever||0,'of those, Forever')+tile(money(B.cents||0),'paid after a gift');
+    const R=d.rounds||[]; $('gRounds').innerHTML=R.length?'<table class="grounds"><thead><tr><th>Round</th><th>Gifts made</th><th>Turned on</th><th>Turned on %</th></tr></thead><tbody>'+R.map(r=>'<tr><td>'+r.round+'</td><td>'+r.made+'</td><td>'+r.on+'</td><td>'+(r.made?Math.round(r.on/r.made*100):0)+'%</td></tr>').join('')+'</tbody></table>':'<p>No gifts made yet.</p>';
+    const H=d.holders||[]; $('gList').innerHTML=H.length?H.map(h=>'<div class="item"><div class="top"><b>'+esc(h.prefix)+'-…'+esc(h.last4)+' · started '+esc(h.started)+'</b><span class="pill '+esc(h.status)+'">round '+(h.round+1)+'</span></div><div class="meta">'+h.on+' turned on · '+h.left+' left · '+h.reward_days+' of 21 bonus days'+(h.email?' · '+esc(h.email):'')+'</div></div>').join(''):'<p>No families have shared gifts yet.</p>'; }
+  catch(e){ $('gStats').innerHTML=''; $('gErr').textContent=e.message; } }
 /* Release 1.2 #2: tabs, sort, Campaigns and schools. Counts cards, never people. */
 let pTab='all', pBatch='';
 function batchItem(b){ const n=v=>v==null?'–':v;
