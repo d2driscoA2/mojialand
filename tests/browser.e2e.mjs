@@ -83,6 +83,7 @@ function serve(site) {
     let p = decodeURIComponent(u.pathname);
     let f = path.join(site, p);
     if (!f.startsWith(site)) { res.writeHead(403).end(); return; }
+    if (globalThis.HOST_PAUSED && p === '/play/') { res.writeHead(503, { 'Content-Type': 'text/html' }).end('<html><body>Site not available</body></html>'); return; }
     if (/^\/r\/[^/]+$/.test(p)) f = path.join(site, 'r', 'index.html'); // _redirects: /r/*  /r/index.html  200
     if (/^\/g\/[^/]+$/.test(p)) f = path.join(site, 'g', 'index.html'); // _redirects: /g/*  /g/index.html  200
     if (p.endsWith('/')) f = path.join(f, 'index.html');
@@ -2294,6 +2295,11 @@ for (const [st, title] of [[403, 'This pass is on 5 devices'], [410, 'This link 
   const bj = await page.evaluate(() => fetch('/play/build.json', { cache: 'no-store' }).then(() => 'answered', () => 'failed'));
   check('1.4 #14 sw: offline, build.json fails (never served from the saved copy)', bj === 'failed');
   await ctx.setOffline(false);
+  globalThis.HOST_PAUSED = true;
+  await page.goto(base + '/play/').catch(() => null);
+  globalThis.HOST_PAUSED = false;
+  const paused = await page.evaluate(() => ({ b: (document.querySelector('meta[name="mojia-build"]') || {}).content, txt: /Site not available/.test(document.body.textContent) })).catch(() => ({}));
+  check('1.4 #14 sw: host paused (503), the game opens from the saved copy', paused.b === bid && !paused.txt, JSON.stringify(paused));
   await ctx.close();
 }
 

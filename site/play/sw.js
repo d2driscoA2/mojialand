@@ -40,6 +40,10 @@ self.addEventListener('fetch', function (e) {
         var copy = res.clone();
         caches.open(CACHE).then(function (c) { c.put(PAGE, copy); });
       }
+      // Host busy or paused (5xx or 429): play from the saved copy when there is one.
+      if (res && (res.status >= 500 || res.status === 429)) {
+        return caches.match(PAGE, { ignoreSearch: true }).then(function (hit) { return hit || res; });
+      }
       return res;
     }).catch(function () {
       return caches.match(PAGE, { ignoreSearch: true }).then(function (hit) { return hit || Response.error(); });
