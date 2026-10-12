@@ -1,4 +1,4 @@
-// POST {token?, device_id, fv_end?} -> {gifts:[{code, link, state, use_by}], reward_days, cap, kind, token?}
+// POST /.netlify/functions/gifts {token?, device_id, fv_end?} -> {gifts:[{code, link, state, use_by}], reward_days, cap, kind, token?}
 // Release 1.4 #32 (Danny, October 6 and 11): every family gets 3 gifts of 7 free days.
 // Called only after a grown-up taps Give a friend (behind the number check).
 // With a pass token: the gifts belong to that pass.
@@ -94,4 +94,5 @@ export const handler = async (event) => {
   }
 };
 
-export const config = { path: '/api/gifts' };
+// Called at /.netlify/functions/gifts like the other handler-style functions
+// (Netlify only honours config.path on default-export functions such as ping.mjs).

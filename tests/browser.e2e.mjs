@@ -2231,7 +2231,7 @@ for (const [st, title] of [[403, 'This pass is on 5 devices'], [410, 'This link 
   const giftBodies = [];
   const { ctx, page } = await newPage();
   await page.addInitScript(() => { if (sessionStorage.getItem('s14')) return; sessionStorage.setItem('s14', '1'); localStorage.setItem('mojia.demos', 'false'); localStorage.setItem('mojia.welcomed', 'true'); });
-  await page.route('**/api/gifts', (r) => { const b = r.request().postDataJSON(); giftBodies.push(b); r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ kind: 'holder', reward_days: 7, cap: 21, token: ht.token, ends_at: ht.payload.e, gifts: [
+  await page.route('**/.netlify/functions/gifts', (r) => { const b = r.request().postDataJSON(); giftBodies.push(b); r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ kind: 'holder', reward_days: 7, cap: 21, token: ht.token, ends_at: ht.payload.e, gifts: [
     { code: 'GIFT-AAAA-BBBB-CCCC', link: base + '/g/GIFTAAAABBBBCCCC', state: 'ready', use_by: new Date(Date.now() + 30 * 864e5).toISOString() },
     { code: 'GIFT-DDDD-EEEE-FFFF', link: base + '/g/GIFTDDDDEEEEFFFF', state: 'used', use_by: new Date(Date.now() + 30 * 864e5).toISOString() },
     { code: 'GIFT-GGGG-HHHH-JJJJ', link: base + '/g/GIFTGGGGHHHHJJJJ', state: 'ready', use_by: new Date(Date.now() + 30 * 864e5).toISOString() }] }) }); });
@@ -2285,7 +2285,7 @@ for (const [st, title] of [[403, 'This pass is on 5 devices'], [410, 'This link 
     await page.addInitScript(([tok, e]) => { localStorage.setItem('mojia.demos', 'false'); localStorage.setItem('mojia.welcomed', 'true'); localStorage.setItem('mojia.pass', JSON.stringify({ code: 'MOJI-OLDP-ASSX-2345', kind: '48h', ends_at: e, token: tok })); localStorage.setItem('mojia.freeStart', String(Date.now() - 2 * 864e5 - 60e3)); }, [t.token, t.payload.e]);
     await page.route('**/.netlify/functions/friend-code', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 'GIFT-FRND-AAAA-BBBB', link: base + '/r/X', state: 'ready', use_by: new Date(Date.now() + 9 * 864e5).toISOString() }) }));
     await page.route('**/.netlify/functions/pass-check', (r) => r.fulfill({ status: 503, contentType: 'application/json', body: '{}' }));
-    await page.route('**/api/gifts', (r) => { gb.push(r.request().postDataJSON()); r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ kind: '48h', reward_days: 0, cap: 21, gifts: [] }) }); });
+    await page.route('**/.netlify/functions/gifts', (r) => { gb.push(r.request().postDataJSON()); r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ kind: '48h', reward_days: 0, cap: 21, gifts: [] }) }); });
     await page.goto(base + '/play/');
     await openGU3(page); await page.waitForTimeout(700);
     const gifts = await page.locator('#pwGuList [data-a="gifts"]').count(), oldRow = await page.locator('#pwGuList [data-a="gift"]').count();

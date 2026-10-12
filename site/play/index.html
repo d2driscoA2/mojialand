@@ -4512,7 +4512,7 @@ const pay=(function(){
   const GIFT7_MSG='Here are 7 free days of Mojialand, emoji games for kids 3 and up. No ads. Tap to play:';
   let gifts7=null;
   async function loadGifts7(){ const raw=store.get('pass',null); const tok=raw&&typeof raw.token==='string'?raw.token:'';
-    try{ const res=await fetch('/api/gifts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:tok||undefined,device_id:deviceId(),fv_end:freeEnd()}),credentials:'same-origin',cache:'no-store'});
+    try{ const res=await fetch('/.netlify/functions/gifts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:tok||undefined,device_id:deviceId(),fv_end:freeEnd()}),credentials:'same-origin',cache:'no-store'});
       let d={}; try{ d=await res.json(); }catch(e){}
       if(res.status!==200||!d||!Array.isArray(d.gifts)) return {error:d&&typeof d.error==='string'&&d.error.length<200?d.error:'We could not get the gifts. Please try again in a minute.'};
       if(!tok&&typeof d.token==='string') await savePass({token:d.token,kind:d.kind,ends_at:d.ends_at});

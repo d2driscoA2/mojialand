@@ -1316,3 +1316,16 @@ test('1.4 #14 busy day switches: admin sets 0 or 1; ping, emails, new free gifts
   const s = JSON.parse((await settingsFn(ev({}, {}, 'GET'))).body);
   assert.equal(s.new_free_paused, 0);
 });
+
+test('routing: a /api/ path only works on default-export functions (Netlify ignores config.path on handler functions)', async () => {
+  const fs = await import('node:fs');
+  const dir = new URL('../netlify/functions/', import.meta.url);
+  const routed = {};
+  for (const f of fs.readdirSync(dir).filter((x) => x.endsWith('.mjs'))) {
+    const src = fs.readFileSync(new URL(f, dir), 'utf8');
+    const m = /export const config = \{[^}]*path:\s*'([^']+)'/.exec(src);
+    if (m) { assert.ok(/export default/.test(src), f + ' sets config.path but is a handler function'); routed[m[1]] = f; }
+  }
+  const play = fs.readFileSync(new URL('../site/play/index.html', import.meta.url), 'utf8');
+  for (const [, p] of play.matchAll(/'(\/api\/[a-z-]+)'/g)) assert.ok(routed[p], p + ' is called by the game but no function serves it');
+});
