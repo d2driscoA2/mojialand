@@ -114,6 +114,29 @@ section{padding-block:72px}
 /* Games */
 .games-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:end;gap:16px;margin-bottom:32px}
 .games-head h2{font-size:clamp(34px,4.4vw,52px)}
+/* Carnival Coming Soon band (Release 1.4.1, board #59, claude/Carnival-Website-Handoff.md sections 11 to 13). Display only: no link, no button. */
+.cband{position:relative;overflow:hidden;margin-top:30px;border-radius:28px;background:linear-gradient(180deg,#2A1660 0%,#5A2FAE 100%);color:#fff;box-shadow:0 14px 30px rgba(42,22,96,.28)}
+.cb-awn{position:absolute;left:0;right:0;top:0;height:24px;z-index:2;background:repeating-linear-gradient(90deg,#FF5FA2 0 30px,#FFFFFF 30px 60px);-webkit-mask:linear-gradient(#000,#000) top/100% 9px no-repeat,radial-gradient(circle at 15px 9px,#000 14.5px,transparent 15px) 0 0/30px 24px repeat-x;mask:linear-gradient(#000,#000) top/100% 9px no-repeat,radial-gradient(circle at 15px 9px,#000 14.5px,transparent 15px) 0 0/30px 24px repeat-x}
+.cb-art{position:absolute;top:0;right:0;bottom:0;width:46%;background:url(/img/carnival-scene.webp) center/cover no-repeat;opacity:.55;-webkit-mask:linear-gradient(90deg,transparent 0,#000 45%);mask:linear-gradient(90deg,transparent 0,#000 45%)}
+.cb-star{position:absolute;color:#FFC83D;opacity:.35;font-size:16px;line-height:1}
+.cb-sign{position:absolute;z-index:3;top:20px;right:64px;transform:rotate(4deg);transform-origin:50% 0}
+.cb-sign:before,.cb-sign:after{content:"";position:absolute;top:-20px;width:3px;height:22px;background:#FFE6C2;border-radius:2px;opacity:.85}
+.cb-sign:before{left:22%}.cb-sign:after{right:22%}
+.cb-board{display:block;background:#A7663F;border:3px solid #FF8A3D;border-radius:12px;padding:10px 26px 9px;font-size:20px;font-weight:1000;letter-spacing:.14em;text-transform:uppercase;color:#FFF4DE;line-height:1.1;white-space:nowrap;box-shadow:0 6px 0 rgba(0,0,0,.18),inset 0 1px rgba(255,255,255,.25)}
+.cb-row{position:relative;z-index:1;display:grid;grid-template-columns:270px minmax(0,1fr);gap:36px;align-items:center;padding:56px 48px 40px}
+.cb-logo{display:block;width:100%;height:auto}
+.cb-text{max-width:600px}
+.cband .eyebrow{color:var(--yellow)}
+.cband h2{margin:8px 0 6px;color:#fff;font-size:clamp(28px,3.4vw,40px);line-height:1.1}
+.cb-line{margin:0;font-size:17px;opacity:.94}
+@media (max-width:860px){
+ .cb-art{width:100%;opacity:.28;-webkit-mask:none;mask:none}
+ .cb-sign{right:auto;left:18px;top:22px;transform:rotate(-4deg)}
+ .cb-board{font-size:17px;padding:8px 20px 7px}
+ .cb-row{grid-template-columns:1fr;gap:18px;text-align:center;padding:96px 22px 32px}
+ .cb-logo{width:min(300px,82%);margin:0 auto}
+ .cb-text{margin:0 auto}
+}
 /* Game tiles match the app home (Mojialand-Home-Tiles-Handoff.md): featured card, then colored tiles with a white scene window. Display only: the hero and header buttons open the app. */
 .gtile{color:var(--ink);display:flex}
 .gtile .gname{display:block;font-weight:900;line-height:1.05;letter-spacing:-.01em}
@@ -414,6 +437,27 @@ footer .fine.credit a{color:#fff;text-decoration:underline;text-underline-offset
      <span class="gdesc">Watch a little picture story, tap the face that shows how the friend feels, then help them feel better. Twenty friends.</span>
      <span class="skill">Feelings</span>
     </article>
+   </div>
+  </div>
+ </section>
+
+ <section style="padding-top:0" aria-labelledby="cbTitle">
+  <div class="wrap">
+   <div class="cband">
+    <span class="cb-awn" aria-hidden="true"></span>
+    <span class="cb-art" aria-hidden="true"></span>
+    <span class="cb-star" aria-hidden="true" style="top:52px;left:47%">&#9733;</span>
+    <span class="cb-star" aria-hidden="true" style="top:96px;left:66%;font-size:12px">&#9733;</span>
+    <span class="cb-star" aria-hidden="true" style="bottom:30px;left:40%;font-size:11px">&#9733;</span>
+    <span class="cb-sign"><span class="cb-board">Coming soon</span></span>
+    <div class="cb-row">
+     <img class="cb-logo" src="/img/carnival-lockup.webp" width="800" height="394" alt="Mojialand Carnival" loading="lazy" decoding="async">
+     <div class="cb-text">
+      <p class="eyebrow">Next from Mojialand</p>
+      <h2 id="cbTitle">Carnival is on its way.</h2>
+      <p class="cb-line">Five classic fair games are in family testing now: Duck Pond, Skee-Ball, Horse Race and more.</p>
+     </div>
+    </div>
    </div>
   </div>
  </section>
