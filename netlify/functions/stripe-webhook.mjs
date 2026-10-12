@@ -1,7 +1,7 @@
 // Stripe webhook. Verifies the signature on the raw body, handles each event once.
 import { guard } from './_lib/env.mjs';
 import { json, fail, header, rawBody, originFromUrl, tail6 } from './_lib/http.mjs';
-import { claimEvent, releaseEvent, patchPass, safeErr } from './_lib/db.mjs';
+import { claimEvent, releaseEvent, patchPass, safeErr, getPassBy, endGifts } from './_lib/db.mjs';
 import { grantPass, isPaid } from './_lib/grant.mjs';
 import { getStripe } from './_lib/stripe.mjs';
 import { buildEmail, sendEmail } from './_lib/email.mjs';
@@ -52,10 +52,15 @@ async function setStatusForCharge(charge, status) {
   const plan = session.metadata && session.metadata.plan;
   if (plan === 'add' || plan === 'up') {
     // The pass was bought earlier; flag it for the admin instead of ending it.
-    const note = status + ' on ' + plan + ' session ' + session.id;
-    await patchPass('id=eq.' + enc(session.metadata.pass_id), status === 'disputed' ? { status, note } : { note });
+    // Security S3: add to the note, never replace the admin's note.
+    const pid = session.metadata.pass_id;
+    const cur = await getPassBy('id', pid).catch(() => null);
+    const note = ((cur && cur.note ? cur.note + ' · ' : '') + status + ' on ' + plan + ' session …' + String(session.id).slice(-6)).slice(0, 500);
+    await patchPass('id=eq.' + enc(pid), status === 'disputed' ? { status, note } : { note });
+    if (status === 'disputed') await endGifts(pid);
   } else {
-    await patchPass('stripe_session_id=eq.' + enc(session.id), { status });
+    const rows = await patchPass('stripe_session_id=eq.' + enc(session.id), { status });
+    for (const r of Array.isArray(rows) ? rows : []) await endGifts(r.id); // Security S2
   }
   console.log('stripe-webhook: ' + status + ' for session ' + tail6(session.id));
 }

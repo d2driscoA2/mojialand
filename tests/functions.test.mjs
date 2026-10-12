@@ -1352,3 +1352,49 @@ test('1.4 (Danny Oct 12, A): admin Refund returns every payment on a pass and th
   assert.deepEqual(stripe.calls.refunds, [{ payment_intent: 'pi_cs_test_ref1' }, { payment_intent: 'pi_cs_test_ref2' }]);
   assert.match(d.pass.note, /2 payments, \$14\.99/);
 });
+
+test('1.4 Security M1/S2/S3: refund retry finishes without double refunds; refund and end stop unused gifts; webhook adds to the note', async () => {
+  const cookie = await adminSignIn();
+  const A = async (action, body = {}) => { const r = await adminApi(withCookie({ action, ...body }, cookie)); return [r.statusCode, JSON.parse(r.body)]; };
+  const s1 = { ...paidSession('cs_test_m1a', 'pass'), amount_total: 499 }; stripe.sessions.set(s1.id, s1);
+  const id = (await grantPass(s1)).pass.id;
+  const s2 = { ...paidSession('cs_test_m1b', 'up', { pass_id: id }), amount_total: 1000 }; stripe.sessions.set(s2.id, s2);
+  await grantPass(s2);
+  // the pass's gifts: one unused, one used
+  db.passes.push({ id: crypto.randomUUID(), code_hash: 'g1', code_last4: 'GG01', prefix: 'GIFT', kind: '7d', source: 'gift', status: 'unused', giver_id: id, batch: 'FRIEND' });
+  db.passes.push({ id: crypto.randomUUID(), code_hash: 'g2', code_last4: 'GG02', prefix: 'GIFT', kind: '7d', source: 'gift', status: 'active', giver_id: id, batch: 'FRIEND' });
+  // the upgrade refund fails at Stripe the first time
+  stripe.failRefundFor = 'pi_' + s2.id;
+  let [st, d] = await A('passes.refund', { id });
+  assert.equal(st, 400); assert.match(d.error, /Refunded 1 payment\. 1 failed/);
+  const row = db.passes.find((p) => p.id === id);
+  assert.equal(row.status, 'refunded'); assert.match(row.note, /refund failed for 1 payment/);
+  assert.equal(db.passes.find((p) => p.code_hash === 'g1').status, 'ended', 'S2: unused gift ended');
+  assert.equal(db.passes.find((p) => p.code_hash === 'g2').status, 'active', 'S2: used gift keeps working');
+  // retry finishes the upgrade refund and never refunds the first payment twice
+  [st, d] = await A('passes.refund', { id });
+  assert.equal(st, 200);
+  assert.deepEqual(stripe.calls.refunds.map((r) => r.payment_intent), ['pi_' + s1.id, 'pi_' + s2.id]);
+  assert.ok(stripe.calls.refundKeys.every((k) => /^refund-cs_test_m1/.test(k)), 'each refund has an idempotency key');
+  [st, d] = await A('passes.refund', { id });
+  assert.equal(st, 400, 'nothing left to refund');
+  // S3: webhook refund on the upgrade session adds to the note
+  const before = db.passes.find((p) => p.id === id).note;
+  await webhook(signed({ id: 'evt_m1', type: 'charge.refunded', data: { object: { object: 'charge', refunded: true, payment_intent: 'pi_' + s2.id } } }));
+  const after = db.passes.find((p) => p.id === id).note;
+  assert.ok(after.startsWith(before) && /refunded on up session/.test(after), after);
+  // S2: admin End stops unused gifts too
+  const p2 = { id: crypto.randomUUID(), code_hash: 'e1', code_last4: 'EE01', prefix: 'MOJI', kind: '30d', source: 'stripe', status: 'active' };
+  db.passes.push(p2, { id: crypto.randomUUID(), code_hash: 'g3', code_last4: 'GG03', prefix: 'GIFT', kind: '7d', source: 'gift', status: 'unused', giver_id: p2.id, batch: 'FRIEND' });
+  await A('passes.end', { id: p2.id });
+  assert.equal(db.passes.find((p) => p.code_hash === 'g3').status, 'ended');
+});
+
+test('1.4 Security S1: at most 5 new gift holders per network a day', async () => {
+  const G = (n) => giftsFn(ev({ device_id: String(n).repeat(32).slice(0, 32) }));
+  for (const n of ['a', 'b', 'c', 'd', 'e']) assert.equal((await G(n)).statusCode, 200);
+  const r = await G('f');
+  assert.equal(r.statusCode, 429);
+  assert.equal(db.passes.filter((p) => p.kind === 'holder').length, 5);
+  assert.equal((await G('a')).statusCode, 200, 'an existing holder still opens its gifts');
+});

@@ -185,7 +185,10 @@ export function fakeStripe(overrides = {}) {
     promotionCodes: {
       list: async (p) => { calls.promo.push(p); return { data: String(p.code).toUpperCase() === 'FRIENDS50' ? [{ id: 'promo_123', code: 'FRIENDS50', coupon: { percent_off: 50, amount_off: null, valid: true, name: 'Friends' } }] : [] }; },
     },
-    refunds: { create: async (p) => { calls.refunds = calls.refunds || []; calls.refunds.push(p); return { id: 're_1', status: 'succeeded' }; } },
+    refunds: {
+      create: async (p, o) => { if (fake.failRefundFor && fake.failRefundFor === p.payment_intent) { fake.failRefundFor = null; const e = new Error('timeout'); e.type = 'StripeConnectionError'; throw e; } calls.refunds = calls.refunds || []; calls.refunds.push(p); calls.refundKeys = (calls.refundKeys || []).concat([o && o.idempotencyKey]); return { id: 're_1', status: 'succeeded' }; },
+      list: async (p) => ({ data: (calls.refunds || []).filter((r) => r.payment_intent === p.payment_intent).map(() => ({ status: 'succeeded' })) }),
+    },
     ...overrides,
   };
   return fake;

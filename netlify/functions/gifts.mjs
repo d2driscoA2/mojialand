@@ -14,6 +14,13 @@ import { verifyToken, makeTokenPayload, signToken } from './_lib/token.mjs';
 import { gifts, givesGifts } from './_lib/friend.mjs';
 import { randomCode, codeHash, codeLast4 } from './_lib/codes.mjs';
 import { freeWeekEnd } from './_lib/kinds.mjs';
+import { pushAll, pushReady } from './_lib/push.mjs';
+
+// Release 1.4 (Security S1): new gift holders are cheap to make with fresh device IDs.
+// At most 5 new holders per network address per day, and one phone alert an hour
+// when new holders pass HOLDER_ALERT in an hour. The busy day switch stops them at once.
+const HOLDER_DAY = 5;
+const HOLDER_ALERT = 50;
 
 const REQUIRED = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY', 'RESTORE_CODE_PEPPER', 'PASS_SIGNING_PRIVATE_KEY', 'PASS_SIGNING_PUBLIC_JWK'];
 const UUID = /^[0-9a-f-]{36}$/i;
@@ -64,7 +71,13 @@ export const handler = async (event) => {
     } else {
       pass = await holderForDevice(input.device_id);
       if (!pass && (await switchOn('new_free_paused'))) return fail(503, 'Gifts are paused for a little while. Please try again later.');
-      if (!pass) pass = await newHolder(input.device_id, input.fv_end);
+      if (!pass) {
+        if (!(await rateHit('gifts-holder', clientIp(event), HOLDER_DAY, 86400))) return fail(429, 'Too many new families from this network today. Please try again tomorrow.');
+        pass = await newHolder(input.device_id, input.fv_end);
+        if (!(await rateHit('gifts-holder-hour', 'all', HOLDER_ALERT, 3600, { failOpen: true })) && pushReady() && (await rateHit('gifts-holder-alert', 'all', 1, 3600))) {
+          await pushAll({ title: 'Many new gift holders', body: 'More than ' + HOLDER_ALERT + ' new gift holders this hour. Check the Gifts tab. Switch: Pause new free weeks and gifts.', tag: 'holders' }).catch(() => null);
+        }
+      }
       issue = true;
     }
     if (!givesGifts(pass)) return fail(410, 'This pass has no gifts to give.');

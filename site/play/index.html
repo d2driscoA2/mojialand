@@ -1127,11 +1127,12 @@ const FRESH=(function(){ try{ for(let i=0;i<localStorage.length;i++){ if(String(
 /* Android and desktop Chrome need start_url for the install prompt. iPhone must not have one (see the link tag). */
 (function(){ if(!/iPhone|iPad|iPod/.test(navigator.userAgent)&&!(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)){ const l=document.querySelector('link[rel="manifest"]'); if(l) l.setAttribute('href','/manifest-install.webmanifest'); } })();
 /* Play settings. Defaults here; the admin page's values come from the server and are kept for the next open. */
+const SETTINGS_KNOWN={v:false}; /* Release 1.4 (Legal M5): settings seen from the server at least once */
 const SETTINGS={free_days:7,play_counts_off:0,new_free_paused:0,lite_home:0,first_visit_minutes:15,daily_minutes:3,daily_reset:'04:00',warning_minutes:10,credit_days:7,devices_per_code:5};
 (function(){ function apply(o){ if(!o||typeof o!=='object') return; for(const k of Object.keys(SETTINGS)){ if(!(k in o)) continue; const v=o[k]; if(k==='daily_reset'){ if(/^([01]\d|2[0-3]):[0-5]\d$/.test(String(v))) SETTINGS[k]=String(v); } else { const n=Number(v); if(Number.isFinite(n)&&n>=0&&n<=100000) SETTINGS[k]=n; } } }
-  try{ apply(JSON.parse(localStorage.getItem('mojia.settings')||'null')); }catch(e){}
+  try{ const c=JSON.parse(localStorage.getItem('mojia.settings')||'null'); if(c&&typeof c==='object'){ apply(c); SETTINGS_KNOWN.v=true; } }catch(e){}
   try{ if(SETTINGS.lite_home===1) document.documentElement.classList.add('lite'); }catch(e){}
-  fetch('/.netlify/functions/settings',{credentials:'same-origin'}).then(r=>r.ok?r.json():null).then(o=>{ if(o){ try{ localStorage.setItem('mojia.settings',JSON.stringify(o)); }catch(e){} } }).catch(()=>{}); })();
+  fetch('/.netlify/functions/settings',{credentials:'same-origin'}).then(r=>r.ok?r.json():null).then(o=>{ if(o){ try{ localStorage.setItem('mojia.settings',JSON.stringify(o)); }catch(e){} apply({free_days:o.free_days,new_free_paused:o.new_free_paused}); SETTINGS_KNOWN.v=true; /* the pause switch takes effect on this open */ } }).catch(()=>{}); })();
 const PRICES={pass:4.99,add:4.99,life:14.99,up:10.00,up48:13.49}; /* Release 1.4 #32: 30 days $4.99, Forever $14.99, upgrade $10.00. Shown only behind the parent gate; set in Stripe */
 /* Public key for pass tokens. The build fills it in; null means no pass is valid. A public key only checks, never signs. */
 const PASS_PUBLIC_JWK=/*__PASS_PUBLIC_JWK__*/null;
@@ -4374,7 +4375,7 @@ const pay=(function(){
   function rollDay(){ const day=playDay(Date.now()), last=store.get('freeDay',''); if(last!==day){ if(last) store.set('firstDone',true); store.set('freeDay',day); store.set('freeUsed',0); } return day; }
   /* Release 1.4 #32 (Danny, October 6 and 11): a free week from the first open of 1.4 on this device, every game, no limits.
      Then the daily minutes. Devices that played before 1.4 get the free week once, from their first 1.4 open. */
-  function freeStart(){ let t=Number(store.get('freeStart',0))||0; if(!t||t>Date.now()+DAY){ t=Date.now()-(SETTINGS.new_free_paused===1?SETTINGS.free_days*DAY:0); /* Release 1.4 #14: new free weeks paused */ store.set('freeStart',t); } return t; }
+  function freeStart(){ let t=Number(store.get('freeStart',0))||0; if(!t||t>Date.now()+DAY){ if(!SETTINGS_KNOWN.v) return Date.now(); /* first open: wait for the server settings before saving a start */ if(SETTINGS.new_free_paused===1) return Date.now()-SETTINGS.free_days*DAY; /* Release 1.4 (Legal M5): during a pause, save no start; the free week starts on the first open after the pause */ t=Date.now(); store.set('freeStart',t); } return t; }
   const freeEnd=()=>freeStart()+SETTINGS.free_days*DAY;
   const inFreeWeek=()=>Date.now()<freeEnd();
   const dayNum=()=>Math.floor((Date.now()-freeStart())/DAY)+1;
@@ -4521,7 +4522,7 @@ const pay=(function(){
       gifts7=d; return d; }catch(e){ return {error:'No connection. Please try again.'}; } }
   function paintGifts7(el,d){ if(d.error){ el.innerHTML='<h4>🎁 Give 3 friends 7 free days</h4><p>'+d.error.replace(/</g,'&lt;')+'</p>'; return; }
     const forever=d.kind==='forever', left=Math.max(0,(d.cap||21)-(d.reward_days||0));
-    let h='<h4>🎁 Give 3 friends 7 free days</h4><p>Each gift works once, on a device new to Mojialand, within 30 days.'+(forever?'':' When a friend turns one on, you get 7 more days of play, up to '+(d.cap||21)+'.')+'</p>';
+    let h='<h4>🎁 Give 3 friends 7 free days</h4><p>Each gift works once, within 30 days, on a device with no earlier Mojialand pass or gift.'+(forever?'':' When a friend turns one on, you get 7 more days of play, up to '+(d.cap||21)+'.')+'</p>';
     if(!forever) h+='<p class="pw-giftreward">Bonus days earned: '+(d.reward_days||0)+' of '+(d.cap||21)+(left?'':' (all earned)')+'</p>';
     d.gifts.forEach((g,i)=>{ h+='<div class="pw-gift1" data-i="'+i+'"><b>Gift '+(i+1)+'</b>'+(g.state==='ready'?'<div class="pw-giftbtns"><button class="pw-giftshare" type="button" data-g="share">Share</button><button class="pw-giftcopy" type="button" data-g="copy">Copy link</button></div><span class="pw-giftlink"></span>':g.state==='used'?'<span>A friend turned this one on. Thank you!</span>':'<span>This gift expired.</span>')+'</div>'; });
     el.innerHTML=h;

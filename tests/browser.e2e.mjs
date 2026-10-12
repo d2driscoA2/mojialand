@@ -2231,12 +2231,14 @@ for (const [st, title] of [[403, 'This pass is on 5 devices'], [410, 'This link 
   const giftBodies = [];
   const { ctx, page } = await newPage();
   await page.addInitScript(() => { if (sessionStorage.getItem('s14')) return; sessionStorage.setItem('s14', '1'); localStorage.setItem('mojia.demos', 'false'); localStorage.setItem('mojia.welcomed', 'true'); });
+  await page.route('**/.netlify/functions/settings', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '{"free_days":7,"daily_minutes":3,"new_free_paused":0}' }));
   await page.route('**/.netlify/functions/gifts', (r) => { const b = r.request().postDataJSON(); giftBodies.push(b); r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ kind: 'holder', reward_days: 7, cap: 21, token: ht.token, ends_at: ht.payload.e, gifts: [
     { code: 'GIFT-AAAA-BBBB-CCCC', link: base + '/g/GIFTAAAABBBBCCCC', state: 'ready', use_by: new Date(Date.now() + 30 * 864e5).toISOString() },
     { code: 'GIFT-DDDD-EEEE-FFFF', link: base + '/g/GIFTDDDDEEEEFFFF', state: 'used', use_by: new Date(Date.now() + 30 * 864e5).toISOString() },
     { code: 'GIFT-GGGG-HHHH-JJJJ', link: base + '/g/GIFTGGGGHHHHJJJJ', state: 'ready', use_by: new Date(Date.now() + 30 * 864e5).toISOString() }] }) }); });
   await page.goto(base + '/play/'); await page.click('#splash'); await page.waitForTimeout(500);
   check('1.4 free week: a new device shows 7 free days on the chip and plays with no timer', (await page.locator('#s-home [data-chip]').textContent()).trim() === '⏳ 7d free');
+  await page.waitForFunction(() => Number(localStorage.getItem('mojia.freeStart')) > 0, null, { timeout: 5000 }).catch(() => null);
   const fs0 = await page.evaluate(() => Number(localStorage.getItem('mojia.freeStart')));
   check('1.4 free week: the first open time is saved on the device', Math.abs(fs0 - Date.now()) < 60e3);
   await openGU2(page);
@@ -2304,6 +2306,21 @@ for (const [st, title] of [[403, 'This pass is on 5 devices'], [410, 'This link 
     }
     await ctx.close();
   }
+}
+
+// Release 1.4 (Legal M5): during a pause, a new device saves no free week start; the week starts after the pause
+{
+  const { ctx, page } = await newPage();
+  let paused = 1;
+  await page.addInitScript(() => { localStorage.setItem('mojia.demos', 'false'); localStorage.setItem('mojia.welcomed', 'true'); });
+  await page.route('**/.netlify/functions/settings', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ free_days: 7, daily_minutes: 3, new_free_paused: paused }) }));
+  await page.goto(base + '/play/'); await page.waitForTimeout(2000);
+  const during = await page.evaluate(() => localStorage.getItem('mojia.freeStart'));
+  paused = 0;
+  await page.reload(); await page.waitForTimeout(2500);
+  const after = await page.evaluate(() => Number(localStorage.getItem('mojia.freeStart')));
+  check('1.4 Legal M5: no free week start saved during a pause; the week starts on the first open after', during === null && Math.abs(after - Date.now()) < 60e3, String(during) + ' / ' + after);
+  await ctx.close();
 }
 
 // Release 1.4 #14: service worker saves /play/ for offline play; build.json and api calls never saved.

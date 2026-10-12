@@ -137,3 +137,14 @@ export function safeErr(e) {
     .replace(/(sk|rk|pk|whsec|re|sb_secret)_[A-Za-z0-9_]+/g, '[key]').slice(0, 140);
   return kind + (msg ? ': ' + msg : '');
 }
+
+// Release 1.4 (Security S2): a refunded, disputed or ended pass stops its unused gifts.
+// Gifts already turned on keep working.
+export async function endGifts(passId) {
+  if (!/^[0-9a-f-]{36}$/i.test(String(passId || ''))) return;
+  try {
+    await rest('PATCH', 'passes?giver_id=eq.' + passId + '&status=eq.unused', { body: { status: 'ended' }, prefer: 'return=minimal' });
+  } catch {
+    console.error('end gifts failed');
+  }
+}

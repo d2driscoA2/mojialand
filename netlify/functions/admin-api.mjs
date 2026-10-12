@@ -1,7 +1,7 @@
 // POST {action, ...} for the admin page. Every call needs the session cookie.
 import { guard } from './_lib/env.mjs';
 import { json, fail, readJson, header, originFromHost, sameOrigin, maskEmail } from './_lib/http.mjs';
-import { rest, patchPass, safeErr, switchOn, resetSwitchCache } from './_lib/db.mjs';
+import { rest, patchPass, safeErr, switchOn, resetSwitchCache, endGifts } from './_lib/db.mjs';
 import { isSignedIn } from './_lib/admin.mjs';
 import { randomCode, codeHash, codeLast4, deriveCode, codeNoDashes } from './_lib/codes.mjs';
 import { buildEmail, sendEmail, adminShareText } from './_lib/email.mjs';
@@ -219,6 +219,7 @@ const actions = {
   async 'passes.end'({ id }) {
     if (!UUID.test(String(id || ''))) throw new Error('bad id');
     await patchPass('id=eq.' + enc(id), { status: 'ended', ends_at: new Date().toISOString() });
+    await endGifts(id); // Security S2: a friend turning on a gift must not bring an ended pass back
     return { pass: await passWithDevices(id) };
   },
   async 'passes.note'({ id, note }) {
@@ -226,31 +227,48 @@ const actions = {
     await patchPass('id=eq.' + enc(id), { note: String(note || '').slice(0, 500) || null });
     return { pass: await passWithDevices(id) };
   },
-  // Refunds the pass's own Stripe payment in full and ends the pass. Add-on
-  // payments (add 48 hours, upgrade) are separate sessions: refund those in Stripe.
+  // Release 1.4 (Danny, October 12; Security M1): refund every payment on the pass (first purchase,
+  // adds, upgrade). Each refund carries an idempotency key, so a double tap or a retry never refunds
+  // twice. Every payment gets tried even after one fails. A refunded pass with an unrefunded add or
+  // upgrade takes Refund again to finish the job.
   async 'passes.refund'({ id }) {
     if (!UUID.test(String(id || ''))) throw new Error('bad id');
     const p = await passWithDevices(id);
     if (!p) throw new Error('pass not found');
     if (p.source !== 'stripe' || !p.stripe_session_id) throw new Error('this pass was not paid through Stripe');
-    if (p.status === 'refunded') throw new Error('already refunded');
-    // Release 1.4 (Danny, October 12): refund every payment on the pass (first purchase, adds, upgrade).
     const sessions = [p.stripe_session_id, ...(await extraCheckouts([id])).map((x) => x.session_id).filter((s) => s && s !== p.stripe_session_id)];
-    let refunded = 0, cents = 0;
+    let refunded = 0, cents = 0, done = 0;
+    const failed = [];
     for (const sid of sessions) {
-      const session = await getStripe().checkout.sessions.retrieve(sid);
-      const pi = session && session.payment_intent;
-      if (!pi) continue; // a free checkout (100% off code) has no payment
       try {
-        await getStripe().refunds.create({ payment_intent: typeof pi === 'string' ? pi : pi.id });
-        refunded++; cents += Number(session.amount_total) || 0;
-      } catch (e) {
-        if (!/already been refunded|charge_already_refunded/i.test(String((e && (e.code || e.message)) || ''))) throw e;
+        const session = await getStripe().checkout.sessions.retrieve(sid);
+        const pi = session && session.payment_intent;
+        if (!pi) { done++; continue; } // a free checkout (100% off code) has no payment
+        const piId = typeof pi === 'string' ? pi : pi.id;
+        const prior = await getStripe().refunds.list({ payment_intent: piId, limit: 10 });
+        if (prior && Array.isArray(prior.data) && prior.data.some((r) => r.status === 'succeeded' || r.status === 'pending')) { done++; continue; } // refunded already
+        try {
+          await getStripe().refunds.create({ payment_intent: piId }, { idempotencyKey: 'refund-' + sid });
+          refunded++; cents += Number(session.amount_total) || 0;
+        } catch (e) {
+          if (!/already been refunded|charge_already_refunded/i.test(String((e && (e.code || e.message)) || ''))) throw e;
+          done++;
+        }
+      } catch {
+        failed.push(sid);
       }
     }
-    if (!refunded && sessions.length === 1) throw new Error('no payment to refund');
+    if (!refunded && !failed.length) {
+      if (p.status === 'refunded') throw new Error('already refunded');
+      if (sessions.length === 1 && !done) throw new Error('no payment to refund');
+    }
     const what = refunded > 1 ? refunded + ' payments, $' + (cents / 100).toFixed(2) : '$' + (cents / 100).toFixed(2);
-    await patchPass('id=eq.' + enc(id), { status: 'refunded', note: ((p.note ? p.note + ' · ' : '') + 'refunded from admin ' + new Date().toISOString().slice(0, 10) + ' (' + what + ')').slice(0, 500) });
+    const fail = failed.length ? ' · refund failed for ' + failed.length + ' payment' + (failed.length > 1 ? 's' : '') + ' (' + failed.map((x) => '…' + x.slice(-6)).join(', ') + '), tap Refund again' : '';
+    if (refunded || p.status !== 'refunded') {
+      await patchPass('id=eq.' + enc(id), { status: 'refunded', note: ((p.note ? p.note + ' · ' : '') + 'refunded from admin ' + new Date().toISOString().slice(0, 10) + ' (' + what + ')' + fail).slice(0, 500) });
+      await endGifts(id); // Security S2: unused gifts of a refunded pass stop working
+    }
+    if (failed.length) throw new Error('Refunded ' + refunded + ' payment' + (refunded === 1 ? '' : 's') + '. ' + failed.length + ' failed at Stripe. Tap Refund again in a minute.');
     return { pass: await passWithDevices(id) };
   },
 
@@ -324,7 +342,7 @@ const actions = {
     const ids = [...givers.keys()].filter((x) => UUID.test(x));
     const rows = [];
     for (let i = 0; i < ids.length; i += 50) {
-      const { data } = await rest('GET', 'passes?id=in.(' + ids.slice(i, i + 50).join(',') + ')&select=id,prefix,code_last4,kind,source,status,email,gen,reward_days,created_at');
+      const { data } = await rest('GET', 'passes?id=in.(' + ids.slice(i, i + 50).join(',') + ')&select=id,prefix,code_last4,kind,source,status,gen,reward_days,created_at');
       if (Array.isArray(data)) rows.push(...data);
     }
     const holderCount = (await allRows('passes?kind=eq.holder&select=id')).length;
@@ -333,7 +351,7 @@ const actions = {
     const holders = rows.map((p) => {
       const v = givers.get(p.id) || { on: 0, left: 0 };
       return { last4: p.code_last4, prefix: p.prefix, started: startedAs(p), kind: p.kind, status: p.status, round: Number(p.gen) || 0,
-        on: v.on, left: v.left, reward_days: Number(p.reward_days) || 0, email: p.source === 'stripe' ? p.email : null, made: p.created_at };
+        on: v.on, left: v.left, reward_days: Number(p.reward_days) || 0, made: p.created_at }; // Security S4: no family email in the Gifts tab
     }).sort((a, b) => (b.on - a.on) || String(b.made).localeCompare(String(a.made))).slice(0, 100);
     return {
       totals: { ...t, givers: givers.size, holders: holderCount, reward_days: rows.reduce((n, p) => n + (Number(p.reward_days) || 0), 0) },
