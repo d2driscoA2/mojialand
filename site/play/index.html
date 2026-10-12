@@ -4326,7 +4326,7 @@ const pay=(function(){
   const MIN=60e3, HOUR=3600e3, DAY=864e5;
   const PLAY=new Set(['home','pattern','bounce','match','parade','draw','share','feelings']);
   const money=v=>'$'+v.toFixed(2);
-  const fmtT=t=>{ try{ return new Date(t).toLocaleString([],{weekday:'short',hour:'numeric',minute:'2-digit'}); }catch(e){ return new Date(t).toString(); } };
+  const fmtT=t=>{ try{ const far=Math.abs(t-Date.now())>6*864e5; /* Release 1.4: a date 7 days out names the day of the month too */ return new Date(t).toLocaleString([],far?{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}:{weekday:'short',hour:'numeric',minute:'2-digit'}); }catch(e){ return new Date(t).toString(); } };
   const splashOn=()=>!$('#splash').classList.contains('hidden');
 
   /* device id: random, made once, only used later to count devices per code */
@@ -4637,8 +4637,10 @@ const pay=(function(){
       nudge+='<div class="pw-gunudge pw-offer">'+(end>Date.now()?'Your free days end '+fmtT(end)+'.':'Your free week ended.')+' Keep playing with Forever, '+money(PRICES.life)+', or 30 days, '+money(PRICES.pass)+'. Never renews by itself.<button type="button" class="pw-offerbtn" data-a="buy">See passes</button></div>'; }
     /* Give a friend shows only when the server says this pass has a friend pass (Release 1.1.1 #37: friend passes and support passes have none). */
     /* Release 1.4 #32: 3 gifts of 7 days from day 3 for every family (48-hour passes keep their one old friend pass). */
-    if(dayNum()>=3&&!(p&&p.kind==='48h')&&!(p&&['refunded','disputed'].includes(p.status))) rows.push(['🎁 Give 3 friends 7 free days','›','gifts']);
-    if(p&&p.kind==='48h'){ const raw=store.get('pass',null), gc=raw&&giftCache&&giftCache.token===raw.token?giftCache:null;
+    /* A running 48-hour pass keeps its old friend pass; once it ends, the family gets the 3 gifts (the server gives gifts to that pass). */
+    const old48=p&&p.kind==='48h'&&passOn(p);
+    if(dayNum()>=3&&!old48&&!(p&&['refunded','disputed'].includes(p.status))) rows.push(['🎁 Give 3 friends 7 free days','›','gifts']);
+    if(old48){ const raw=store.get('pass',null), gc=raw&&giftCache&&giftCache.token===raw.token?giftCache:null;
       if(gc&&gc.data&&gc.data.state!=='expired') rows.push(['🎁 Give a friend 48 hours','›','gift']);
       else if(!gc) loadGift().then(d=>{ if(d&&d.state!=='expired') buildGU(); });
       const left=p.kind==='48h'?p.ends_at-Date.now():0, nk=(p.code||'')+':'+p.ends_at;

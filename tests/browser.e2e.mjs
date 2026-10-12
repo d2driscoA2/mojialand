@@ -2241,6 +2241,7 @@ for (const [st, title] of [[403, 'This pass is on 5 devices'], [410, 'This link 
   check('1.4 free week: the first open time is saved on the device', Math.abs(fs0 - Date.now()) < 60e3);
   await openGU2(page);
   check('1.4 free week: Grown-ups says Free week with the end time and 3 minutes a day after', /Free week/.test(await page.textContent('#pwStatus')) && /3 minutes a day/.test(await page.textContent('#pwStatus')));
+  check('1.4 free week: on day 1 the end time 7 days out names the month and day', /(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d/.test(await page.textContent('#pwStatus')), (await page.textContent('#pwStatus')).slice(0, 100));
   check('1.4 gifts: no gift row before day 3', (await page.locator('#pwGuList [data-a="gifts"]').count()) === 0);
   check('1.4 staging: test date buttons show on staging hosts', (await page.locator('#pwStatus [data-day]').count()) === 4);
   await page.click('#pwStatus [data-day="3"]'); await page.waitForTimeout(300);
@@ -2271,6 +2272,32 @@ for (const [st, title] of [[403, 'This pass is on 5 devices'], [410, 'This link 
   check('1.4 gifts: Have a code? sends the free week end (a gift adds 7 days after it)', rb && typeof rb.fv_end === 'number' && Math.abs(rb.fv_end - (Date.now() - 60e3)) < 120e3);
   check('1.4: no CSP violations or errors', p2.csp.length === 0 && p2.errors.length === 0, p2.csp.concat(p2.errors).join(' | '));
   await c2.close();
+}
+
+// Release 1.4 #32 (Danny's staging test, Oct 12): an ended 48-hour pass gets the 3 gifts, not the old friend row
+{
+  const openGU3 = async (page) => { if (await page.isVisible('#splash')) { await page.click('#splash'); await page.waitForTimeout(400); } await page.click('#lockBtn'); await page.waitForSelector('#s-ngate:not(.hidden)'); const ans = await page.getAttribute('#pwChoices', 'data-a'); await page.click('#pwChoices [data-n="' + ans + '"]'); await page.waitForSelector('#s-gate:not(.hidden)'); };
+  const old = tokenFor('48h', Date.now() - 2 * 864e5);
+  const run = tokenFor('48h', Date.now() + 20 * 3600e3);
+  for (const [label, t] of [['ended', old], ['running', run]]) {
+    const { ctx, page } = await newPage();
+    const gb = [];
+    await page.addInitScript(([tok, e]) => { localStorage.setItem('mojia.demos', 'false'); localStorage.setItem('mojia.welcomed', 'true'); localStorage.setItem('mojia.pass', JSON.stringify({ code: 'MOJI-OLDP-ASSX-2345', kind: '48h', ends_at: e, token: tok })); localStorage.setItem('mojia.freeStart', String(Date.now() - 2 * 864e5 - 60e3)); }, [t.token, t.payload.e]);
+    await page.route('**/.netlify/functions/friend-code', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 'GIFT-FRND-AAAA-BBBB', link: base + '/r/X', state: 'ready', use_by: new Date(Date.now() + 9 * 864e5).toISOString() }) }));
+    await page.route('**/.netlify/functions/pass-check', (r) => r.fulfill({ status: 503, contentType: 'application/json', body: '{}' }));
+    await page.route('**/api/gifts', (r) => { gb.push(r.request().postDataJSON()); r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ kind: '48h', reward_days: 0, cap: 21, gifts: [] }) }); });
+    await page.goto(base + '/play/');
+    await openGU3(page); await page.waitForTimeout(700);
+    const gifts = await page.locator('#pwGuList [data-a="gifts"]').count(), oldRow = await page.locator('#pwGuList [data-a="gift"]').count();
+    if (label === 'ended') {
+      check('1.4 gifts: an ended 48-hour pass on day 3 shows Give 3 friends, not the old 48-hour row', gifts === 1 && oldRow === 0, gifts + '/' + oldRow);
+      await page.click('#pwGuList [data-a="gifts"]'); await page.waitForTimeout(500);
+      check('1.4 gifts: an ended 48-hour pass asks for gifts with its own token', gb.length === 1 && gb[0].token === t.token);
+    } else {
+      check('1.4 gifts: a running 48-hour pass keeps its old friend row only', gifts === 0 && oldRow === 1, gifts + '/' + oldRow);
+    }
+    await ctx.close();
+  }
 }
 
 // Release 1.4 #14: service worker saves /play/ for offline play; build.json and api calls never saved.
