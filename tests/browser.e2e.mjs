@@ -2293,8 +2293,14 @@ for (const [st, title] of [[403, 'This pass is on 5 devices'], [410, 'This link 
       check('1.4 gifts: an ended 48-hour pass on day 3 shows Give 3 friends, not the old 48-hour row', gifts === 1 && oldRow === 0, gifts + '/' + oldRow);
       await page.click('#pwGuList [data-a="gifts"]'); await page.waitForTimeout(500);
       check('1.4 gifts: an ended 48-hour pass asks for gifts with its own token', gb.length === 1 && gb[0].token === t.token);
+      await page.click('#pwOvGift [data-pw-close]').catch(() => null); await page.waitForTimeout(300);
+      await page.click('#pwGuList [data-a="buy"]'); await page.waitForSelector('#s-ngate:not(.hidden)'); { const ans = await page.getAttribute('#pwChoices', 'data-a'); await page.click('#pwChoices [data-n="' + ans + '"]'); } await page.waitForSelector('#s-plans:not(.hidden)');
+      const up = await page.textContent('#s-plans [data-plan="up"]');
+      check('1.4 (Danny Oct 12, B): Forever after an ended 48-hour pass shows $13.49', /\$13\.49/.test(up) && !/\$10\.00/.test(up), up);
     } else {
       check('1.4 gifts: a running 48-hour pass keeps its old friend row only', gifts === 0 && oldRow === 1, gifts + '/' + oldRow);
+      const row = await page.textContent('#pwGuList [data-a="up"]');
+      check('1.4 (Danny Oct 12, B): Upgrade to Forever on a running 48-hour pass shows $13.49', /\$13\.49/.test(row), row);
     }
     await ctx.close();
   }

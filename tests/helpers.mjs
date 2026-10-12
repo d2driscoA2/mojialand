@@ -22,6 +22,7 @@ export function setEnv(extra = {}) {
     STRIPE_PRICE_PASS_30D: 'price_30d',
     STRIPE_PRICE_FOREVER: 'price_forever',
     STRIPE_PRICE_UPGRADE: 'price_upgrade',
+    STRIPE_PRICE_UPGRADE_48H: 'price_upgrade_48h',
     SUPABASE_URL: 'https://db.example.test',
     SUPABASE_SERVICE_KEY: 'service-key',
     EMAIL_API_KEY: 're_fake',

@@ -157,7 +157,7 @@ test('create-checkout: add and up check the pass', async () => {
   assert.equal((await createCheckout(ev({ plan: 'add', code }))).statusCode, 400);
   r = await createCheckout(ev({ plan: 'up', code }));
   assert.equal(r.statusCode, 200);
-  assert.deepEqual(stripe.calls.create.at(-1).line_items, [{ price: 'price_upgrade', quantity: 1 }]);
+  assert.deepEqual(stripe.calls.create.at(-1).line_items, [{ price: 'price_upgrade_48h', quantity: 1 }], 'Danny Oct 12 (B): Forever after a 48-hour pass stays $13.49');
   // ended 8 days ago: up refused
   db.passes[0].ends_at = new Date(Date.now() - 8 * 864e5).toISOString();
   assert.equal((await createCheckout(ev({ plan: 'up', code }))).statusCode, 400);
@@ -166,6 +166,7 @@ test('create-checkout: add and up check the pass', async () => {
   db.passes[0].kind = '30d'; db.passes[0].status = 'active'; db.passes[0].ends_at = new Date(Date.now() + 864e5).toISOString();
   assert.equal((await createCheckout(ev({ plan: 'add', code }))).statusCode, 200);
   assert.equal((await createCheckout(ev({ plan: 'up', code }))).statusCode, 200);
+  assert.deepEqual(stripe.calls.create.at(-1).line_items, [{ price: 'price_upgrade', quantity: 1 }], 'Forever after a 30-day pass is $10.00');
   db.rate.clear();
   for (const k of ['7d', 'holder', 'forever']) { db.passes[0].kind = k; assert.equal((await createCheckout(ev({ plan: 'up', code }))).statusCode, 400, k + ' cannot take the upgrade price'); }
   // from_gift rides along as yes or no only

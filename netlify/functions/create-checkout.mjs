@@ -9,7 +9,7 @@ import { LABEL_RE } from './_lib/analytics.mjs';
 
 const REQUIRED = [
   'STRIPE_SECRET_KEY', 'STRIPE_PUBLISHABLE_KEY',
-  'STRIPE_PRICE_PASS_30D', 'STRIPE_PRICE_FOREVER', 'STRIPE_PRICE_UPGRADE',
+  'STRIPE_PRICE_PASS_30D', 'STRIPE_PRICE_FOREVER', 'STRIPE_PRICE_UPGRADE', 'STRIPE_PRICE_UPGRADE_48H',
   'SUPABASE_URL', 'SUPABASE_SERVICE_KEY', 'RESTORE_CODE_PEPPER',
 ];
 const DAY = 864e5;
@@ -42,6 +42,7 @@ export const handler = async (event) => {
     // Release 1.4 #58: the device started from a gift (yes or no only, for the Gifts tab count).
     if (input.from_gift === true) metadata.from_gift = '1';
 
+    let priceEnv = PLANS[plan].env;
     if (plan === 'add' || plan === 'up') {
       const hash = typeof input.code === 'string' ? codeHash(process.env.RESTORE_CODE_PEPPER, input.code) : null;
       if (!hash) return fail(400, CANT_CHANGE);
@@ -58,13 +59,15 @@ export const handler = async (event) => {
       }
       if (!ok) return fail(400, CANT_CHANGE);
       metadata.pass_id = pass.id;
+      // Release 1.4 (Danny, October 12, choice B): Forever after an old 48-hour pass stays $13.49.
+      if (plan === 'up' && pass.kind === '48h') priceEnv = 'STRIPE_PRICE_UPGRADE_48H';
     }
 
     const stripe = getStripe();
     const params = {
       mode: 'payment',
       ui_mode: 'embedded_page',
-      line_items: [{ price: process.env[PLANS[plan].env], quantity: 1 }],
+      line_items: [{ price: process.env[priceEnv], quantity: 1 }],
       return_url: originFromHost(header(event, 'host')) + '/pass/done/?session_id={CHECKOUT_SESSION_ID}',
       payment_intent_data: { description: PLANS[plan].description, metadata },
       metadata,

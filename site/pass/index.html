@@ -69,6 +69,7 @@ var q=new URLSearchParams(location.search);
 var plan=q.get('plan')||'';
 var promo=(q.get('promo')||'').trim().slice(0,40);
 var checkout=null, busy=false;
+try{ var sp=JSON.parse(localStorage.getItem('mojia.pass')||'null'); if(sp&&sp.kind==='48h') PLANS.up[1]='$13.49'; }catch(e){} /* Release 1.4: Forever after an old 48-hour pass stays $13.49 */
 if(Object.prototype.hasOwnProperty.call(PLANS,plan)){ $('coItem').textContent=PLANS[plan][0]; $('coPrice').textContent=PLANS[plan][1]; }
 
 function readCode(){ try{ var p=JSON.parse(localStorage.getItem('mojia.pass')||'null'); return p&&typeof p.code==='string'?p.code:''; }catch(e){ return ''; } }

@@ -1132,7 +1132,7 @@ const SETTINGS={free_days:7,play_counts_off:0,new_free_paused:0,lite_home:0,firs
   try{ apply(JSON.parse(localStorage.getItem('mojia.settings')||'null')); }catch(e){}
   try{ if(SETTINGS.lite_home===1) document.documentElement.classList.add('lite'); }catch(e){}
   fetch('/.netlify/functions/settings',{credentials:'same-origin'}).then(r=>r.ok?r.json():null).then(o=>{ if(o){ try{ localStorage.setItem('mojia.settings',JSON.stringify(o)); }catch(e){} } }).catch(()=>{}); })();
-const PRICES={pass:4.99,add:4.99,life:14.99,up:10.00}; /* Release 1.4 #32: 30 days $4.99, Forever $14.99, upgrade $10.00. Shown only behind the parent gate; set in Stripe */
+const PRICES={pass:4.99,add:4.99,life:14.99,up:10.00,up48:13.49}; /* Release 1.4 #32: 30 days $4.99, Forever $14.99, upgrade $10.00. Shown only behind the parent gate; set in Stripe */
 /* Public key for pass tokens. The build fills it in; null means no pass is valid. A public key only checks, never signs. */
 const PASS_PUBLIC_JWK=/*__PASS_PUBLIC_JWK__*/null;
 var payHook=null; function onScreen(name){ if(payHook) payHook(name); }
@@ -4431,7 +4431,9 @@ const pay=(function(){
   /* pass screen */
   /* a Stripe promotion code from Have a code?: shown on the pass screen and passed to checkout */
   let promo=null;
-  function priceOf(key){ let v=PRICES[key]; if(promo){ if(promo.percent_off) v=v*(1-promo.percent_off/100); else if(promo.amount_off) v=v-promo.amount_off/100; } return Math.max(0,Math.round(v*100)/100); }
+  /* Release 1.4 (Danny, Oct 12, B): Forever after an old 48-hour pass stays $13.49; after a 30-day pass $10.00. */
+  function upKey(){ const p=getPass(); return p&&p.kind==='48h'?'up48':'up'; }
+  function priceOf(key){ let v=PRICES[key==='up'?upKey():key]; if(promo){ if(promo.percent_off) v=v*(1-promo.percent_off/100); else if(promo.amount_off) v=v-promo.amount_off/100; } return Math.max(0,Math.round(v*100)/100); }
   function card(key,title,small,tag,strike){ return '<button class="pw-plan" aria-pressed="'+(plan===key)+'" data-plan="'+key+'"><b>'+title+(tag?'<span class="pw-tag">best value</span>':'')+'</b><span class="price">'+(strike||promo?'<s>'+money(strike?PRICES.life:PRICES[key])+'</s>':'')+money(priceOf(key))+'</span><small>'+small+'</small></button>'; }
   function buildPlans(){ const p=getPass(); let html='', keys;
     const dsc=$('#pwDiscount'); if(promo){ dsc.textContent=promo.code+' applied: '+(promo.percent_off?promo.percent_off+'% off':'$'+(promo.amount_off/100).toFixed(2)+' off'); dsc.hidden=false; } else dsc.hidden=true;
@@ -4646,7 +4648,7 @@ const pay=(function(){
       const left=p.kind==='48h'?p.ends_at-Date.now():0, nk=(p.code||'')+':'+p.ends_at;
       if(gc&&gc.data&&gc.data.state==='ready'&&left>0&&left<=6*60*MIN&&store.get('giftNudge','')!==nk){ store.set('giftNudge',nk); nudge='<div class="pw-gunudge">🎁 Your pass ends soon. Know a family who would enjoy 48 free hours? Tap Give a friend below.</div>'; } }
     if(passOn(p)&&p.code) rows.push(['📲 Send code to another device','›','share']); /* a pass that arrived by address token has no code here; the code stays in the email */
-    if(passOn(p)&&paidTimed(p)) rows.push(['Add 30 days',money(PRICES.add),'add'],['Upgrade to Forever',money(PRICES.up),'up']);
+    if(passOn(p)&&paidTimed(p)) rows.push(['Add 30 days',money(PRICES.add),'add'],['Upgrade to Forever',money(PRICES[upKey()]),'up']);
     else if(!(passOn(p)&&p.kind==='forever')) rows.push(['Get a pass',money(PRICES.life)+' or '+money(PRICES.pass),'buy']);
     rows.push(['🖼️ Save drawings to Photos','›','photos'],['Have a code?','›','code'],['Contact us','›','help']);
     $('#pwGuList').innerHTML=nudge+rows.map(r=>'<button class="pw-gurow'+(r[2]==='share'?' share':'')+'" data-a="'+r[2]+'"><span>'+r[0]+'</span><span>'+r[1]+'</span></button>').join('');
