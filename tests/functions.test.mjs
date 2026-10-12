@@ -655,9 +655,9 @@ test('#2 gift codes by batch: labels, campaigns, tabs, sort, batch rows, notes',
   assert.ok(d.passes.length >= 1 && d.passes.every((p) => p.source === 'stripe'));
   [st, d] = await A('passes.list', { tab: 'active', sort: 'on' });
   assert.ok(d.passes.every((p) => p.status === 'active'));
-  assert.ok(db.calls.at(-1).includes('order=starts_at.desc.nullslast'), 'Recently turned on sorts by start');
+  assert.ok(db.calls.slice(-2).some((c) => c.includes('order=starts_at.desc.nullslast')), 'Recently turned on sorts by start');
   [st, d] = await A('passes.list', { tab: 'all', sort: 'ends' });
-  assert.ok(db.calls.at(-1).includes('order=ends_at.asc.nullslast'));
+  assert.ok(db.calls.slice(-2).some((c) => c.includes('order=ends_at.asc.nullslast')));
   [st, d] = await A('passes.list', { q: 'fair-oct' });
   assert.equal(d.passes.length, 6, 'search finds a campaign by label');
   [st, d] = await A('passes.list', { batch: 'in-fair-oct', tab: 'gifts' });
@@ -1329,4 +1329,26 @@ test('routing: a /api/ path only works on default-export functions (Netlify igno
   }
   const play = fs.readFileSync(new URL('../site/play/index.html', import.meta.url), 'utf8');
   for (const [, p] of play.matchAll(/'(\/api\/[a-z-]+)'/g)) assert.ok(routed[p], p + ' is called by the game but no function serves it');
+});
+
+test('1.4 (Danny Oct 12, A): admin Refund returns every payment on a pass and the row shows the total paid', async () => {
+  const cookie = await adminSignIn();
+  const A = async (action, body = {}) => { const r = await adminApi(withCookie({ action, ...body }, cookie)); return [r.statusCode, JSON.parse(r.body)]; };
+  // first purchase: 30 days for $4.99
+  const s1 = { ...paidSession('cs_test_ref1', 'pass'), amount_total: 499 };
+  stripe.sessions.set(s1.id, s1);
+  const g1 = await grantPass(s1);
+  const id = g1.pass.id;
+  // upgrade to Forever for $10.00 on the same pass
+  const s2 = { ...paidSession('cs_test_ref2', 'up', { pass_id: id }), amount_total: 1000 };
+  stripe.sessions.set(s2.id, s2);
+  await grantPass(s2);
+  assert.deepEqual(db.granted_checkouts.find((x) => x.session_id === s2.id), { session_id: s2.id, pass_id: id, amount_cents: 1000 }, 'the upgrade remembers its pass and amount');
+  assert.equal(Object.keys(db.granted_checkouts.find((x) => x.session_id === s1.id)).join(), 'session_id', 'the first purchase record stays checkout ID only');
+  let [st, d] = await A('passes.list', { q: db.passes[0].code_last4 });
+  assert.equal(d.passes[0].paid_cents, 1499); assert.equal(d.passes[0].payments, 2);
+  [st, d] = await A('passes.refund', { id });
+  assert.equal(st, 200); assert.equal(d.pass.status, 'refunded');
+  assert.deepEqual(stripe.calls.refunds, [{ payment_intent: 'pi_cs_test_ref1' }, { payment_intent: 'pi_cs_test_ref2' }]);
+  assert.match(d.pass.note, /2 payments, \$14\.99/);
 });

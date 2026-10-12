@@ -333,7 +333,7 @@ function tellResult(item,t){ if(!t) return; const box=document.createElement('di
 function passItem(p){ const st=p.status; const voided=st==='ended'&&!p.starts_at; const ends=p.kind==='forever'?'Forever':(p.ends_at?'Ends '+fmt(p.ends_at):'Not started');
   const mail=!!(p.email&&p.source==='stripe'&&p.stripe_session_id);
   return '<div class="item" data-id="'+esc(p.id)+'"'+(mail?' data-mail="'+esc(maskMail(p.email))+'"':'')+'><div class="top"><b>'+esc(p.prefix)+'-…'+esc(p.code_last4)+' · '+(KINDS_SHORT[p.kind]||esc(p.kind))+'</b><span class="pill '+esc(st)+'">'+(voided?'ended unused':esc(st))+'</span></div>'
-    +'<div class="meta">'+esc(p.email||'(no email)')+' · '+esc(p.source)+(p.amount_cents?' · '+money(p.amount_cents):'')+' · made '+fmt(p.created_at)+'</div>'
+    +'<div class="meta">'+esc(p.email||'(no email)')+' · '+esc(p.source)+(p.paid_cents?' · '+money(p.paid_cents)+(p.payments>1?' in '+p.payments+' payments':''):p.amount_cents?' · '+money(p.amount_cents):'')+' · made '+fmt(p.created_at)+'</div>'
     +'<div class="meta">'+esc(ends)+(p.use_by&&st==='unused'?' · use by '+fmt(p.use_by):'')+(typeof p.devices==='number'?' · '+p.devices+' of '+p.device_limit+' devices':'')+(p.stripe_session_id?' · '+esc(p.stripe_session_id):'')+'</div>'
     +(p.batch?'<div class="meta">Batch: '+esc(p.batch)+'</div>':'')+(p.note?'<div class="meta">Note: '+esc(p.note)+'</div>':'')
     +'<div class="acts">'+(p.kind!=='forever'&&!voided?'<button class="secondary" data-act="passes.add30">Add 30 days</button><button class="secondary" data-act="passes.forever">Make Forever</button>':'')
@@ -385,7 +385,7 @@ $('pList').addEventListener('click',async e=>{ const cp=e.target.closest('[data-
   let extra={id:id};
   if(act==='note'){ const cur=(item.querySelector('.meta:last-of-type')||{}).textContent||''; const n=prompt('Note for this pass:',/^Note: /.test(cur)?cur.slice(6):''); if(n===null) return; extra.note=n; }
   else if(act==='passes.end'&&!confirm('End this pass now?')) return;
-  else if(act==='passes.refund'&&!confirm('Refund the full '+(item.textContent.match(/\$\d+\.\d\d/)||['amount'])[0]+' to the card and end this pass? Add 30 days and upgrade payments are separate; refund those in Stripe.')) return;
+  else if(act==='passes.refund'&&!confirm('Refund '+(item.textContent.match(/\$\d+\.\d\d/)||['the amount'])[0]+' to the card and end this pass? This returns every payment on the pass, including Add 30 days and upgrades.')) return;
   else if(act==='passes.devices_reset'&&!confirm('Forget every device on this pass? The family taps the email button or types the code again on each device.')) return;
   else if(act==='passes.email'){ const t=prompt('Send the code email to which address? Use the parent\'s real email if the one on file is a Hide My Email address.',((item.querySelector('.meta')||{}).textContent||'').split(' · ')[0].replace('(no email)','')); if(t===null) return; extra.to=t.trim(); }
   if(act==='codes.replace'){ if(made){ $('pErr').textContent='Finish the open code card under Codes first (Done).'; return; }

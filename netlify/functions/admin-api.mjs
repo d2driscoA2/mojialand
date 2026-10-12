@@ -27,7 +27,26 @@ async function passWithDevices(id) {
   if (!pass) return null;
   const d = await rest('GET', 'devices?pass_id=eq.' + enc(id) + '&select=id');
   pass.devices = Array.isArray(d.data) ? d.data.length : 0;
+  await addPayments([pass]);
   return pass;
+}
+
+// Release 1.4 (Danny, October 12): add and upgrade payments on a pass, for the total paid and for refunds.
+async function extraCheckouts(ids) {
+  const ok = ids.filter((x) => UUID.test(String(x || '')));
+  if (!ok.length) return [];
+  try {
+    const { data } = await rest('GET', 'granted_checkouts?pass_id=in.(' + ok.join(',') + ')&select=session_id,pass_id,amount_cents');
+    return Array.isArray(data) ? data : [];
+  } catch { return []; } // database not updated yet: first payment only
+}
+async function addPayments(passes) {
+  const extra = await extraCheckouts(passes.map((p) => p.id));
+  for (const p of passes) {
+    const mine = extra.filter((x) => x.pass_id === p.id && x.session_id !== p.stripe_session_id);
+    p.payments = 1 + mine.length;
+    p.paid_cents = (Number(p.amount_cents) || 0) + mine.reduce((t, x) => t + (Number(x.amount_cents) || 0), 0);
+  }
 }
 
 // Paid codes come from the Stripe session ID, so the admin can show or re-send
@@ -120,7 +139,9 @@ const actions = {
     if (batch) filter += '&batch=eq.' + enc(cleanBatch(batch));
     const order = PASS_SORTS[sort] || PASS_SORTS.made;
     const { data } = await rest('GET', 'passes?select=' + PASS_FIELDS + filter + '&order=' + order + '&limit=100');
-    return { passes: Array.isArray(data) ? data : [] };
+    const passes = Array.isArray(data) ? data : [];
+    await addPayments(passes.filter((p) => p.source === 'stripe'));
+    return { passes };
   },
   // One row per batch: codes made, codes used, percent used, days from making
   // to use, passes bought after (campaign counts). Never names or devices.
@@ -213,11 +234,23 @@ const actions = {
     if (!p) throw new Error('pass not found');
     if (p.source !== 'stripe' || !p.stripe_session_id) throw new Error('this pass was not paid through Stripe');
     if (p.status === 'refunded') throw new Error('already refunded');
-    const session = await getStripe().checkout.sessions.retrieve(p.stripe_session_id);
-    const pi = session && session.payment_intent;
-    if (!pi) throw new Error('no payment to refund');
-    await getStripe().refunds.create({ payment_intent: typeof pi === 'string' ? pi : pi.id });
-    await patchPass('id=eq.' + enc(id), { status: 'refunded', note: ((p.note ? p.note + ' · ' : '') + 'refunded from admin ' + new Date().toISOString().slice(0, 10)).slice(0, 500) });
+    // Release 1.4 (Danny, October 12): refund every payment on the pass (first purchase, adds, upgrade).
+    const sessions = [p.stripe_session_id, ...(await extraCheckouts([id])).map((x) => x.session_id).filter((s) => s && s !== p.stripe_session_id)];
+    let refunded = 0, cents = 0;
+    for (const sid of sessions) {
+      const session = await getStripe().checkout.sessions.retrieve(sid);
+      const pi = session && session.payment_intent;
+      if (!pi) continue; // a free checkout (100% off code) has no payment
+      try {
+        await getStripe().refunds.create({ payment_intent: typeof pi === 'string' ? pi : pi.id });
+        refunded++; cents += Number(session.amount_total) || 0;
+      } catch (e) {
+        if (!/already been refunded|charge_already_refunded/i.test(String((e && (e.code || e.message)) || ''))) throw e;
+      }
+    }
+    if (!refunded && sessions.length === 1) throw new Error('no payment to refund');
+    const what = refunded > 1 ? refunded + ' payments, $' + (cents / 100).toFixed(2) : '$' + (cents / 100).toFixed(2);
+    await patchPass('id=eq.' + enc(id), { status: 'refunded', note: ((p.note ? p.note + ' · ' : '') + 'refunded from admin ' + new Date().toISOString().slice(0, 10) + ' (' + what + ')').slice(0, 500) });
     return { pass: await passWithDevices(id) };
   },
 

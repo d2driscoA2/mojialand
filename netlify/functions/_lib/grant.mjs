@@ -19,11 +19,12 @@ async function wasGranted(sessionId) {
   const { data } = await rest('GET', 'granted_checkouts?session_id=eq.' + encodeURIComponent(sessionId) + '&select=session_id&limit=1');
   return Array.isArray(data) && data.length > 0;
 }
-async function markGranted(sessionId) {
-  await rest('POST', 'granted_checkouts?on_conflict=session_id', {
-    body: { session_id: sessionId },
-    prefer: 'resolution=ignore-duplicates,return=minimal',
-  });
+async function markGranted(sessionId, extra) {
+  const write = (body) => rest('POST', 'granted_checkouts?on_conflict=session_id', { body, prefer: 'resolution=ignore-duplicates,return=minimal' });
+  if (!extra) return write({ session_id: sessionId });
+  // Release 1.4: add and upgrade checkouts remember their pass and amount so a refund returns every payment.
+  // If the database has not been updated yet, the plain record still keeps the checkout from granting twice.
+  try { await write({ session_id: sessionId, ...extra }); } catch { await write({ session_id: sessionId }); }
 }
 
 // Add and upgrade keep the original code. Paid codes come from the first
@@ -99,7 +100,7 @@ export async function grantPass(session) {
       }
       const rows = await patchPass('id=eq.' + encodeURIComponent(passId), patch);
       if (!rows.length) throw new GrantError('pass update failed');
-      await markGranted(session.id);
+      await markGranted(session.id, { pass_id: passId, amount_cents: Number.isFinite(Number(session.amount_total)) ? Number(session.amount_total) : null });
       return { plan, pass: rows[0], code: sameCode(pass, pepper) };
     } catch (e) {
       await releaseEvent(guardId); // let a retry apply it
