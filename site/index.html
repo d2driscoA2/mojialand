@@ -156,6 +156,8 @@ section{padding-block:72px}
 .gcell .win{height:130px;flex:none;border-radius:18px;background:rgba(255,255,255,.92);overflow:hidden;display:flex;align-items:center;justify-content:center}
 .gcell .hrow{display:flex;align-items:center;gap:8px;padding:0 4px}
 .gcell .gname{flex:1;min-width:0;font-size:24px}
+/* New! chips on the newest games (Danny, October 12): come off in the release that adds the next new game. */
+.gcell .hrow .gchip{align-self:center;flex:none}
 .gcell .tag{padding:0 4px;font-size:14px;font-weight:900}
 .gcell .gdesc{padding:0 4px;font-size:15px}
 .gcell .skill{margin-top:auto;padding:6px 4px 0;font-size:12px;letter-spacing:.16em;text-transform:uppercase;font-weight:900;opacity:.85}
@@ -369,7 +371,7 @@ footer .fine.credit a{color:#fff;text-decoration:underline;text-underline-offset
     <div class="tagrow" aria-label="Play, create, explore, together">PLAY <b class="pk">•</b> CREATE <b class="yl">•</b> EXPLORE <b class="bl">•</b> TOGETHER</div>
    </div>
    <div class="stage">
-    <div class="float-f" aria-hidden="true"><span class="em ff" style="left:0%;top:10%;font-size:15cqw;--r:-10deg">🦄</span><span class="em ff" style="right:0%;top:4%;font-size:14cqw;animation-delay:-1.5s;--r:8deg"><i class="mir">🦈</i></span><span class="em ff" style="left:3%;bottom:14%;font-size:12cqw;animation-delay:-2.2s">🐶</span><span class="em ff" style="right:3%;bottom:22%;font-size:12cqw;animation-delay:-.8s;--r:10deg">🍕</span></div><button class="phone" type="button" data-play aria-label="Try a game in Mojialand"><img src="img/app-home.webp?v=2" width="780" height="1688" alt="The Mojialand home screen: emoji stamped on a canvas, an emoji tray, the new Draw game, and the Pattern and Bounce game tiles"></button>
+    <div class="float-f" aria-hidden="true"><span class="em ff" style="left:0%;top:10%;font-size:15cqw;--r:-10deg">🦄</span><span class="em ff" style="right:0%;top:4%;font-size:14cqw;animation-delay:-1.5s;--r:8deg"><i class="mir">🦈</i></span><span class="em ff" style="left:3%;bottom:14%;font-size:12cqw;animation-delay:-2.2s">🐶</span><span class="em ff" style="right:3%;bottom:22%;font-size:12cqw;animation-delay:-.8s;--r:10deg">🍕</span></div><button class="phone" type="button" data-play aria-label="Try a game in Mojialand"><img src="img/app-home.webp?v=3" width="780" height="1688" alt="The Mojialand home screen: emoji stamped on a canvas, an emoji tray, the new Share Party game, and the Pattern and Bounce game tiles"></button>
    </div>
   </div>
  </section>
@@ -425,14 +427,14 @@ footer .fine.credit a{color:#fff;text-decoration:underline;text-underline-offset
     </article>
     <article class="gtile gcell t-share">
      <span class="win" aria-hidden="true"><div style="display:flex;align-items:center;gap:4px;font-size:28px;line-height:1"><span class="em hs-pi">🦄</span><span class="em" style="font-size:34px">🍕</span><span class="em hs-pi hs-pi3">🐶</span></div></span>
-     <span class="hrow"><span class="gname">Share Party</span></span>
+     <span class="hrow"><span class="gname">Share Party</span><span class="gchip">New!</span></span>
      <span class="tag">Fair shares for all</span>
      <span class="gdesc">Swipe to cut the food, then give every friend the same share. Nine levels of fair-share puzzles.</span>
      <span class="skill">Fair sharing</span>
     </article>
     <article class="gtile gcell t-feelings">
      <span class="win" aria-hidden="true"><div style="display:flex;align-items:center;gap:4px;font-size:28px;line-height:1"><span class="em hs-pi">😀</span><span class="em hs-pi hs-pi2">😢</span><span class="em hs-pi hs-pi3">😮</span></div></span>
-     <span class="hrow"><span class="gname">Feelings Faces</span></span>
+     <span class="hrow"><span class="gname">Feelings Faces</span><span class="gchip">New!</span></span>
      <span class="tag">How do they feel?</span>
      <span class="gdesc">Watch a little picture story, tap the face that shows how the friend feels, then help them feel better. Twenty friends.</span>
      <span class="skill">Feelings</span>
