@@ -6,6 +6,7 @@ import { json, fail, readJson, clientIp, header, originFromHost } from './_lib/h
 import { rateHit, getPassBy, safeErr } from './_lib/db.mjs';
 import { verifyToken } from './_lib/token.mjs';
 import { friendPass } from './_lib/friend.mjs';
+import { refuseBlocked } from './_lib/blocked.mjs';
 
 const REQUIRED = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY', 'RESTORE_CODE_PEPPER', 'PASS_SIGNING_PUBLIC_JWK'];
 const UUID = /^[0-9a-f-]{36}$/i;
@@ -14,6 +15,9 @@ export const handler = async (event) => {
   const stop = guard('friend-code', REQUIRED);
   if (stop) return stop;
   if (event.httpMethod !== 'POST') return fail(405, 'Use POST.');
+  // Release 1.5 #66: blocked countries get 451 before anything else runs.
+  const blocked = await refuseBlocked(event, 'friend-code');
+  if (blocked) return blocked;
   const input = readJson(event) || {};
   let jwk;
   try { jwk = JSON.parse(process.env.PASS_SIGNING_PUBLIC_JWK); } catch { return fail(500, 'Not set up.'); }

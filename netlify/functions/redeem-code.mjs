@@ -12,6 +12,7 @@ import { makeTokenPayload, signToken } from './_lib/token.mjs';
 import { getStripe } from './_lib/stripe.mjs';
 import { campaignHit, LABEL_RE } from './_lib/analytics.mjs';
 import { notify } from './_lib/push.mjs';
+import { refuseBlocked } from './_lib/blocked.mjs';
 
 const REQUIRED = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY', 'RESTORE_CODE_PEPPER', 'PASS_SIGNING_PRIVATE_KEY', 'STRIPE_SECRET_KEY'];
 const PROMO_RE = /^[A-Za-z0-9_-]{2,40}$/;
@@ -21,6 +22,9 @@ export const handler = async (event) => {
   const stop = guard('redeem-code', REQUIRED);
   if (stop) return stop;
   if (event.httpMethod !== 'POST') return fail(405, 'Use POST.');
+  // Release 1.5 #66: blocked countries get 451 before anything else runs.
+  const blocked = await refuseBlocked(event, 'redeem-code');
+  if (blocked) return blocked;
 
   const input = readJson(event);
   const raw = String((input && input.code) || '').trim();

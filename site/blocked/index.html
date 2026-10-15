@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FFF8E8">
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/svg+xml" href="/logo/favicon.svg">
+<title>Not available</title>
+<!-- Release 1.5 #66: shown with status 451 in blocked countries and regions. No links, no prices. -->
+<style>
+@font-face{font-family:'Nunito';font-style:normal;font-weight:700 900;font-display:swap;src:url('/fonts/nunito-latin.woff2') format('woff2')}
+body{margin:0;min-height:100vh;background:#FFF8E8;color:#30254A;font:800 16px/1.45 Nunito,ui-rounded,system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px 16px;box-sizing:border-box;text-align:center}
+img{width:200px;height:auto}
+h1{margin:0;font-weight:900;font-size:24px;line-height:1.2;color:#7138D1;max-width:22ch}
+</style>
+</head>
+<body>
+<img src="/logo/logo-3d.png" alt="" width="200" height="66">
+<h1>Mojialand is not available in your country.</h1>
+<script>
+(function(){ try { if (sessionStorage.getItem('mojia.blk')) return; sessionStorage.setItem('mojia.blk', '1'); } catch (e) {}
+  try { fetch('/api/ping', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"e":"blocked"}', keepalive: true }).catch(function(){}); } catch (e) {}
+})();
+</script>
+</body>
+</html>

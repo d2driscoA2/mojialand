@@ -10,6 +10,7 @@ import { guard, envName } from './_lib/env.mjs';
 import { json, fail, readJson, clientIp } from './_lib/http.mjs';
 import { rateHit, getPassBy, addDevice, safeErr, DEVICE_RE } from './_lib/db.mjs';
 import { verifyToken, makeTokenPayload, signToken } from './_lib/token.mjs';
+import { refuseBlocked } from './_lib/blocked.mjs';
 
 const REQUIRED = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY', 'RESTORE_CODE_PEPPER', 'PASS_SIGNING_PRIVATE_KEY', 'PASS_SIGNING_PUBLIC_JWK'];
 const UUID = /^[0-9a-f-]{36}$/i;
@@ -18,6 +19,9 @@ export const handler = async (event) => {
   const stop = guard('pass-check', REQUIRED);
   if (stop) return stop;
   if (event.httpMethod !== 'POST') return fail(405, 'Use POST.');
+  // Release 1.5 #66: blocked countries get 451 before anything else runs.
+  const blocked = await refuseBlocked(event, 'pass-check');
+  if (blocked) return blocked;
   const input = readJson(event) || {};
   let jwk;
   try { jwk = JSON.parse(process.env.PASS_SIGNING_PUBLIC_JWK); } catch { return fail(500, 'Not set up.'); }

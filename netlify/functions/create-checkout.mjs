@@ -6,6 +6,7 @@ import { rateHit, getPassBy, getSetting } from './_lib/db.mjs';
 import { codeHash } from './_lib/codes.mjs';
 import { getStripe, PLANS } from './_lib/stripe.mjs';
 import { LABEL_RE } from './_lib/analytics.mjs';
+import { refuseBlocked } from './_lib/blocked.mjs';
 
 const REQUIRED = [
   'STRIPE_SECRET_KEY', 'STRIPE_PUBLISHABLE_KEY',
@@ -21,6 +22,9 @@ export const handler = async (event) => {
   const stop = guard('create-checkout', REQUIRED);
   if (stop) return stop;
   if (event.httpMethod !== 'POST') return fail(405, 'Use POST.');
+  // Release 1.5 #66: blocked countries get 451 before anything else runs.
+  const blocked = await refuseBlocked(event, 'create-checkout');
+  if (blocked) return blocked;
 
   const input = readJson(event);
   const plan = input && input.plan;

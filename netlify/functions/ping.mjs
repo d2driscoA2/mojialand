@@ -5,6 +5,7 @@
 import { checkEnv } from './_lib/env.mjs';
 import { recordPing } from './_lib/analytics.mjs';
 import { safeErr, switchOn } from './_lib/db.mjs';
+import { blockedPlace, recordBlocked } from './_lib/blocked.mjs';
 
 const REQUIRED = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY'];
 const HEADERS = { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' };
@@ -16,8 +17,6 @@ export default async (req, context) => {
     console.error('ping: refused to start (' + reason + ')');
     return new Response(null, { status: 500, headers: HEADERS });
   }
-  // Release 1.4 #14: play counts off during a traffic spike (no database write).
-  if (await switchOn('play_counts_off')) return new Response(null, { status: 204, headers: HEADERS });
   let body = null;
   try {
     const text = await req.text();
@@ -26,6 +25,16 @@ export default async (req, context) => {
     body = null;
   }
   const ip = (context && context.ip) || req.headers.get('x-nf-client-connection-ip') || 'unknown';
+  // Release 1.5 #66: a blocked country or region. The blocked page sends {e:"blocked"} once per open
+  // (counted as a page open, answers 204); any other ping from there counts as a blocked call (451).
+  const place = blockedPlace(context && context.geo, req.headers.get('cookie'));
+  if (place) {
+    const isPage = !!(body && body.e === 'blocked');
+    await recordBlocked(place, isPage ? 'page' : 'ping', ip);
+    return new Response(null, { status: isPage ? 204 : 451, headers: HEADERS });
+  }
+  // Release 1.4 #14: play counts off during a traffic spike (no database write).
+  if (await switchOn('play_counts_off')) return new Response(null, { status: 204, headers: HEADERS });
   try {
     const status = await recordPing(body, context && context.geo, ip);
     return new Response(null, { status, headers: HEADERS });

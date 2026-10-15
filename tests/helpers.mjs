@@ -115,6 +115,9 @@ export function fakeDb() {
     }
     if (table === 'rpc/alert_add') { db.alerts.push(body); return reply(200, 1); }
     if (table === 'rpc/analytics_add') { db.analytics.push(body); return reply(204); }
+    // Release 1.5 #66: blocked visit counts.
+    if (table === 'rpc/blocked_add') { (db.blocked = db.blocked || []).push(body); return reply(204); }
+    if (table === 'rpc/blocked_stats') { (db.blockedCalls = db.blockedCalls || []).push(body); if (db.blockedStatsMissing) return reply(404, { message: 'no function' }); return reply(200, db.rpcData.blocked_stats || []); }
     if (table === 'rpc/campaign_add') {
       const ok = db.campaigns.some((c) => c.label === body.p_label && c.active !== false);
       if (ok) db.campaignEvents.push(body);

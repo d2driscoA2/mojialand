@@ -8,6 +8,7 @@ import { rateHit, addDevice, safeErr, DEVICE_RE } from './_lib/db.mjs';
 import { grantPass, isPaid } from './_lib/grant.mjs';
 import { getStripe } from './_lib/stripe.mjs';
 import { makeTokenPayload, signToken } from './_lib/token.mjs';
+import { refuseBlocked } from './_lib/blocked.mjs';
 
 const REQUIRED = [
   'STRIPE_SECRET_KEY', 'STRIPE_PUBLISHABLE_KEY', 'SUPABASE_URL', 'SUPABASE_SERVICE_KEY',
@@ -24,6 +25,9 @@ export const handler = async (event) => {
   const stop = guard('confirm-session', REQUIRED);
   if (stop) return stop;
   if (event.httpMethod !== 'POST') return fail(405, 'Use POST.');
+  // Release 1.5 #66: blocked countries get 451 before anything else runs.
+  const blocked = await refuseBlocked(event, 'confirm-session');
+  if (blocked) return blocked;
 
   const input = readJson(event);
   const sid = input && input.session_id;

@@ -7,6 +7,7 @@ import { rateHit, addSupportMessage, getPassBy, safeErr } from './_lib/db.mjs';
 import { normalizeCode, codeHash, codeLast4 } from './_lib/codes.mjs';
 import { sendEmail } from './_lib/email.mjs';
 import { switchOn } from './_lib/db.mjs';
+import { refuseBlocked } from './_lib/blocked.mjs';
 
 const REQUIRED = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY', 'RESTORE_CODE_PEPPER'];
 const TOPICS = { pass: 'My pass', broken: 'Something is broken', refund: 'Refund', other: 'Other' };
@@ -18,6 +19,9 @@ export const handler = async (event) => {
   const stop = guard('contact', REQUIRED);
   if (stop) return stop;
   if (event.httpMethod !== 'POST') return fail(405, 'Use POST.');
+  // Release 1.5 #66: blocked countries get 451 before anything else runs.
+  const blocked = await refuseBlocked(event, 'contact');
+  if (blocked) return blocked;
 
   const input = readJson(event);
   if (!input) return fail(400, 'Please fill in the form.');

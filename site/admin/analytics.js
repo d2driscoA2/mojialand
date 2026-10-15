@@ -109,6 +109,7 @@
       <div class="anCard"><h3>Top places by plays</h3><div class="anTable" id="anTPlays"></div></div>
       <div class="anCard"><h3>Top places by minutes played</h3><div class="anTable" id="anTMins"></div></div>
     </div>
+    <div class="anCard" id="anBlockedCard"><h3>Visits from blocked countries</h3><p class="anMuted" style="margin:0 0 8px">People in these countries see the not available page. Page opens count each visit to that page; server calls count refused payments, codes and pass checks.</p><div class="anTable" id="anBlocked"></div></div>
     <div class="anPrivacy">${shield}<span><b>Totals by the hour, never by the person.</b> A city shows on days with 5 or more plays. Smaller towns add up to their county, and a county shows once its total passes 5. The rest rolls into the state. Minutes come from ranges (under 2, 2 to 5, 5 to 15, 15 plus), so no single play is timed. Mojialand counts plays, not people.</span></div>
   </section>
 
@@ -538,6 +539,14 @@
     $('anTPlays').innerHTML = tp.length ? `<table><thead><tr><th>Place</th><th>Top game</th><th class="r">Plays</th></tr></thead><tbody>${tp.map((c) => { const g = GAMES[top(c.byGame)]; return `<tr><td>${esc(c.name)}</td><td>${g.e} ${g.n}</td><td class="r">${fmtN(c.total)}</td></tr>`; }).join('')}</tbody></table>` : '<div class="anEmpty">No place passed 5 plays in a day yet.</div>';
     const tm = all.slice().sort((a, b) => b.minutes - a.minutes).slice(0, 8);
     $('anTMins').innerHTML = tm.length ? `<table><thead><tr><th>Place</th><th class="r">Minutes</th><th class="r">Per play</th></tr></thead><tbody>${tm.map((c) => `<tr><td>${esc(c.name)}</td><td class="r">${fmtN(c.minutes)}</td><td class="r">${(c.minutes / Math.max(1, c.total)).toFixed(1)}</td></tr>`).join('')}</tbody></table>` : '<div class="anEmpty">No place passed 5 plays in a day yet.</div>';
+    // Release 1.5 #66: visits from blocked countries and regions.
+    const BREG = { 'UA-43': 'Crimea', 'UA-40': 'Sevastopol', 'UA-14': 'Donetsk', 'UA-09': 'Luhansk' };
+    let regionName = (c) => c;
+    try { const dn = new Intl.DisplayNames(['en'], { type: 'region' }); regionName = (c) => dn.of(c) || c; } catch (e) { /* codes only */ }
+    const bl2 = Array.isArray(H.blocked) ? H.blocked : null;
+    $('anBlocked').innerHTML = bl2 === null ? '<div class="anEmpty">Blocked visit counts are not set up yet.</div>'
+      : bl2.length ? `<table><thead><tr><th>Country</th><th class="r">Page opens</th><th class="r">Server calls</th></tr></thead><tbody>${bl2.map((b) => `<tr><td>${esc(b.region ? (BREG[b.region] || b.region) + ' (' + regionName(b.country) + ')' : regionName(b.country))}</td><td class="r">${fmtN(b.page)}</td><td class="r">${fmtN(b.calls)}</td></tr>`).join('')}</tbody></table>`
+      : '<div class="anEmpty">No visits from blocked countries in this range.</div>';
     $('anHistSub').textContent = (range === 1 ? 'Today so far.' : 'The ' + RANGE_LABEL[range] + '.') + ' Bubble size shows plays. Color shows the favorite game in that place.' + (H.other ? ' ' + fmtN(H.other) + ' plays came from outside the US or an unnamed place.' : '');
   }
   // groups daily values into 7-day weeks, ending with the latest day

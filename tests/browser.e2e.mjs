@@ -83,6 +83,13 @@ function serve(site) {
     let p = decodeURIComponent(u.pathname);
     let f = path.join(site, p);
     if (!f.startsWith(site)) { res.writeHead(403).end(); return; }
+    // Release 1.5 #66: stands in for netlify/edge-functions/geo-block.js (same page paths, the blocked page, status 451).
+    if (globalThis.GEO_BLOCKED && (/^\/(index\.html)?$|^\/play\/(index\.html)?$|^\/pass\/(done\/)?(index\.html)?$|^\/[rg]\//.test(p))) {
+      const bh = {}; for (const b of blocks) if (matches(b.path, '/blocked/')) Object.assign(bh, b.h);
+      if (bh['Content-Security-Policy']) bh['Content-Security-Policy'] = bh['Content-Security-Policy'].replace(/;\s*upgrade-insecure-requests/, '');
+      delete bh['Strict-Transport-Security']; bh['Content-Type'] = 'text/html; charset=utf-8'; bh['Cache-Control'] = 'no-store';
+      res.writeHead(451, bh).end(fs.readFileSync(path.join(site, 'blocked', 'index.html'))); return;
+    }
     if (globalThis.HOST_PAUSED && p === '/play/') { res.writeHead(503, { 'Content-Type': 'text/html' }).end('<html><body>Site not available</body></html>'); return; }
     if (/^\/r\/[^/]+$/.test(p)) f = path.join(site, 'r', 'index.html'); // _redirects: /r/*  /r/index.html  200
     if (/^\/g\/[^/]+$/.test(p)) f = path.join(site, 'g', 'index.html'); // _redirects: /g/*  /g/index.html  200
@@ -2350,6 +2357,34 @@ for (const [st, title] of [[403, 'This pass is on 5 devices'], [410, 'This link 
   globalThis.HOST_PAUSED = false;
   const paused = await page.evaluate(() => ({ b: (document.querySelector('meta[name="mojia-build"]') || {}).content, txt: /Site not available/.test(document.body.textContent) })).catch(() => ({}));
   check('1.4 #14 sw: host paused (503), the game opens from the saved copy', paused.b === bid && !paused.txt, JSON.stringify(paused));
+  // Release 1.5 #66: a family in a blocked country with a saved copy sees the blocked page, never the saved game
+  globalThis.GEO_BLOCKED = true;
+  await page.goto(base + '/play/').catch(() => null);
+  globalThis.GEO_BLOCKED = false;
+  const blk = await page.evaluate(() => ({ b: (document.querySelector('meta[name="mojia-build"]') || {}).content || '', t: document.body.textContent })).catch(() => ({}));
+  check('1.5 #66 sw: a 451 shows the blocked page, not the saved game', !blk.b && /not available in your country/.test(blk.t || ''), JSON.stringify(blk).slice(0, 160));
+  await ctx.close();
+}
+
+// Release 1.5 #66: the blocked page in blocked countries and regions
+{
+  const { ctx, page } = await newPage();
+  const pings = [];
+  await page.route('**/api/ping', (r) => { pings.push(r.request().postData()); r.fulfill({ status: 204 }); });
+  globalThis.GEO_BLOCKED = true;
+  const statuses = [];
+  for (const p of ['/', '/play/', '/pass/', '/pass/done/', '/r/ABCD', '/g/ABCD']) { const r = await page.goto(base + p).catch(() => null); statuses.push(r ? r.status() : 0); }
+  await page.waitForTimeout(300);
+  const info = await page.evaluate(() => ({ t: document.body.innerText.trim(), links: document.querySelectorAll('a,button,form,input').length, h: document.documentElement.innerHTML }));
+  check('1.5 #66 every page answers 451 with the blocked page', statuses.every((x) => x === 451), statuses.join(','));
+  check('1.5 #66 blocked page: the approved line only, no links, buttons or prices', info.t === 'Mojialand is not available in your country.' && info.links === 0 && !/\$|price|pass/i.test(info.t), info.t);
+  check('1.5 #66 blocked page: no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
+  check('1.5 #66 blocked page: one count per visit, {e:"blocked"} and nothing else', pings.length === 1 && pings[0] === '{"e":"blocked"}', JSON.stringify(pings));
+  globalThis.GEO_BLOCKED = false;
+  const ok = await page.goto(base + '/play/');
+  check('1.5 #66 outside the list the game opens as before', ok.status() === 200);
+  const hdrs = fs.readFileSync(path.join(site, '_headers'), 'utf8');
+  check('1.5 #66 headers: blocked page never cached, never indexed', /\/blocked\/\*\n  Content-Security-Policy: [^\n]*connect-src 'self'[^\n]*\n  X-Frame-Options: DENY\n  Cache-Control: no-store\n  X-Robots-Tag: noindex/.test(hdrs));
   await ctx.close();
 }
 

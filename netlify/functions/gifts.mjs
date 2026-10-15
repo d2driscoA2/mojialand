@@ -15,6 +15,7 @@ import { gifts, givesGifts } from './_lib/friend.mjs';
 import { randomCode, codeHash, codeLast4 } from './_lib/codes.mjs';
 import { freeWeekEnd } from './_lib/kinds.mjs';
 import { pushAll, pushReady } from './_lib/push.mjs';
+import { refuseBlocked } from './_lib/blocked.mjs';
 
 // Release 1.4 (Security S1): new gift holders are cheap to make with fresh device IDs.
 // At most 5 new holders per network address per day, and one phone alert an hour
@@ -56,6 +57,9 @@ export const handler = async (event) => {
   const stop = guard('gifts', REQUIRED);
   if (stop) return stop;
   if (event.httpMethod !== 'POST') return fail(405, 'Use POST.');
+  // Release 1.5 #66: blocked countries get 451 before anything else runs.
+  const blocked = await refuseBlocked(event, 'gifts');
+  if (blocked) return blocked;
   const input = readJson(event) || {};
   if (!DEVICE_RE.test(String(input.device_id || ''))) return fail(400, 'This device could not be checked.');
   if (!(await rateHit('gifts', clientIp(event), 30, 3600))) return fail(429, 'Too many tries. Please wait a few minutes.');

@@ -1398,3 +1398,91 @@ test('1.4 Security S1: at most 5 new gift holders per network a day', async () =
   assert.equal(db.passes.filter((p) => p.kind === 'holder').length, 5);
   assert.equal((await G('a')).statusCode, 200, 'an existing holder still opens its gifts');
 });
+
+// ---------------------------------------------------------------- Release 1.5 #66: blocked countries
+import { blockedFor, BLOCKED_COUNTRIES, geoOverride } from '../netlify/functions/_lib/blocked-list.mjs';
+import { blockedPlace, geoFromEvent } from '../netlify/functions/_lib/blocked.mjs';
+import { blockedView } from '../netlify/functions/_lib/analytics-admin.mjs';
+const geoHdr = (code, sub) => ({ 'x-nf-geo': Buffer.from(JSON.stringify({ country: { code }, subdivision: sub ? { code: sub } : undefined, city: 'Somewhere' })).toString('base64') });
+
+test('blocked list: 42 countries (list approved October 15) and the 4 Ukraine region codes', () => {
+  assert.equal(new Set(BLOCKED_COUNTRIES).size, 42);
+  assert.equal(BLOCKED_COUNTRIES.length, 42, 'no repeats');
+  for (const c of ['DE', 'FR', 'GB', 'CH', 'NO', 'RU', 'CN', 'KP', 'IR', 'CU', 'IL', 'KW', 'IQ', 'SY', 'BY']) assert.deepEqual(blockedFor(c), { country: c, region: '' }, c);
+  for (const c of ['US', 'CA', 'MX', 'KR', 'UA', 'JP', 'AU', '']) assert.equal(blockedFor(c), null, c);
+  assert.deepEqual(blockedFor('UA', '43'), { country: 'UA', region: 'UA-43' });
+  assert.deepEqual(blockedFor('ua', 'UA-14'), { country: 'UA', region: 'UA-14' });
+  assert.deepEqual(blockedFor('UA', '09'), { country: 'UA', region: 'UA-09' });
+  assert.deepEqual(blockedFor('UA', '40'), { country: 'UA', region: 'UA-40' });
+  assert.equal(blockedFor('UA', '30'), null, 'Kyiv plays');
+  assert.equal(blockedFor('US', '43'), null);
+  assert.deepEqual(geoOverride('a=1; mojia_geo=ua-43; b=2'), { country: 'UA', sub: '43' });
+  assert.equal(geoOverride('mojia_geo=<x>'), null);
+});
+
+test('blocked: geo from the x-nf-geo header; the cookie test switch works on staging only', () => {
+  assert.equal(geoFromEvent({ headers: geoHdr('DE') }).country.code, 'DE');
+  assert.equal(geoFromEvent({ headers: { 'x-country': 'FR' } }).country.code, 'FR');
+  assert.equal(geoFromEvent({ headers: { 'x-nf-geo': '%%%' } }), null);
+  assert.deepEqual(blockedPlace({ country: { code: 'US' } }, 'mojia_geo=DE'), { country: 'DE', region: '' });
+  setEnv({ MOJIA_ENV: undefined });
+  assert.equal(blockedPlace({ country: { code: 'US' } }, 'mojia_geo=DE'), null, 'live ignores the cookie');
+  assert.deepEqual(blockedPlace({ country: { code: 'IT' } }, ''), { country: 'IT', region: '' });
+});
+
+test('blocked: every public function answers 451, counts one call, and stores no IP or city', async () => {
+  const { handler: createFn } = await import('../netlify/functions/create-checkout.mjs');
+  const { handler: confirmFn } = await import('../netlify/functions/confirm-session.mjs');
+  const { handler: gifts } = await import('../netlify/functions/gifts.mjs');
+  const fns = [['create-checkout', createFn, 'POST'], ['confirm-session', confirmFn, 'POST'], ['pass-check', passCheck, 'POST'], ['redeem-code', redeemFn, 'POST'],
+    ['gifts', gifts, 'POST'], ['friend-code', friendFn, 'POST'], ['contact', contact, 'POST'], ['settings', settingsFn, 'GET']];
+  for (const [name, fn, method] of fns) {
+    const r = await fn(ev({ plan: 'forever' }, geoHdr('DE'), method));
+    assert.equal(r.statusCode, 451, name);
+    assert.equal(r.headers['Cache-Control'], 'no-store', name + ' never cached');
+    assert.match(r.body, /not available in your country/);
+  }
+  assert.deepEqual(db.blocked.map((b) => b.p_kind), fns.map((f) => f[0]));
+  assert.ok(db.blocked.every((b) => b.p_country === 'DE' && b.p_region === '' && Object.keys(b).length === 3), 'country, region and kind only');
+  assert.equal(stripe.calls.create.length, 0, 'no checkout made');
+  assert.equal(db.support_messages.length, 0, 'no message saved');
+  // Crimea blocked, Kyiv not
+  assert.equal((await redeemFn(ev({ code: 'x' }, geoHdr('UA', '43')))).statusCode, 451);
+  assert.equal(db.blocked.at(-1).p_region, 'UA-43');
+  assert.notEqual((await redeemFn(ev({ code: 'x' }, geoHdr('UA', '30')))).statusCode, 451);
+  // US works as before
+  assert.equal((await settingsFn(ev({}, geoHdr('US', 'MI'), 'GET'))).statusCode, 200);
+  // staging cookie switch
+  assert.equal((await settingsFn(ev({}, { cookie: 'mojia_geo=FR' }, 'GET'))).statusCode, 451);
+  // Stripe webhook and admin stay open (no check in them)
+  const fs = await import('node:fs');
+  for (const f of ['stripe-webhook', 'admin-api', 'admin-login']) assert.ok(!fs.readFileSync('netlify/functions/' + f + '.mjs', 'utf8').includes('refuseBlocked'), f);
+});
+
+test('blocked: ping counts a blocked page open (204) and refuses other pings (451); Stop play counts pauses the count', async () => {
+  const req = (body, cookie) => new Request('https://mojialand.displayedux.com/api/ping', { method: 'POST', body: JSON.stringify(body), headers: cookie ? { cookie } : {} });
+  const de = { country: { code: 'DE' }, city: 'Berlin' };
+  assert.equal((await ping(req({ e: 'blocked' }), ctx(de))).status, 204);
+  assert.equal((await ping(req({ e: 'open', g: 'draw', m: 'app' }), ctx(de))).status, 451);
+  assert.equal(db.analytics.length, 0, 'no play counted');
+  assert.deepEqual(db.blocked.map((b) => [b.p_country, b.p_kind]), [['DE', 'page'], ['DE', 'ping']]);
+  assert.ok(!JSON.stringify(db.blocked).includes('Berlin'));
+  // a {e:"blocked"} ping from the US counts nothing
+  assert.equal((await ping(req({ e: 'blocked' }), ctx())).status, 400);
+  assert.equal(db.blocked.length, 2);
+  // staging cookie test switch reaches ping too
+  assert.equal((await ping(req({ e: 'blocked' }, 'mojia_geo=UA-14'), ctx())).status, 204);
+  assert.equal(db.blocked.at(-1).p_region, 'UA-14');
+  // Stop play counts: still blocked, nothing counted
+  db.settings.push({ key: 'play_counts_off', value: 1 });
+  resetSwitchCache();
+  assert.equal((await ping(req({ e: 'open', g: 'draw', m: 'app' }), ctx(de))).status, 451);
+  assert.equal(db.blocked.length, 3);
+});
+
+test('blocked: admin History lists blocked visits by country and region', async () => {
+  db.rpcData.blocked_stats = [{ c: 'DE', r: '', k: 'page', n: 4 }, { c: 'DE', r: '', k: 'gifts', n: 1 }, { c: 'DE', r: '', k: 'ping', n: 2 }, { c: 'UA', r: 'UA-43', k: 'page', n: 9 }, { c: 'x<', r: '', k: 'page', n: 1 }];
+  assert.deepEqual(await blockedView(Date.now()), [{ country: 'UA', region: 'UA-43', page: 9, calls: 0 }, { country: 'DE', region: '', page: 4, calls: 3 }]);
+  db.blockedStatsMissing = true;
+  assert.equal(await blockedView(Date.now()), null, 'History still loads before the SQL runs');
+});

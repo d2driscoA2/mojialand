@@ -245,6 +245,7 @@ export async function historyView(range, now = Date.now()) {
     prev.perDayMinutes = prev.perDayMinutes.map(Math.round);
   }
 
+  const blocked = await blockedView(from);
   const minutes = Math.round(minutesGame.reduce((a, b) => a + b, 0));
   const closed = buckets.reduce((a, b) => a + b, 0);
   const states = stateTotals(allEntries);
@@ -256,9 +257,29 @@ export async function historyView(range, now = Date.now()) {
     appShare: plays ? Math.round((app / plays) * 100) : 0,
     cities: cityList, counties: countyList, rolls: acc.rolls, rollBy: acc.rollBy, states, other,
     cityCount: cityList.length, stateCount: states.length,
-    hours, hoursGame, cityHours, countyHours, stateHours, rule: DAY_MIN, prev,
+    hours, hoursGame, cityHours, countyHours, stateHours, rule: DAY_MIN, prev, blocked,
     todayHour: Number(parts(now, TZ).hour),
   };
+}
+
+// Release 1.5 #66: visits from blocked countries and regions since a time.
+// One row per country and region: page opens, server calls refused. Null when the count is not set up yet.
+export async function blockedView(from) {
+  try {
+    const { data } = await rest('POST', 'rpc/blocked_stats', { body: { p_from: new Date(from).toISOString() } });
+    const by = new Map();
+    for (const r of Array.isArray(data) ? data : []) {
+      if (!/^[A-Z]{2}$/.test(String(r.c))) continue;
+      const key = r.c + '|' + (r.r || '');
+      const o = by.get(key) || { country: r.c, region: r.r || '', page: 0, calls: 0 };
+      if (r.k === 'page') o.page += Number(r.n) || 0;
+      else o.calls += Number(r.n) || 0;
+      by.set(key, o);
+    }
+    return [...by.values()].sort((a, b) => (b.page + b.calls) - (a.page + a.calls));
+  } catch {
+    return null;
+  }
 }
 
 // ---------- campaigns

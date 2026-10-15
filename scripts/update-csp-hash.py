@@ -101,6 +101,7 @@ pay_hashes = "'sha256-%s' 'sha256-%s'" % (script_hash('pass/index.html'), script
 redeem = script_hash('r/index.html')
 admin = script_hash('admin/index.html')
 friend = script_hash('g/index.html')
+blocked = script_hash('blocked/index.html')
 
 # Friend pass link (/g/CODE): shows a link preview card, then opens /r/CODE.
 # On staging the preview image points at the staging site.
@@ -127,6 +128,11 @@ redeem_csp = ("default-src 'none'; script-src 'self' 'sha256-%s'; style-src 'sel
 # Friend pass link page (/g/CODE): one inline script that forwards to /r/CODE.
 friend_csp = ("default-src 'none'; script-src 'sha256-%s'; style-src 'unsafe-inline'; "
               "img-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests") % friend
+
+# Release 1.5 #66: the blocked page (shown with status 451 in blocked countries). One inline
+# script sends one count to /api/ping. No links, no outside requests.
+blocked_csp = ("default-src 'none'; script-src 'sha256-%s'; style-src 'unsafe-inline'; img-src 'self'; font-src 'self'; "
+               "connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests") % blocked
 
 # Admin page: same-site only, never indexed, never cached.
 admin_csp = ("default-src 'none'; script-src 'self' 'sha256-%s'; style-src 'self' 'unsafe-inline'; "
@@ -176,6 +182,7 @@ headers = "".join([
     "/img/*\n  Cache-Control: public, max-age=604800, stale-while-revalidate=86400\n",
     block('/r/*', redeem_csp, 'DENY') + "  Cache-Control: no-store\n",
     block('/g/*', friend_csp, 'DENY'),
+    block('/blocked/*', blocked_csp, 'DENY') + "  Cache-Control: no-store\n  X-Robots-Tag: noindex, nofollow\n",
     block('/admin/*', admin_csp, 'DENY') + "  Cache-Control: no-store\n  X-Robots-Tag: noindex, nofollow\n",
     block('/pass/*', pass_csp, 'DENY') + "  Permissions-Policy: %s\n" % pass_pp,
     "/fonts/*\n  Cache-Control: public, max-age=31536000, immutable\n",
