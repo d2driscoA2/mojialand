@@ -292,23 +292,6 @@ body.drawer-open .addbtn{display:none}
 .hs-party .friends{font-size:30px;letter-spacing:4px}
 .hs-party .t{font-family:var(--display);font-weight:900;font-size:26px;color:var(--purple-d)}
 @keyframes hsPop{from{transform:scale(.4);opacity:0}to{transform:none;opacity:1}}
-/* Release 1.5 #24 (Danny, October 15, choice B): the unicorn walks a kid through Add to Home Screen.
-   Safari draws its own buttons, so the hand points at their usual spot and a big picture shows the button. */
-.coach{position:fixed;inset:0;z-index:58;background:rgba(48,37,74,.55);display:grid;place-items:center;padding:16px}
-.coach .cbox{position:relative;display:grid;justify-items:center;gap:12px;background:var(--cream);border:4px solid var(--purple);border-radius:32px;padding:22px 20px 18px;width:min(340px,100%);box-shadow:0 12px 36px rgba(0,0,0,.25);animation:hsPop .45s cubic-bezier(.3,1.6,.6,1) both}
-.coach .cuni{font-size:76px;line-height:1;animation:coWave 1.4s ease-in-out infinite;transform-origin:50% 90%}
-.coach .cpic{display:grid;place-items:center;width:132px;height:132px;border-radius:30px;background:#fff;border:4px solid var(--ink);box-shadow:0 6px 0 var(--line)}
-.coach .cpic svg{width:84px;height:84px}
-.coach .cpic .addpill{font:900 34px/1 var(--display);color:#0A84FF}
-.coach .cdots{display:flex;gap:8px}.coach .cdots i{width:12px;height:12px;border-radius:50%;background:var(--line)}.coach .cdots i.on{background:var(--purple)}
-.coach .cx{position:absolute;top:-18px;left:-14px;width:56px;height:56px;border-radius:50%;border:4px solid var(--purple);background:#fff;color:var(--purple-d);font:900 26px/1 var(--display);display:grid;place-items:center;box-shadow:0 4px 10px rgba(0,0,0,.18)}
-.coach .chand{position:fixed;font-size:64px;line-height:1;pointer-events:none;filter:drop-shadow(0 4px 6px rgba(0,0,0,.3));transition:left .5s,top .5s,bottom .5s}
-.coach .chand.down{left:calc(50% - 32px);bottom:calc(env(safe-area-inset-bottom,0px) + 6px);animation:coBobD .9s ease-in-out infinite}
-.coach .chand.topright{right:10px;top:calc(env(safe-area-inset-top,0px) + 6px);animation:coBobU .9s ease-in-out infinite}
-@keyframes coWave{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
-@keyframes coBobD{0%,100%{transform:translateY(0)}50%{transform:translateY(14px)}}
-@keyframes coBobU{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
-@media (prefers-reduced-motion:reduce){.coach .cuni,.coach .chand,.coach .cbox{animation:none}}
 @media (prefers-reduced-motion:reduce){.hs-party .badge{animation:none}}
 @keyframes fall{to{transform:translate(var(--dx),var(--dy)) rotate(540deg);opacity:0}}
 .hidden{display:none!important}
@@ -1238,7 +1221,7 @@ function say(text){ if(!settings.voice||!('speechSynthesis' in window)||!text) r
 /* ---------- toast ---------- */
 let toastT=null; function toast(text){ const t=$('#toast'); $('#toastText').textContent=text; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),1800); }
 /* ---------- confetti ---------- */
-/* Release 1.5 #24 (Danny, October 15): the Home Screen coaching speaks even with the Voice switch off */
+/* Release 1.5 #24 (Danny, October 15): Home sweet home speaks even with the Voice switch off */
 function sayAlways(text){ const v=settings.voice; settings.voice=true; try{ say(text); }finally{ settings.voice=v; } }
 function confetti(host,x,y,n){ const cols=['#FF6FAE','#4CC9F0','#FFC83D','#8AE234','#9B5DE5']; for(let i=0;i<(n||18);i++){ const c=document.createElement('div'); c.className='confetti'; c.style.left=x+'px'; c.style.top=y+'px'; c.style.background=rnd(cols); c.style.setProperty('--dx',(Math.random()*220-110)+'px'); c.style.setProperty('--dy',(Math.random()*180+40)+'px'); host.appendChild(c); setTimeout(()=>c.remove(),1100);} }
 
@@ -1268,7 +1251,7 @@ const PS=(function(){
 const screens={home:'#s-home',pattern:'#s-pattern',bounce:'#s-bounce',match:'#s-match',parade:'#s-parade',share:'#s-share',feelings:'#s-feelings',draw:'#s-draw',gate:'#s-gate',rest:'#s-rest',ngate:'#s-ngate',plans:'#s-plans',allset:'#s-allset'};
 let current='home';
 const games={};
-function go(name){ stopDemo(); closeGlass(); if(games[current]&&games[current].leave) games[current].leave(); $$('.screen').forEach(s=>s.classList.add('hidden')); $(screens[name]).classList.remove('hidden'); PS.screen(name); current=name; document.body.classList.toggle('in-draw',name==='draw'); homeNote(name); if(name==='home'){ homeRefresh(); setTimeout(()=>{ try{ maybeReload(); checkBuild(false); }catch(e){} },400); homeParty(); } try{ coach.screen(name); }catch(e){} onScreen(name); if(games[name]&&games[name].enter) games[name].enter(); if(games[name]&&settings.demos&&!demoDone[name]) setTimeout(()=>showGlass(name),350); }
+function go(name){ stopDemo(); closeGlass(); if(games[current]&&games[current].leave) games[current].leave(); $$('.screen').forEach(s=>s.classList.add('hidden')); $(screens[name]).classList.remove('hidden'); PS.screen(name); current=name; document.body.classList.toggle('in-draw',name==='draw'); homeNote(name); if(name==='home'){ homeRefresh(); setTimeout(()=>{ try{ maybeReload(); checkBuild(false); }catch(e){} },400); homeParty(); } try{  }catch(e){} onScreen(name); if(games[name]&&games[name].enter) games[name].enter(); if(games[name]&&settings.demos&&!demoDone[name]) setTimeout(()=>showGlass(name),350); }
 document.addEventListener('click',e=>{ const b=e.target.closest('[data-go]'); if(b){ ctx(); sfx.boop(); if(b.dataset.go==='home'&&b.closest('.bar')&&games[current]&&games[current].back&&games[current].back()) return; go(b.dataset.go);} const d=e.target.closest('[data-demo]'); if(d){ ctx(); sfx.boop(); showGlass(d.dataset.demo);} });
 
 /* ---------- how-to-play glass cards ---------- */
@@ -1421,52 +1404,6 @@ function homeParty(){ let app=false; try{ app=matchMedia('(display-mode: standal
   document.body.appendChild(d); const r=d.getBoundingClientRect(); confetti(d,r.width/2,r.height/2-40,40); setTimeout(()=>confetti(d,r.width/2,r.height/2-40,30),350);
   try{ sfx.chime(); }catch(e){} sayAlways('Home sweet home!');
   const bye=()=>{ if(d.parentNode) d.remove(); }; d.addEventListener('click',bye); setTimeout(bye,4000); }
-/* Release 1.5 #24: Home Screen coaching for kids (Danny, October 15).
-   Shows back on the home screen after the second game or 5 minutes of play, in iPhone or iPad Safari only,
-   once a day, 3 times in all. The kid does every tap, including Apple's Share sheet (Danny's exception, choice B).
-   The voice speaks each step even with the Voice switch off. Counts stay on this device. */
-const coach=(function(){
-  const DAY=()=>new Date().toDateString();
-  const st=()=>{ const c=store.get('coach',null); return c&&typeof c==='object'?c:{g:0,ms:0,day:'',n:0}; };
-  const save=c=>store.set('coach',c);
-  let inGame=null, t0=0, el=null, timer=null, loop=0;
-  const ua=()=>navigator.userAgent||'';
-  const ipad=()=>/iPad/.test(ua())||(/Macintosh/.test(ua())&&(navigator.maxTouchPoints||0)>1);
-  const iosSafari=()=>{ let app=false; try{ app=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true; }catch(e){}
-    return !app&&(/iPhone|iPod/.test(ua())||ipad())&&/Safari\//.test(ua())&&!/CriOS|FxiOS|EdgiOS|OPiOS|GSA\//.test(ua()); };
-  const SHARE='<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M22 24h-6v32h32V24h-6" fill="none" stroke="#0A84FF" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M32 40V6M21 16 32 5l11 11" fill="none" stroke="#0A84FF" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  const ADDHS='<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="9" y="9" width="46" height="46" rx="11" fill="none" stroke="#30254A" stroke-width="5"/><path d="M32 21v22M21 32h22" stroke="#30254A" stroke-width="5" stroke-linecap="round"/></svg>';
-  const BASE=[
-    {pic:SHARE, hand:()=>ipad()?'topright':'down', say:'Tap the share button.'},
-    {pic:ADDHS, hand:()=>'', say:'Now tap Add to Home Screen.'},
-    {pic:'<span class="addpill">Add</span>', hand:()=>'topright', say:'Tap Add.'},
-  ];
-  /* Danny, October 16: on iPad, Add to Home Screen sits under View More in the Share sheet (as in the iPad video) */
-  const VIEWMORE={pic:'<span class="addpill" style="font-size:22px">View More</span>', hand:()=>'', say:'Now tap View More.'};
-  let STEPS=BASE;
-  function step(i){ if(!el) return; const s=STEPS[i]; el.querySelector('.cpic').innerHTML=s.pic; el.querySelectorAll('.cdots i').forEach((d,j)=>d.classList.toggle('on',j===i));
-    const h=el.querySelector('.chand'), dir=s.hand(); h.hidden=!dir; h.className='chand '+dir; h.textContent=dir==='down'?'👇':'👆'; el.dataset.step=String(i); sayAlways(s.say); }
-  function close(){ clearTimeout(timer); timer=null; if(el){ el.remove(); el=null; } try{ speechSynthesis.cancel(); }catch(e){} }
-  function show(){ if(el) return; const c=st(); c.day=DAY(); c.n=(c.n||0)+1; save(c);
-    el=document.createElement('div'); el.className='coach'; el.setAttribute('role','dialog'); el.setAttribute('aria-label','Put Mojialand on your Home Screen');
-    STEPS=ipad()?[BASE[0],VIEWMORE,BASE[1],BASE[2]]:BASE;
-    el.innerHTML='<div class="cbox"><button class="cx" type="button" aria-label="Close">✕</button><div class="cuni" aria-hidden="true">🦄</div><div class="cpic"></div><div class="cdots" aria-hidden="true">'+STEPS.map(()=>'<i></i>').join('')+'</div></div><div class="chand" hidden aria-hidden="true"></div>';
-    document.body.appendChild(el); el.querySelector('.cx').addEventListener('click',()=>{ try{ sfx.boop(); }catch(e){} close(); });
-    sayAlways("Let's put Mojialand on your Home Screen!"); loop=0;
-    let i=-1; const next=()=>{ if(!el) return; i=(i+1)%STEPS.length; if(i===0) loop++; if(loop>4){ close(); return; } step(i); timer=setTimeout(next,i===0?7000:6000); };
-    timer=setTimeout(next,2600); }
-  /* Security review 1.5 S1 (Danny, October 15, choice A): never while a pass is on. The address then carries the pass token,
-     and a wrong tap on a contact in the Share sheet would send it. With a pass, the grown-up Home Screen card stays the path. */
-  function passOnHere(){ if(/[?&]restore=/.test(location.search)) return true; const p=store.get('pass',null); return !!p&&typeof p==='object'&&(p.kind==='forever'||Number(p.ends_at)>Date.now()); }
-  function due(){ const c=st(); return iosSafari()&&!passOnHere()&&(c.g>=2||c.ms>=5*60000)&&c.day!==DAY()&&(c.n||0)<3; }
-  /* called from go(): counts games and play time, and checks on the way back home */
-  function screen(name){ const now=Date.now(); if(inGame&&name!==inGame){ const c=st(); c.ms=(c.ms||0)+Math.min(now-t0,60*60000); save(c); inGame=null; }
-    if(HG.some(g=>g.id===name)&&inGame!==name){ const c=st(); c.g=(c.g||0)+1; save(c); inGame=name; t0=now; }
-    if(name==='home'&&splashDone&&due()) setTimeout(()=>{ if(current==='home'&&!el&&glass.classList.contains('hidden')&&!document.querySelector('.hs-party')) show(); },700);
-    if(name!=='home') close(); }
-  window.addEventListener('pagehide',close);
-  return {screen, show, close, due};
-})();
 function homeRefresh(){ homeRender(); homeSize(); $('#s-home').scrollTop=0; }
 let homeLastCols=homeCols(); window.addEventListener('resize',()=>{ const c=homeCols(); if(c!==homeLastCols){ homeLastCols=c; homeRender(); } homeSize(); }); addEventListener('orientationchange',()=>setTimeout(homeSize,300));
 homeRender(); requestAnimationFrame(homeSize);
@@ -4837,7 +4774,7 @@ const splash=(function(){
   function show(){ timers.forEach(clearTimeout); timers=[]; el.classList.remove('run','leaving','hidden','ready'); void el.offsetWidth; layout(); el.classList.add('run'); timers.push(setTimeout(()=>el.classList.add('ready'),1600));
     if(reduced()) smiley.textContent='😀'; else FACES.forEach(([ms,f])=>timers.push(setTimeout(()=>{ smiley.textContent=f; },ms))); }
   function hide(){ if(el.classList.contains('hidden')||el.classList.contains('leaving')) return; timers.forEach(clearTimeout); store.set('welcomed',true); unlock(); ctx(); sfx.chime();
-    el.classList.add('leaving'); setTimeout(()=>{ el.classList.add('hidden'); el.classList.remove('run','leaving'); splashDone=true; homeParty(); if(current==='home') try{ coach.screen('home'); }catch(e){} },reduced()?0:460); }
+    el.classList.add('leaving'); setTimeout(()=>{ el.classList.add('hidden'); el.classList.remove('run','leaving'); splashDone=true; homeParty(); },reduced()?0:460); }
   el.addEventListener('click',hide);
   return { show, hide };
 })();
