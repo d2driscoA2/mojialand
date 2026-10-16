@@ -285,6 +285,14 @@ body.drawer-open .addbtn{display:none}
 #watch{position:absolute;left:50%;top:max(72px,calc(env(safe-area-inset-top,0px) + 72px));transform:translateX(-50%);z-index:49;display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:999px;background:var(--white);color:var(--ink);font-family:var(--display);font-weight:900;font-size:20px;box-shadow:0 8px 24px rgba(0,0,0,.14)}
 #shield{position:absolute;inset:0;z-index:40}
 .confetti{position:absolute;width:10px;height:10px;border-radius:3px;pointer-events:none;animation:fall 1s forwards}
+/* Release 1.5 #24: Home sweet home, once, the first time Mojialand opens from the Home Screen */
+.hs-party{position:fixed;inset:0;z-index:60;display:grid;place-items:center;background:rgba(255,248,232,.92);overflow:hidden}
+.hs-party .badge{display:grid;justify-items:center;gap:8px;background:#fff;border:4px solid var(--purple);border-radius:32px;padding:22px 30px;box-shadow:0 10px 30px rgba(81,34,165,.25);animation:hsPop .5s cubic-bezier(.3,1.6,.6,1) both}
+.hs-party .house{font-size:84px;line-height:1}
+.hs-party .friends{font-size:30px;letter-spacing:4px}
+.hs-party .t{font-family:var(--display);font-weight:900;font-size:26px;color:var(--purple-d)}
+@keyframes hsPop{from{transform:scale(.4);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.hs-party .badge{animation:none}}
 @keyframes fall{to{transform:translate(var(--dx),var(--dy)) rotate(540deg);opacity:0}}
 .hidden{display:none!important}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -1212,6 +1220,8 @@ function say(text){ if(!settings.voice||!('speechSynthesis' in window)||!text) r
 /* ---------- toast ---------- */
 let toastT=null; function toast(text){ const t=$('#toast'); $('#toastText').textContent=text; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),1800); }
 /* ---------- confetti ---------- */
+/* Release 1.5 #24 (Danny, October 15): the Home Screen coaching speaks even with the Voice switch off */
+function sayAlways(text){ const v=settings.voice; settings.voice=true; try{ say(text); }finally{ settings.voice=v; } }
 function confetti(host,x,y,n){ const cols=['#FF6FAE','#4CC9F0','#FFC83D','#8AE234','#9B5DE5']; for(let i=0;i<(n||18);i++){ const c=document.createElement('div'); c.className='confetti'; c.style.left=x+'px'; c.style.top=y+'px'; c.style.background=rnd(cols); c.style.setProperty('--dx',(Math.random()*220-110)+'px'); c.style.setProperty('--dy',(Math.random()*180+40)+'px'); host.appendChild(c); setTimeout(()=>c.remove(),1100);} }
 
 /* ---------- play counts: game, city (added by the server), nothing about the child ---------- */
@@ -1240,7 +1250,7 @@ const PS=(function(){
 const screens={home:'#s-home',pattern:'#s-pattern',bounce:'#s-bounce',match:'#s-match',parade:'#s-parade',share:'#s-share',feelings:'#s-feelings',draw:'#s-draw',gate:'#s-gate',rest:'#s-rest',ngate:'#s-ngate',plans:'#s-plans',allset:'#s-allset'};
 let current='home';
 const games={};
-function go(name){ stopDemo(); closeGlass(); if(games[current]&&games[current].leave) games[current].leave(); $$('.screen').forEach(s=>s.classList.add('hidden')); $(screens[name]).classList.remove('hidden'); PS.screen(name); current=name; document.body.classList.toggle('in-draw',name==='draw'); homeNote(name); if(name==='home'){ homeRefresh(); setTimeout(()=>{ try{ maybeReload(); checkBuild(false); }catch(e){} },400); } onScreen(name); if(games[name]&&games[name].enter) games[name].enter(); if(games[name]&&settings.demos&&!demoDone[name]) setTimeout(()=>showGlass(name),350); }
+function go(name){ stopDemo(); closeGlass(); if(games[current]&&games[current].leave) games[current].leave(); $$('.screen').forEach(s=>s.classList.add('hidden')); $(screens[name]).classList.remove('hidden'); PS.screen(name); current=name; document.body.classList.toggle('in-draw',name==='draw'); homeNote(name); if(name==='home'){ homeRefresh(); setTimeout(()=>{ try{ maybeReload(); checkBuild(false); }catch(e){} },400); homeParty(); } onScreen(name); if(games[name]&&games[name].enter) games[name].enter(); if(games[name]&&settings.demos&&!demoDone[name]) setTimeout(()=>showGlass(name),350); }
 document.addEventListener('click',e=>{ const b=e.target.closest('[data-go]'); if(b){ ctx(); sfx.boop(); if(b.dataset.go==='home'&&b.closest('.bar')&&games[current]&&games[current].back&&games[current].back()) return; go(b.dataset.go);} const d=e.target.closest('[data-demo]'); if(d){ ctx(); sfx.boop(); showGlass(d.dataset.demo);} });
 
 /* ---------- how-to-play glass cards ---------- */
@@ -1382,6 +1392,17 @@ function homeRender(){ const f=homeFeatured(), prog=store.get('homeProg',{}), g=
 /* The stamp canvas fills the first screen; the featured card peeks 96 px at the bottom edge so kids see more games below. */
 function homeSize(){ const sc=$('#s-home'); if(!sc||sc.classList.contains('hidden')) return; if(matchMedia('(min-width:700px) and (orientation:landscape)').matches){ $('#canvas').style.height=''; return; } const cs=getComputedStyle(sc), gap=parseFloat(cs.rowGap)||14, H=sc.clientHeight-parseFloat(cs.paddingTop);
   const h=Math.max(240,Math.round(H-$('.homehead').offsetHeight-$('#tray').offsetHeight-gap*3-96)); $('#canvas').style.height=h+'px'; }
+/* Release 1.5 #24: the first open from the Home Screen gets confetti and a Home sweet home badge, once. */
+let splashDone=false;
+function homeParty(){ let app=false; try{ app=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true; }catch(e){}
+  if(!app||store.get('homeParty',false)) return;
+  if(!splashDone||current!=='home') return; /* after the welcome splash closes, on the home screen */
+  store.set('homeParty',true);
+  const d=document.createElement('div'); d.className='hs-party'; d.setAttribute('role','dialog'); d.setAttribute('aria-label','Home sweet home');
+  d.innerHTML='<div class="badge"><div class="house" aria-hidden="true">🏠</div><div class="friends" aria-hidden="true">🦄🦈🐶😀🍕</div><div class="t">Home sweet home!</div></div>';
+  document.body.appendChild(d); const r=d.getBoundingClientRect(); confetti(d,r.width/2,r.height/2-40,40); setTimeout(()=>confetti(d,r.width/2,r.height/2-40,30),350);
+  try{ sfx.chime(); }catch(e){} sayAlways('Home sweet home!');
+  const bye=()=>{ if(d.parentNode) d.remove(); }; d.addEventListener('click',bye); setTimeout(bye,4000); }
 function homeRefresh(){ homeRender(); homeSize(); $('#s-home').scrollTop=0; }
 let homeLastCols=homeCols(); window.addEventListener('resize',()=>{ const c=homeCols(); if(c!==homeLastCols){ homeLastCols=c; homeRender(); } homeSize(); }); addEventListener('orientationchange',()=>setTimeout(homeSize,300));
 homeRender(); requestAnimationFrame(homeSize);
@@ -4671,7 +4692,7 @@ const pay=(function(){
     $('#pwGuList').innerHTML=nudge+rows.map(r=>'<button class="pw-gurow'+(r[2]==='share'?' share':'')+'" data-a="'+r[2]+'"><span>'+r[0]+'</span><span>'+r[1]+'</span></button>').join('');
     const on=standalone(), hb=$('#pwHS'); hb.classList.toggle('done',on); $('#pwHSt').textContent=on?'On your Home Screen':'Mojialand on your Home Screen!';
     $('#pwHSbody').textContent=on?'Mojialand sits next to your other apps on this device. Open it from the icon for full screen play.':'Add Mojialand to your Home Screen. Your kids find it next to your other apps, and it opens full screen.';
-    $('#pwHSbtn').hidden=on;
+    $('#pwHSbtn').hidden=on; $('#pwHSbtn').textContent=installEvt?'Install':'Show me how'; /* Release 1.5 #24: Android and computers get one Install button */
     /* Release 1.5 #61: first Grown-ups open on an iPhone in Safari plays the video once, muted; later opens offer Watch again */
     const gv=!on&&iphoneSafari(), gvw=$('#pwGuVidWrap'), gvid=$('#pwGuVid');
     gvw.hidden=!gv; $('#pwMini').hidden=gv; hb.classList.toggle('vid',gv);
@@ -4746,7 +4767,7 @@ const splash=(function(){
   function show(){ timers.forEach(clearTimeout); timers=[]; el.classList.remove('run','leaving','hidden','ready'); void el.offsetWidth; layout(); el.classList.add('run'); timers.push(setTimeout(()=>el.classList.add('ready'),1600));
     if(reduced()) smiley.textContent='😀'; else FACES.forEach(([ms,f])=>timers.push(setTimeout(()=>{ smiley.textContent=f; },ms))); }
   function hide(){ if(el.classList.contains('hidden')||el.classList.contains('leaving')) return; timers.forEach(clearTimeout); store.set('welcomed',true); unlock(); ctx(); sfx.chime();
-    el.classList.add('leaving'); setTimeout(()=>{ el.classList.add('hidden'); el.classList.remove('run','leaving'); },reduced()?0:460); }
+    el.classList.add('leaving'); setTimeout(()=>{ el.classList.add('hidden'); el.classList.remove('run','leaving'); splashDone=true; homeParty(); },reduced()?0:460); }
   el.addEventListener('click',hide);
   return { show, hide };
 })();

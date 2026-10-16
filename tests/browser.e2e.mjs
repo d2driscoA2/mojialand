@@ -1181,6 +1181,25 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
     await ctx.close();
   }
   {
+    const { ctx, page } = await newPage({ userAgent: IPHONE });
+    await page.addInitScript(() => { Object.defineProperty(navigator, 'standalone', { get: () => true }); window.__said = []; const S = window.SpeechSynthesisUtterance; window.SpeechSynthesisUtterance = function (t) { window.__said.push(t); return new S(t); }; });
+    await page.goto(base + '/play/'); await page.waitForTimeout(600);
+    check('1.5 #24 Home sweet home waits for the welcome splash', (await page.locator('.hs-party').count()) === 0);
+    await page.click('#splash'); await page.waitForTimeout(700);
+    check('1.5 #24 the first Home Screen open shows Home sweet home with confetti and says it, even with Voice off', await page.isVisible('.hs-party .badge') && /Home sweet home!/.test(await page.textContent('.hs-party')) && (await page.evaluate(() => window.__said.includes('Home sweet home!'))) && (await page.evaluate(() => localStorage.getItem('mojia.voice'))) !== 'true');
+    await page.click('.hs-party'); await page.waitForTimeout(200);
+    check('1.5 #24 a tap closes the badge', (await page.locator('.hs-party').count()) === 0);
+    await page.goto(base + '/play/'); await page.waitForTimeout(600); await page.click('#splash'); await page.waitForTimeout(700);
+    check('1.5 #24 Home sweet home shows once', (await page.locator('.hs-party').count()) === 0);
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await newPage({ userAgent: IPHONE });
+    await page.goto(base + '/play/'); await page.waitForTimeout(600); await page.click('#splash'); await page.waitForTimeout(700);
+    check('1.5 #24 Safari (not the Home Screen app) never shows Home sweet home', (await page.locator('.hs-party').count()) === 0);
+    await ctx.close();
+  }
+  {
     const { ctx, page } = await newPage();
     const r = await page.goto(base + '/home-screen/'); await page.waitForTimeout(300);
     const html = await page.content();
