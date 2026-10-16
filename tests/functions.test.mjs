@@ -1486,3 +1486,54 @@ test('blocked: admin History lists blocked visits by country and region', async 
   db.blockedStatsMissing = true;
   assert.equal(await blockedView(Date.now()), null, 'History still loads before the SQL runs');
 });
+
+// ---------------------------------------------------------------- Release 1.5 #67: delete unused and fast counts
+test('#67 Delete unused: removes codes nobody turned on; used codes, paid passes and FRIEND stay', async () => {
+  const cookie = await adminSignIn();
+  const A = (action, extra) => adminApi(withCookie({ action, ...extra }, cookie)).then((r) => [r.statusCode, JSON.parse(r.body)]);
+  let [st, d] = await A('codes.batch', { kind: '30d', source: 'gift', days_valid: 30, count: 6, batch: 'oops-batch' });
+  const codes = d.codes.map((c) => c.code);
+  await redeemFn(ev({ code: codes[0], device_id: 'c'.repeat(32) }));
+  await A('codes.end_unused', { batch: 'oops-batch' }); // 5 ended before use
+  // a used code that later ended stays too
+  db.passes.find((p) => p.batch === 'oops-batch' && p.starts_at).status = 'ended';
+  db.passes.push({ id: crypto.randomUUID(), batch: 'oops-batch', source: 'stripe', status: 'ended', starts_at: null, kind: '30d' });
+  [st, d] = await A('codes.delete_unused', { batch: 'Oops-Batch' });
+  assert.equal(st, 200); assert.equal(d.deleted, 5);
+  const left = db.passes.filter((p) => p.batch === 'oops-batch');
+  assert.equal(left.length, 2, 'the used code and the paid pass stay');
+  assert.ok(left.some((p) => p.starts_at) && left.some((p) => p.source === 'stripe'));
+  [st, d] = await A('codes.delete_unused', { batch: 'oops-batch' }); assert.equal(d.deleted, 0, 'twice is safe');
+  [st] = await A('codes.delete_unused', { batch: 'friend' }); assert.equal(st, 400, 'FRIEND refused');
+  [st] = await A('codes.delete_unused', {}); assert.equal(st, 400, 'a batch is required');
+  // the admin page shows Delete N unused and asks first
+  const fs = await import('node:fs');
+  const html = fs.readFileSync('site/admin/index.html', 'utf8');
+  assert.match(html, /data-batch="delete"/); assert.match(html, /confirm\('Delete '\+bb\.dataset\.n\+' unused codes in '/);
+});
+
+test('#67 fast counts: batches and the Gifts tab read one database step when it exists', async () => {
+  const cookie = await adminSignIn();
+  const A = (action, extra) => adminApi(withCookie({ action, ...extra }, cookie)).then((r) => [r.statusCode, JSON.parse(r.body)]);
+  db.rpcData.batch_stats = [{ b: 'fair-oct', codes: 5, used: 2, open: 2, voided: 1, made: '2026-10-10T00:00:00Z', ds: 4, dn: 2 }, { b: 'FRIEND', codes: 9, used: 9, open: 0, voided: 0 }];
+  let [st, d] = await A('passes.batches', {});
+  assert.equal(st, 200);
+  assert.deepEqual(d.batches.map((b) => [b.label, b.codes, b.used, b.open, b.voided, b.pct, b.avgDays]), [['fair-oct', 5, 2, 2, 1, 40, 2]]);
+  assert.ok(!db.calls.some((c) => /GET .*passes\?batch=neq\.FRIEND/.test(c)), 'no row-by-row read');
+  db.rpcData.gifts_summary = { totals: { made: 3, on: 1, open: 1, expired: 1 }, rounds: [{ round: 1, made: 2, on: 1 }], givers: 1, holders: 4, reward_days: 7,
+    bought: { passes: 1, forever: 1, cents: 1499 }, top: [{ prefix: 'GIFT', code_last4: 'HOLD', kind: 'holder', source: 'gift', status: 'active', gen: 0, reward_days: 7, created_at: '2026-10-06T00:00:00Z', on: 1, left: 1 }] };
+  [st, d] = await A('gifts.report', {});
+  assert.equal(st, 200);
+  assert.deepEqual(d.totals, { made: 3, on: 1, open: 1, expired: 1, givers: 1, holders: 4, reward_days: 7 });
+  assert.deepEqual(d.holders[0], { last4: 'HOLD', prefix: 'GIFT', started: 'free week', kind: 'holder', status: 'active', round: 0, on: 1, left: 1, reward_days: 7, made: '2026-10-06T00:00:00Z' });
+  assert.ok(!JSON.stringify(d).includes('@'), 'no email');
+  assert.deepEqual(db.fastCalls, ['batch_stats', 'gifts_summary']);
+});
+
+test('#67 SQL: cleanup deletes ended Forever gift codes, never paid Forever; blocked counts kept 400 days', async () => {
+  const fs = await import('node:fs');
+  const sql = fs.readFileSync('supabase/release-1.5-codes.sql', 'utf8');
+  assert.match(sql, /where kind = \$\$forever\$\$ and source in \(\$\$gift\$\$, \$\$support\$\$\)/);
+  assert.match(sql, /delete from blocked_hourly\s+where hour_start < now\(\) - make_interval\(days => 400\)/);
+  for (const f of ['release-1.5-codes.sql', 'release-1.5-blocked.sql']) assert.ok(!/'/.test(fs.readFileSync('supabase/' + f, 'utf8').replace(/^--.*$/gm, '')), f + ' uses $$ in place of quote marks');
+});

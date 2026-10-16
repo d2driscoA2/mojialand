@@ -146,10 +146,20 @@ const actions = {
   // One row per batch: codes made, codes used, percent used, days from making
   // to use, passes bought after (campaign counts). Never names or devices.
   async 'passes.batches'({ q }) {
-    const rows = await allRows('passes?batch=neq.' + FRIEND_BATCH + '&select=batch,status,created_at,starts_at&order=created_at.asc');
     const camps = (await campaignsView()).campaigns || [];
     const cBy = new Map(camps.map((c) => [c.label, c]));
     const by = new Map();
+    // Release 1.5 #67: one database step counts every batch (batch_stats). Before that SQL runs, count row by row.
+    let fast = null;
+    try { const { data } = await rest('POST', 'rpc/batch_stats', { body: {} }); if (Array.isArray(data)) fast = data; } catch { fast = null; }
+    if (fast) {
+      for (const r of fast) {
+        if (!r.b || r.b === FRIEND_BATCH) continue;
+        by.set(r.b, { label: r.b, codes: Number(r.codes) || 0, used: Number(r.used) || 0, open: Number(r.open) || 0, voided: Number(r.voided) || 0,
+          daysSum: Number(r.ds) || 0, daysN: Number(r.dn) || 0, made: r.made });
+      }
+    }
+    const rows = fast ? [] : await allRows('passes?batch=neq.' + FRIEND_BATCH + '&select=batch,status,created_at,starts_at&order=created_at.asc');
     for (const p of rows) {
       if (!p.batch) continue;
       const b = by.get(p.batch) || { label: p.batch, codes: 0, used: 0, open: 0, voided: 0, daysSum: 0, daysN: 0, made: p.created_at };
@@ -326,6 +336,21 @@ const actions = {
   // Release 1.4 #58: how gifts spread, counted by pass and round, never by person.
   // No device values, no places, no play history, and never which family gifted which.
   async 'gifts.report'() {
+    // Release 1.5 #67: one database step (gifts_summary). Before that SQL runs, the row-by-row count below.
+    try {
+      const { data: f } = await rest('POST', 'rpc/gifts_summary', { body: {} });
+      if (f && typeof f === 'object' && f.totals) {
+        const startedAs = (p) => p.kind === 'holder' ? 'free week' : p.source === 'stripe' ? 'paid' : p.kind === '7d' ? 'gift' : p.source;
+        const n = (v) => Number(v) || 0;
+        return {
+          totals: { made: n(f.totals.made), on: n(f.totals.on), open: n(f.totals.open), expired: n(f.totals.expired), givers: n(f.givers), holders: n(f.holders), reward_days: n(f.reward_days) },
+          rounds: (Array.isArray(f.rounds) ? f.rounds : []).map((r) => ({ round: n(r.round), made: n(r.made), on: n(r.on) })),
+          bought: { passes: n(f.bought && f.bought.passes), forever: n(f.bought && f.bought.forever), cents: n(f.bought && f.bought.cents) },
+          holders: (Array.isArray(f.top) ? f.top : []).map((p) => ({ last4: p.code_last4, prefix: p.prefix, started: startedAs(p), kind: p.kind, status: p.status,
+            round: n(p.gen), on: n(p.on), left: n(p.left), reward_days: n(p.reward_days), made: p.created_at })),
+        };
+      }
+    } catch { /* fall through to the row-by-row count */ }
     const now = Date.now();
     const gifts = await allRows('passes?batch=eq.' + FRIEND_BATCH + '&kind=eq.7d&select=id,giver_id,gen,status,starts_at,use_by,created_at&order=created_at.asc');
     const givers = new Map();
@@ -368,6 +393,20 @@ const actions = {
     const rows = await patchPass('batch=eq.' + enc(lb) + '&status=eq.unused', { status: 'ended', ends_at: new Date().toISOString() });
     console.log('admin-api: ended ' + rows.length + ' unused codes in a batch');
     return { ended: rows.length };
+  },
+
+  // Release 1.5 #67: delete a batch's codes nobody ever turned on (unused, or ended before use).
+  // Codes a family turned on stay, even after they end. Gift and support codes only; never FRIEND, never paid.
+  async 'codes.delete_unused'({ batch }) {
+    const lb = cleanBatch(batch);
+    if (!lb) throw new Error('pick a batch');
+    if (lb.toUpperCase() === FRIEND_BATCH) throw new Error('friend passes cannot be deleted here');
+    const filter = 'batch=eq.' + enc(lb) + '&source=in.(gift,support)&status=in.(unused,ended)&starts_at=is.null';
+    const rows = await allRows('passes?' + filter + '&select=id');
+    if (!rows.length) return { deleted: 0 };
+    await rest('DELETE', 'passes?' + filter, { prefer: 'return=minimal' });
+    console.log('admin-api: deleted ' + rows.length + ' unused codes in a batch');
+    return { deleted: rows.length };
   },
 
   // Many codes at once, for printed cards. Up to 30 per call (function time limit); the page loops for more.
