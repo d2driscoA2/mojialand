@@ -65,7 +65,7 @@ export function buildEmail({ plan, pass, code, origin, friend, byAdmin }) {
   // Release 1.5 #61: a still of the 21-second Add to Home Screen video and a button to a small page that plays it
   // (email apps do not play video reliably).
   const hsHead = 'Put it on your Home Screen';
-  const hsWhy = 'On iPhone, 4 taps in Safari add the app icon. It opens full screen and keeps your pass.';
+  const hsWhy = 'On iPhone or iPad, a few taps in Safari add the app icon. It opens full screen and keeps your pass.';
   const hsLink = origin + '/home-screen/';
   const text = [
     head, '', when, '',

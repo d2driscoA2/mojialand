@@ -489,6 +489,7 @@ body.drawer-open .addbtn{display:none}
 .pw-hsvid video,.pw-ovvid video{display:block;width:100%;max-width:220px;aspect-ratio:9/16;border-radius:18px;border:4px solid var(--ink);background:var(--cream)}
 .pw-ovvid{display:grid;justify-items:center;margin:4px 0 10px}
 .pw-ovvid video{max-width:200px;max-height:46vh;width:auto}
+.pw-hsvid.ipad video,.pw-ovvid.ipad video{aspect-ratio:4/3;max-width:420px;max-height:none;width:100%}
 .pw-hsbig.done .pw-hst{color:#1E7A48}
 .pw-hsbig .pw-primary{padding:10px;font-size:15px;margin-top:8px}
 /* mini iPhone home screen */
@@ -4557,8 +4558,13 @@ const pay=(function(){
   /* Release 1.5 #61: the 21-second video shows the 4 taps. iPhone in Safari only: never in the Home Screen app,
      never on iPad (Share sits at the top there; the iPad video comes later), never in other browsers. Muted, no sound track. */
   const iphoneSafari=()=>{ const ua=navigator.userAgent||''; return /iPhone|iPod/.test(ua)&&/Safari\//.test(ua)&&!/CriOS|FxiOS|EdgiOS|OPiOS|GSA\//.test(ua)&&!standalone(); };
+  /* October 15: the iPad video arrived (Marketing chat). iPad in Safari gets its own landscape video (Share sits at the top). */
+  const ipadSafari=()=>{ const ua=navigator.userAgent||'', ip=/iPad/.test(ua)||(/Macintosh/.test(ua)&&(navigator.maxTouchPoints||0)>1); return ip&&/Safari\//.test(ua)&&!/CriOS|FxiOS|EdgiOS|OPiOS|GSA\//.test(ua)&&!standalone(); };
+  const vidDevice=()=>iphoneSafari()?'iphone':ipadSafari()?'ipad':'';
+  function setVid(v,wrap){ const d=vidDevice(); if(!d) return false; const src='/img/a2hs-'+d+'.mp4'; wrap.classList.toggle('ipad',d==='ipad');
+    if(v.dataset.dev!==d){ v.dataset.dev=d; v.poster='/img/a2hs-'+d+'-poster.jpg'; const so=v.querySelector('source'); so.src=src; try{ v.load(); }catch(e){} } return true; }
   function playVid(v){ try{ v.muted=true; v.currentTime=0; const pr=v.play(); if(pr&&pr.catch) pr.catch(()=>{}); }catch(e){} }
-  function showHow(){ const vw=$('#pwOvVidWrap'), iv=iphoneSafari(); vw.hidden=!iv; $('#pwMiniBig').hidden=iv; if(iv&&!installEvt){ $('#pwOvHS').classList.remove('hidden'); playVid($('#pwOvVid')); return; }
+  function showHow(){ const vw=$('#pwOvVidWrap'), iv=!!vidDevice()&&setVid($('#pwOvVid'),vw); vw.hidden=!iv; $('#pwMiniBig').hidden=iv; if(iv&&!installEvt){ $('#pwOvHS').classList.remove('hidden'); playVid($('#pwOvVid')); return; }
     if(installEvt){ const ev=installEvt; installEvt=null; try{ ev.prompt(); const r=ev.userChoice; if(r&&r.then) r.then(()=>buildGU(),()=>{}); }catch(e){ $('#pwOvHS').classList.remove('hidden'); } return; } $('#pwOvHS').classList.remove('hidden'); }
   $('#pwHSbtn').addEventListener('click',()=>{ ctx(); sfx.boop(); showHow(); });
   $('#pwGuVidAgain').addEventListener('click',()=>{ ctx(); playVid($('#pwGuVid')); });
@@ -4573,6 +4579,7 @@ const pay=(function(){
     $('#pwOkText').textContent=(p.kind==='forever'?'Forever pass on.':'Pass on until '+fmtT(p.ends_at)+'.')+(mail?' Code emailed to '+mail+'.':'');
     const touch=(navigator.maxTouchPoints||0)>0, ipad=/iPad/.test(navigator.userAgent)||(/Macintosh/.test(navigator.userAgent)&&touch);
     $('#pwOkHS').hidden=standalone()||!(touch||installEvt); $('#pwOkHSt').textContent=!touch?'Install Mojialand on this computer':ipad?"Put Mojialand on this iPad's Home Screen":iphoneSafari()?'Watch how: Mojialand on your Home Screen':"Put Mojialand on this phone's Home Screen";
+    if(ipad&&ipadSafari()) $('#pwOkHSt').textContent='Watch how: Mojialand on your Home Screen';
     $('#pwOkShare').hidden=!p.code; $('#pwOkGift').hidden=true; okMail=!!mail; go('allset'); showGiftOnAllset(); return true; }
   let okMail=false;
   $('#pwOkHS').addEventListener('click',()=>{ ctx(); sfx.boop(); showHow(); });
@@ -4750,7 +4757,7 @@ const pay=(function(){
     $('#pwHSbody').textContent=on?'Mojialand sits next to your other apps on this device. Open it from the icon for full screen play.':'Add Mojialand to your Home Screen. Your kids find it next to your other apps, and it opens full screen.';
     $('#pwHSbtn').hidden=on; $('#pwHSbtn').textContent=installEvt?'Install':'Show me how'; /* Release 1.5 #24: Android and computers get one Install button */
     /* Release 1.5 #61: first Grown-ups open on an iPhone in Safari plays the video once, muted; later opens offer Watch again */
-    const gv=!on&&iphoneSafari(), gvw=$('#pwGuVidWrap'), gvid=$('#pwGuVid');
+    const gvw=$('#pwGuVidWrap'), gvid=$('#pwGuVid'), gv=!on&&!!vidDevice()&&setVid(gvid,gvw);
     gvw.hidden=!gv; $('#pwMini').hidden=gv; hb.classList.toggle('vid',gv);
     if(gv){ if(!store.get('a2hsVid',false)){ store.set('a2hsVid',true); $('#pwGuVidAgain').hidden=true; playVid(gvid); } else $('#pwGuVidAgain').hidden=false; }
     else { try{ gvid.pause(); }catch(e){} }

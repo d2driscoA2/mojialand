@@ -1168,7 +1168,7 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
     await page.addInitScript(spy);
     await page.goto(base + '/play/'); await page.waitForTimeout(600);
     await openGU(page);
-    check('1.5 #61 iPad shows no iPhone video (Share sits at the top there)', await page.isHidden('#pwGuVid') && (await page.evaluate(() => window.__plays.length)) === 0);
+    check('1.5 #61 iPad plays the iPad video (landscape, Share at the top) on the first Grown-ups open', await page.isVisible('#pwGuVid') && (await page.evaluate(() => document.querySelector('#pwGuVid source').getAttribute('src'))) === '/img/a2hs-ipad.mp4' && (await page.getAttribute('#pwGuVid', 'poster')) === '/img/a2hs-ipad-poster.jpg' && (await page.locator('#pwGuVidWrap.ipad').count()) === 1 && (await page.evaluate(() => window.__plays.length)) === 1);
     await ctx.close();
   }
   {
@@ -1245,8 +1245,8 @@ const nav = (pg, id) => pg.evaluate((x) => { const b = document.createElement('b
     const { ctx, page } = await newPage();
     const r = await page.goto(base + '/home-screen/'); await page.waitForTimeout(300);
     const html = await page.content();
-    check('1.5 #61 /home-screen/ plays the video page with no script and no CSP errors', r.status() === 200 && (await page.locator('video source[src="/img/a2hs-iphone.mp4"]').count()) === 1 && !/<script/.test(html) && page.csp.length === 0 && page.errors.length === 0, page.csp.join(' | '));
-    { const buf = fs.readFileSync(path.join(site, 'img', 'a2hs-iphone.mp4')); check('1.5 #61 video file is small and has no sound track', buf.length < 1600000 && !buf.includes(Buffer.from('soun')) && buf.includes(Buffer.from('vide'))); }
+    check('1.5 #61 /home-screen/ plays the video page with no script and no CSP errors', r.status() === 200 && (await page.locator('video source[src="/img/a2hs-iphone.mp4"]').count()) === 1 && (await page.locator('video source[src="/img/a2hs-ipad.mp4"]').count()) === 1 && !/<script/.test(html) && page.csp.length === 0 && page.errors.length === 0, page.csp.join(' | '));
+    for (const f of ['a2hs-iphone.mp4', 'a2hs-ipad.mp4']) { const buf = fs.readFileSync(path.join(site, 'img', f)); check('1.5 #61 ' + f + ' is small and has no sound track', buf.length < 1600000 && !buf.includes(Buffer.from('soun')) && buf.includes(Buffer.from('vide'))); }
     await ctx.close();
   }
 }
@@ -2014,7 +2014,7 @@ for (const [w, h, name] of [[390, 844, 'phone'], [820, 1180, 'ipad'], [1180, 820
   await page.goto(base + '/pass/done/?session_id=cs_test_ipad');
   await page.waitForSelector('#s-allset:not(.hidden)', { timeout: 15000 });
   await page.waitForSelector('#pwOkGift:not([hidden])');
-  check('iPad All set: Home Screen link names the iPad', (await page.textContent('#pwOkHSt')) === "Put Mojialand on this iPad's Home Screen" && await page.isVisible('#pwOkHS'));
+  check('iPad All set: Home Screen link offers the iPad video in Safari, names the iPad elsewhere', ['Watch how: Mojialand on your Home Screen', "Put Mojialand on this iPad's Home Screen"].includes(await page.textContent('#pwOkHSt')) && await page.isVisible('#pwOkHS'), await page.textContent('#pwOkHSt'));
   await page.screenshot({ path: path.join(SHOTS, 'allset-ipad-1080.png') });
   await page.click('#pwOkBack');
   await page.waitForSelector('#s-home:not(.hidden)');
