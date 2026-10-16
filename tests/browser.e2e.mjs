@@ -25,10 +25,18 @@ async function analyticsSamples() {
     for (const d of lastDays(180, Date.now())) { const o = Math.round(w * 1.3 * rnd()); if (o) days.push({ d, co: 'US', st, ci, g, m: rnd() < 0.58 ? 'app' : 'web', o, b0: Math.round(o * 0.2), b1: Math.round(o * 0.3), b2: Math.round(o * 0.35), b3: Math.round(o * 0.15) }); }
     for (let h = 6; h < 22; h++) hours.push({ h, co: 'US', st, ci, g, o: Math.round(w * 3 * rnd() * (h > 15 && h < 20 ? 2 : 1)) });
   }
+  // Admin 1 (#62): plays outside the US. Kenora and Paris stay under the rule.
+  const FOREIGN = [['CA', 'ON', 'Toronto', 5], ['CA', 'QC', 'Quebec', 4], ['MX', 'CMX', 'Mexico City', 5], ['MX', 'NLE', 'Monterrey', 3], ['GB', 'ENG', 'London', 3], ['DE', 'BY', 'Munich', 2]];
+  for (const [co, st, ci, w] of FOREIGN) for (const g of G) {
+    for (let k = 0; k < 6; k++) { const n = Math.round(w * rnd() * 0.9); if (n) live.push({ slot_start: new Date(asOf - k * SLOT).toISOString(), country: co, state: st, city: ci, game: g, n }); }
+    for (const d of lastDays(180, Date.now())) { const o = Math.round(w * 1.3 * rnd()); if (o) days.push({ d, co, st, ci, g, m: 'web', o, b0: Math.round(o * 0.2), b1: Math.round(o * 0.3), b2: Math.round(o * 0.35), b3: Math.round(o * 0.15) }); }
+    for (let h = 6; h < 22; h++) hours.push({ h, co, st, ci, g, o: Math.round(w * 3 * rnd()) });
+  }
   const today = lastDays(1, Date.now())[0];
+  days.push({ d: today, co: 'CA', st: 'ON', ci: 'Kenora', g: 'match', m: 'web', o: 1, b0: 1, b1: 0, b2: 0, b3: 0 }, { d: today, co: 'FR', st: 'IDF', ci: 'Paris', g: 'match', m: 'web', o: 2, b0: 2, b1: 0, b2: 0, b3: 0 });
   const camp = { campaigns: [{ label: 'mi-troy-lib-sep', name: 'Troy library story time', note: '150 cards', active: true, created_at: new Date(Date.now() - 5 * 864e5).toISOString() }, { label: 'ig-reel-1', name: 'Instagram Reel 1', note: '', active: true, created_at: new Date(Date.now() - 2 * 864e5).toISOString() }],
     days: [{ l: 'mi-troy-lib-sep', d: today, e: 'open', n: 41, ds: 0 }, { l: 'mi-troy-lib-sep', d: today, e: 'play', n: 33, ds: 0 }, { l: 'mi-troy-lib-sep', d: today, e: 'gift', n: 12, ds: 0 }, { l: 'mi-troy-lib-sep', d: today, e: 'pass48', n: 3, ds: 4.5 }, { l: 'ig-reel-1', d: today, e: 'open', n: 18, ds: 0 }],
-    places: [{ l: 'mi-troy-lib-sep', co: 'US', st: 'MI', ci: 'Troy', n: 22 }, { l: 'mi-troy-lib-sep', co: 'US', st: 'MI', ci: 'Royal Oak', n: 9 }, { l: 'mi-troy-lib-sep', co: 'US', st: 'MI', ci: 'Novi', n: 3 }, { l: 'ig-reel-1', co: 'US', st: 'TX', ci: 'Austin', n: 6 }] };
+    places: [{ l: 'mi-troy-lib-sep', co: 'US', st: 'MI', ci: 'Troy', n: 22 }, { l: 'mi-troy-lib-sep', co: 'US', st: 'MI', ci: 'Royal Oak', n: 9 }, { l: 'mi-troy-lib-sep', co: 'US', st: 'MI', ci: 'Novi', n: 3 }, { l: 'ig-reel-1', co: 'US', st: 'TX', ci: 'Austin', n: 6 }, { l: 'mi-troy-lib-sep', co: 'CA', st: 'ON', ci: 'Windsor', n: 6 }] };
   const saved = globalThis.fetch;
   globalThis.fetch = async (url) => {
     const u = String(url);
@@ -754,7 +762,7 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
     const b = r.request().postDataJSON(); calls.push(b.action); if (/^passes\.(add30|forever)$/.test(b.action)) tellBodies.push(b); bodiesBy[b.action] = b;
     if (signedIn && /^(analytics|campaigns)\./.test(b.action)) {
       if (b.action === 'campaigns.create' && !/^[a-z0-9][a-z0-9-]{1,23}$/.test(b.label || '')) return r.fulfill({ status: 400, contentType: 'application/json', body: '{"error":"Use 2 to 24 lowercase letters, numbers or dashes for the label."}' });
-      const made = b.action === 'campaigns.create' ? { campaigns: [{ ...AN.campaigns.campaigns[0], label: b.label, name: b.name, open: 0, play: 0, gift: 0, pass48: 0, forever: 0, cities: [], rolls: {}, daily: [{ d: AN.campaigns.campaigns[0].daily.at(-1).d, n: 0 }], avgDays: null }, ...AN.campaigns.campaigns] } : null;
+      const made = b.action === 'campaigns.create' ? { campaigns: [{ ...AN.campaigns.campaigns[0], label: b.label, name: b.name, open: 0, play: 0, gift: 0, pass48: 0, forever: 0, cities: [], counties: [], rolls: {}, na: { cities: [], rolls: {} }, world: { countries: [], otherCountries: 0, unnamed: 0 }, daily: [{ d: AN.campaigns.campaigns[0].daily.at(-1).d, n: 0 }], avgDays: null }, ...AN.campaigns.campaigns] } : null;
       const o = { 'analytics.live': AN.live, 'analytics.history': b.range === 1 ? AN.history1 : b.range === 90 ? AN.history90 : AN.history, 'campaigns.list': AN.campaigns, 'campaigns.create': made, 'campaigns.active': AN.campaigns }[b.action];
       return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(o) });
     }
@@ -955,6 +963,15 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   check('analytics: live boards filled', (await page.locator('#anBusy .anRow').count()) >= 1 && (await page.locator('#anGames .anRow').count()) === 7 && (await page.locator('#anFeed .it').count()) >= 1);
   await page.focus('#anLiveMap .anBub');
   check('analytics: bubble tip shows counts by game', await page.isVisible('#anLiveMap .anTip') && /,\s*MI|,\s*[A-Z]{2}/.test(await page.textContent('#anLiveMap .anTip')));
+  check('admin 1: the map opens on the US, with North America and World one tap away', (await page.getAttribute('#anLiveScope [data-scope="us"]', 'aria-pressed')) === 'true' && await page.isVisible('#anLiveMap') && await page.isHidden('#anLiveNA') && await page.isHidden('#anLiveWorld'));
+  await page.click('#anLiveScope [data-scope="na"]');
+  await page.waitForSelector('#anLiveNA svg .anBub');
+  await page.waitForTimeout(300);
+  check('admin 1: live North America shows one bubble per state or province', (await page.locator('#anLiveNA .anBub').count()) === AN.live.na.regions.length && AN.live.na.regions.some((r) => r.country === 'CA') && await page.isHidden('#anLiveMap') && /Canada/.test(await page.textContent('#anLiveNAPlaces')) && /province/.test(await page.textContent('#anLiveHint')), String(AN.live.na.regions.length));
+  check('admin 1: live boards name Canadian and Mexican cities with their country', /Canada|Mexico/.test(await page.textContent('#anBusy') + await page.textContent('#anFeed')));
+  await page.screenshot({ path: path.join(SHOTS, 'admin1-live-na.png'), fullPage: false, clip: { x: 0, y: 0, width: 1024, height: 1100 } }).catch(() => {});
+  await page.click('#anLiveScope [data-scope="us"]');
+  await page.waitForSelector('#anLiveMap:not([hidden])');
   await page.waitForTimeout(1500);
   await page.screenshot({ path: path.join(SHOTS, 'admin-analytics-live.png'), fullPage: true });
   await page.click('#anViews [data-v="history"]');
@@ -985,6 +1002,49 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   await page.click('#anHistMap .anBack');
   await page.waitForFunction(() => document.querySelectorAll('#anHistMap path.anCounty').length === 0);
   check('analytics: Back returns to the whole US', (await page.textContent('#anHistPlaces')) === '');
+  // Admin 1 (#62): North America and World
+  check('admin 1: history has Toronto, Quebec, Mexico City and Monterrey; Kenora and Paris stay hidden', ['Toronto', 'Quebec', 'Mexico City', 'Monterrey'].every((c) => AN.history.na.cities.some((x) => x.city === c)) && !JSON.stringify(AN).includes('Kenora') && !JSON.stringify(AN).includes('Paris') && !JSON.stringify(AN.history).includes('Munich') && AN.history.world.otherCountries >= 2);
+  await page.click('#anHistScope [data-scope="na"]');
+  await page.waitForSelector('#anHistNA svg .anBub');
+  await page.waitForTimeout(500);
+  check('admin 1: North America map has US states, provinces and Mexican states', (await page.locator('#anHistNA path.anState').count()) === 96 && (await page.locator('#anHistNA path.anState[data-st="MX-CMX"]').count()) === 1 && (await page.locator('#anHistNA .anBub').count()) === AN.history.na.regions.length);
+  await page.screenshot({ path: path.join(SHOTS, 'admin1-na.png'), fullPage: false, clip: { x: 0, y: 0, width: 1024, height: 1500 } }).catch(() => {});
+  await page.$eval('#anHistNA path.anState[data-st="CA-ON"]', (el) => el.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+  await page.waitForFunction(() => /Ontario/.test(document.querySelector('#anHistNAPlaces').textContent));
+  await page.waitForTimeout(600);
+  const onTxt = await page.textContent('#anHistNAPlaces');
+  check('admin 1: tap Ontario lists Toronto; the small town shows only as smaller places', /Toronto/.test(onTxt) && !/Kenora/.test(onTxt) && /Smaller places in Ontario/.test(onTxt) && /Ontario/.test(await page.textContent('#anHistNA .anCrumbs')) && (await page.locator('#anHistNA .anBub').count()) === AN.history.na.cities.filter((c) => c.state === 'CA-ON').length, onTxt.slice(0, 160));
+  await page.locator('#anHistNA').screenshot({ path: path.join(SHOTS, 'admin1-ontario.png') }).catch(() => {});
+  await page.click('#anHistNA .anBack');
+  await page.waitForFunction(() => /Mexico/.test(document.querySelector('#anHistNAPlaces').textContent));
+  await page.$eval('#anHistNA path.anState[data-st="MX-CMX"]', (el) => el.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+  await page.waitForFunction(() => /Ciudad de México/.test(document.querySelector('#anHistNAPlaces').textContent));
+  check('admin 1: tap Mexico City lists Mexico City', /Mexico City/.test(await page.textContent('#anHistNAPlaces')));
+  await page.click('#anHistNA .anBack');
+  await page.$eval('#anHistNA path.anState[data-st="US-MI"]', (el) => el.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+  await page.waitForSelector('#anHistMap:not([hidden]) path.anCounty');
+  await page.waitForTimeout(500);
+  check('admin 1: a US state on the North America map opens on the US map with its counties', (await page.getAttribute('#anHistScope [data-scope="us"]', 'aria-pressed')) === 'true' && (await page.locator('#anHistMap path.anCounty').count()) === 83);
+  await page.click('#anHistMap .anBack');
+  await page.waitForFunction(() => document.querySelectorAll('#anHistMap path.anCounty').length === 0);
+  await page.click('#anHistScope [data-scope="world"]');
+  await page.waitForSelector('#anHistWorld svg .anBub');
+  await page.waitForTimeout(500);
+  const wTxt = await page.textContent('#anHistWorldPlaces');
+  check('admin 1: world view shows countries over the rule, blocked ones gray, the rest as Other countries', (await page.locator('#anHistWorld .anBub').count()) === AN.history.world.countries.length && (await page.locator('#anHistWorld .anBub.blk').count()) === 2 && /Other countries/.test(wTxt) && /Blocked/.test(wTxt) && /United Kingdom/.test(wTxt) && /Germany/.test(wTxt) && !/France/.test(wTxt), wTxt.slice(0, 200));
+  check('admin 1: the world legend explains gray bubbles', await page.evaluate(() => { const l = document.getElementById('anHistHint').closest('.anCard').querySelector('.anLgW'); return !!l && !l.hidden && l.offsetParent !== null; }));
+  await page.screenshot({ path: path.join(SHOTS, 'admin1-world.png'), fullPage: false, clip: { x: 0, y: 0, width: 1024, height: 1500 } }).catch(() => {});
+  await page.$eval('#anHistWorld path.anState[data-st="GB"]', (el) => el.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+  await page.waitForFunction(() => /England/.test(document.querySelector('#anHistWorldPlaces').textContent));
+  check('admin 1: tap a country lists its regions with names, tagged blocked', /England/.test(await page.textContent('#anHistWorldPlaces')) && /blocks this country since Release 1\.5/.test(await page.textContent('#anHistWorldPlaces')));
+  await page.click('#anHistWorld .anBack');
+  await page.$eval('#anHistWorld path.anState[data-st="CA"]', (el) => el.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+  await page.waitForFunction(() => /Ontario/.test(document.querySelector('#anHistWorldPlaces').textContent));
+  await page.click('#anHistWorldPlaces [data-jump="na"]');
+  await page.waitForSelector('#anHistNA:not([hidden]) .anBub');
+  check('admin 1: Open on the North America map from a country', (await page.getAttribute('#anHistScope [data-scope="na"]', 'aria-pressed')) === 'true');
+  await page.click('#anHistScope [data-scope="us"]');
+  await page.waitForSelector('#anHistMap:not([hidden])');
   await page.click('#anRanges [data-r="90"]');
   await page.waitForFunction(() => /per week/.test(document.querySelector('#anTrendPlaysT').textContent));
   check('analytics: 90 days groups by week and compares with the 90 days before', /vs the 90 days before/.test(await page.textContent('#anKpis')) && (await page.locator('#anTrendPlays polyline.anPrev').count()) === 1 && await page.isHidden('#anReplayRow'));
@@ -996,6 +1056,11 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   await page.waitForSelector('#anCamps .anCamp');
   check('analytics: campaign cards with QR codes', (await page.locator('#anCamps .anCamp img[src^="data:image/"]').count()) === 2);
   check('analytics: campaign board funnel', /41/.test(await page.textContent('#anBoardC')) && /1\.5/.test(await page.textContent('#anBoardC')) && (await page.locator('#anCampMap .anBub').count()) === 2);
+  check('admin 1: campaign places list Windsor, Canada', /Windsor, ON, Canada/.test(await page.textContent('#anBoardC')));
+  await page.click('#anCampScope [data-scope="na"]');
+  await page.waitForSelector('#anCampNA svg .anBub');
+  check('admin 1: campaign North America map shows Michigan and Ontario', (await page.locator('#anCampNA .anBub').count()) === 2);
+  await page.click('#anCampScope [data-scope="us"]');
   await page.fill('#anName', 'Pumpkin Fest Oct!');
   check('analytics: label fills from the name', (await page.inputValue('#anLabel')) === 'pumpkin-fest-oct' && /\?c=pumpkin-fest-oct$/.test(await page.textContent('#anLinkPrev')));
   await page.click('#anMakeBtn');

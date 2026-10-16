@@ -968,6 +968,106 @@ test('analytics: small cities fold into a county first, then the state', async (
   assert.deepEqual(f.rolls, { MI: 3 }, 'Ann Arbor alone stays hidden inside Michigan');
 });
 
+test('Admin 1 #62: Mexico and Canada region codes map to ISO; blocked list', async () => {
+  const { regionCode, regionId, BLOCKED, BLOCKED_REGIONS } = await import('../netlify/functions/_lib/geo.mjs');
+  assert.equal(regionId('MX', 'CMX'), 'MX-CMX');
+  assert.equal(regionId('MX', 'DIF'), 'MX-CMX', 'old Mexico City code');
+  assert.equal(regionId('MX', 'NL'), 'MX-NLE', 'postal code for Nuevo Leon');
+  assert.equal(regionId('MX', 'NLE'), 'MX-NLE');
+  assert.equal(regionId('CA', 'ON'), 'CA-ON');
+  assert.equal(regionId('CA', 'PQ'), 'CA-QC', 'old Quebec code');
+  assert.equal(regionCode('US', 'mi'), 'MI');
+  assert.equal(regionId('', 'ON'), '');
+  assert.ok(BLOCKED.has('DE') && BLOCKED.has('GB') && BLOCKED.has('KP') && !BLOCKED.has('KR') && !BLOCKED.has('CA') && !BLOCKED.has('MX') && !BLOCKED.has('UA'));
+  assert.equal(BLOCKED.size, 42, 'the 42 codes listed in the Release 1.5 handoff (3 + 8 + 26 + 5)');
+  assert.ok(BLOCKED_REGIONS.has('UA-43') && BLOCKED_REGIONS.size === 4);
+});
+
+test('Admin 1 #62: history adds Canada, Mexico and the world; US numbers stay the same', async () => {
+  const cookie = await adminSignIn();
+  const [d1, d2] = lastDays(2, Date.now());
+  const us = [
+    { d: d1, co: 'US', st: 'MI', ci: 'Troy', g: 'draw', m: 'app', o: 6, b0: 0, b1: 0, b2: 6, b3: 0 },
+    { d: d1, co: 'US', st: 'MI', ci: 'Novi', g: 'match', m: 'web', o: 4, b0: 0, b1: 4, b2: 0, b3: 0 },
+  ];
+  const usHours = [{ h: 9, co: 'US', st: 'MI', ci: 'Troy', g: 'draw', o: 6 }];
+  db.rpcData.analytics_history = { days: us, hours: usHours };
+  const before = JSON.parse((await adminApi(ev({ action: 'analytics.history', range: 7 }, { cookie }))).body);
+  const foreign = [
+    { d: d1, co: 'CA', st: 'ON', ci: 'Toronto', g: 'pattern', m: 'web', o: 7, b0: 0, b1: 7, b2: 0, b3: 0 },
+    { d: d1, co: 'CA', st: 'QC', ci: 'Quebec', g: 'bounce', m: 'app', o: 5, b0: 5, b1: 0, b2: 0, b3: 0 },
+    { d: d1, co: 'CA', st: 'ON', ci: 'Kenora', g: 'pattern', m: 'web', o: 1, b0: 1, b1: 0, b2: 0, b3: 0 },
+    { d: d2, co: 'MX', st: 'CMX', ci: 'Mexico City', g: 'draw', m: 'web', o: 6, b0: 0, b1: 0, b2: 6, b3: 0 },
+    { d: d2, co: 'MX', st: 'NLE', ci: 'Monterrey', g: 'match', m: 'web', o: 5, b0: 0, b1: 5, b2: 0, b3: 0 },
+    { d: d1, co: 'GB', st: 'ENG', ci: 'London', g: 'share', m: 'web', o: 3, b0: 3, b1: 0, b2: 0, b3: 0 },
+    { d: d2, co: 'GB', st: 'ENG', ci: 'London', g: 'share', m: 'web', o: 3, b0: 3, b1: 0, b2: 0, b3: 0 },
+    { d: d1, co: 'FR', st: 'IDF', ci: 'Paris', g: 'match', m: 'web', o: 2, b0: 2, b1: 0, b2: 0, b3: 0 },
+    { d: d1, co: '', st: '', ci: '', g: 'match', m: 'web', o: 1, b0: 1, b1: 0, b2: 0, b3: 0 },
+  ];
+  db.rpcData.analytics_history = { days: [...us, ...foreign], hours: [...usHours, { h: 10, co: 'CA', st: 'ON', ci: 'Toronto', g: 'pattern', o: 7 }, { h: 11, co: 'CA', st: 'ON', ci: 'Kenora', g: 'pattern', o: 1 }, { h: 12, co: 'GB', st: 'ENG', ci: 'London', g: 'share', o: 6 }] };
+  const r = await adminApi(ev({ action: 'analytics.history', range: 7 }, { cookie }));
+  const d = JSON.parse(r.body);
+  for (const k of ['cities', 'counties', 'rolls', 'states', 'cityHours', 'countyHours', 'stateHours', 'stateCount', 'cityCount']) assert.deepEqual(d[k], before[k], 'US ' + k + ' unchanged');
+  assert.equal(d.plays, before.plays + 33);
+  assert.equal(d.other, 33);
+  assert.deepEqual(d.na.cities.map((c) => [c.city, c.state, c.code, c.country, c.total]), [['Toronto', 'CA-ON', 'ON', 'CA', 7], ['Mexico City', 'MX-CMX', 'CMX', 'MX', 6], ['Quebec', 'CA-QC', 'QC', 'CA', 5], ['Monterrey', 'MX-NLE', 'NLE', 'MX', 5]]);
+  assert.deepEqual(d.na.rolls, { 'CA-ON': 1 }, 'Kenora alone stays hidden inside Ontario');
+  assert.ok(!r.body.includes('Kenora') && !r.body.includes('Paris') && !r.body.includes('London'), 'no small or overseas city by name');
+  assert.deepEqual(d.na.regions.map((x) => [x.region, x.total]), [['US-MI', 10], ['CA-ON', 8], ['MX-CMX', 6], ['CA-QC', 5], ['MX-NLE', 5]]);
+  assert.deepEqual(Object.keys(d.na.cityHours), ['CA-ON|Toronto']);
+  assert.deepEqual(d.na.rollHours, { 'CA-ON': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] });
+  assert.deepEqual(d.world.countries.map((c) => [c.co, c.total, c.blocked]), [['CA', 13], ['MX', 11], ['US', 10], ['GB', 6]].map(([co, t]) => [co, t, co === 'GB']));
+  assert.equal(d.world.otherCountries, 2, 'France under 5 plays in the range adds up to Other countries');
+  assert.equal(d.world.otherCount, 1);
+  assert.equal(d.world.unnamed, 1);
+  const gb = d.world.countries.find((c) => c.co === 'GB');
+  assert.deepEqual(gb.regions.map((x) => [x.id, x.total]), [['GB-ENG', 6]]);
+  assert.equal(gb.smaller, 0);
+  const ca = d.world.countries.find((c) => c.co === 'CA');
+  assert.deepEqual(ca.regions.map((x) => [x.id, x.total]), [['CA-ON', 8], ['CA-QC', 5]]);
+  assert.equal(d.world.countryHours.GB[12], 6);
+});
+
+test('Admin 1 #62: live view adds North America and the world with the 3-open rule', async () => {
+  const { liveView } = await import('../netlify/functions/_lib/analytics-admin.mjs');
+  const SLOT = 300e3, asOf = Math.floor(Date.now() / SLOT) * SLOT - SLOT, t = new Date(asOf).toISOString();
+  db.plays_live = [
+    { slot_start: t, country: 'US', state: 'MI', city: 'Troy', game: 'draw', n: 4 },
+    { slot_start: t, country: 'CA', state: 'ON', city: 'Toronto', game: 'pattern', n: 3 },
+    { slot_start: t, country: 'CA', state: 'ON', city: 'Kenora', game: 'pattern', n: 1 },
+    { slot_start: t, country: 'MX', state: 'NL', city: 'Monterrey', game: 'match', n: 2 },
+    { slot_start: t, country: 'DE', state: 'BY', city: 'Munich', game: 'bounce', n: 3 },
+    { slot_start: t, country: 'FR', state: 'IDF', city: 'Paris', game: 'bounce', n: 1 },
+  ];
+  const d = await liveView();
+  assert.equal(d.total, 14);
+  assert.equal(d.other, 10);
+  assert.deepEqual(d.cities.map((c) => c.city), ['Troy']);
+  assert.deepEqual(d.na.cities.map((c) => [c.city, c.code, c.total]), [['Toronto', 'ON', 3]]);
+  assert.deepEqual(d.na.rolls, { 'CA-ON': 1, 'MX-NLE': 2 });
+  assert.deepEqual(d.world.countries.map((c) => [c.co, c.total, c.blocked]).sort(), [['CA', 4, false], ['DE', 3, true], ['US', 4, false]]);
+  assert.equal(d.world.otherCountries, 3, 'Mexico (2) and France (1) under 3 open add up');
+  assert.ok(d.feed.some((f) => f.city === 'Toronto' && f.country === 'CA' && f.state === 'ON'));
+  const js = JSON.stringify(d);
+  assert.ok(!js.includes('Kenora') && !js.includes('Munich') && !js.includes('Paris') && !js.includes('Monterrey'));
+});
+
+test('Admin 1 #62: campaigns count Canada, Mexico and other countries with the 5-open rule', async () => {
+  const cookie = await adminSignIn();
+  db.rpcData.campaign_stats = {
+    campaigns: [{ label: 'zoo-oct', name: 'Zoo', note: '', active: true, created_at: new Date().toISOString() }],
+    days: [],
+    places: [{ l: 'zoo-oct', co: 'US', st: 'MI', ci: 'Troy', n: 6 }, { l: 'zoo-oct', co: 'CA', st: 'ON', ci: 'Windsor', n: 5 }, { l: 'zoo-oct', co: 'CA', st: 'ON', ci: 'London', n: 2 }, { l: 'zoo-oct', co: 'GB', st: 'ENG', ci: 'London', n: 1 }],
+  };
+  const d = JSON.parse((await adminApi(ev({ action: 'campaigns.list' }, { cookie }))).body);
+  const c = d.campaigns[0];
+  assert.deepEqual(c.na.cities, [{ city: 'Windsor', state: 'CA-ON', country: 'CA', code: 'ON', n: 5 }]);
+  assert.deepEqual(c.na.rolls, { 'CA-ON': 2 });
+  assert.deepEqual(c.world.countries, [{ co: 'CA', n: 7, blocked: false }, { co: 'US', n: 6, blocked: false }]);
+  assert.equal(c.world.otherCountries, 1);
+  assert.equal(c.other, 8, 'everything outside the US, as before');
+});
+
 test('admin analytics: 90-day range compares with the 90 days before; bad ranges fall back to 7', async () => {
   const cookie = await adminSignIn();
   const d = lastDays(180, Date.now());

@@ -32,6 +32,8 @@
   const sv = (tag, attrs) => { const e = document.createElementNS(SVGNS, tag); for (const k in attrs || {}) e.setAttribute(k, attrs[k]); return e; };
   const shield = '<span aria-hidden="true">🛡️</span>';
   const countyWord = (st) => (st === 'LA' ? 'Parish' : st === 'AK' ? 'Area' : 'County');
+  const scopeSeg = (id) => `<div class="anSeg anScope" role="group" aria-label="Map area" id="${id}"><button type="button" data-scope="us" aria-pressed="true">US</button><button type="button" data-scope="na" aria-pressed="false">North America</button><button type="button" data-scope="world" aria-pressed="false">World</button></div>`;
+  const SCOPE_HINT = { us: 'Tap a state to zoom in.', na: 'Tap a province or a Mexican state for its cities. A US state opens on the US map.', world: 'Tap a country to see its regions. Gray countries are blocked since Release 1.5; their plays came before the block.' };
   const RANGE_LABEL = { 1: 'today', 7: 'last 7 days', 30: 'last 30 days', 60: 'last 60 days', 90: 'last 90 days', 365: 'last 12 months' };
 
   // ---------------- markup
@@ -54,10 +56,13 @@
       </div>
     </div>
     <div class="anCard" style="display:grid;gap:10px">
-      <div class="anHead"><h2>Where kids play right now</h2><span class="anMuted">Tap a state to zoom in</span></div>
+      <div class="anHead"><h2>Where kids play right now</h2>${scopeSeg('anLiveScope')}</div>
+      <p class="anMuted" id="anLiveHint" style="margin:0">Tap a state to zoom in.</p>
       <div class="anMap" id="anLiveMap"></div>
+      <div class="anMap" id="anLiveNA" hidden></div>
+      <div class="anMap anWorld" id="anLiveWorld" hidden></div>
       <div class="anLegend" data-legend></div>
-      <div id="anLivePlaces"></div>
+      <div id="anLivePlaces"></div><div id="anLiveNAPlaces" hidden></div><div id="anLiveWorldPlaces" hidden></div>
       <p class="anMuted" id="anLiveOther"></p>
     </div>
     <div class="anGrid3">
@@ -65,7 +70,7 @@
       <div class="anCard anBoard"><h3>Latest active cities</h3><div class="anFeed" id="anFeed"></div></div>
       <div class="anCard anBoard"><h3>Games right now</h3><div class="anBoard" id="anGames"></div></div>
     </div>
-    <div class="anPrivacy">${shield}<span><b>Counts only.</b> No names, devices, IP addresses or play sessions. The live view runs 5 minutes behind. A city shows once 3 or more games are open there. Smaller towns add up to their county first, then to their state.</span></div>
+    <div class="anPrivacy">${shield}<span><b>Counts only.</b> No names, devices, IP addresses or play sessions. The live view runs 5 minutes behind. A city shows once 3 or more games are open there. Smaller towns add up to their county first, then to their state or province. A country shows once 3 or more games are open there. The rest add up to Other countries.</span></div>
   </section>
 
   <section id="anHistory" hidden style="display:grid;gap:16px">
@@ -86,11 +91,14 @@
       </div>
     </div>
     <div class="anCard" style="display:grid;gap:10px">
-      <div class="anHead"><h2>Plays by place</h2><span class="anMuted">Tap a state to zoom in</span></div>
-      <p id="anHistSub">Bubble size shows plays. Color shows the favorite game in that place.</p>
+      <div class="anHead"><h2>Plays by place</h2>${scopeSeg('anHistScope')}</div>
+      <p class="anMuted" id="anHistHint" style="margin:0">Tap a state to zoom in.</p>
       <div class="anMap" id="anHistMap"></div>
+      <div class="anMap" id="anHistNA" hidden></div>
+      <div class="anMap anWorld" id="anHistWorld" hidden></div>
+      <p id="anHistSub">Bubble size shows plays. Color shows the favorite game in that place.</p>
       <div class="anLegend" data-legend></div>
-      <div id="anHistPlaces"></div>
+      <div id="anHistPlaces"></div><div id="anHistNAPlaces" hidden></div><div id="anHistWorldPlaces" hidden></div>
       <div class="anReplay" id="anReplayRow">
         <button type="button" class="secondary" id="anPlay">▶ Replay the day</button>
         <input type="range" id="anHour" min="0" max="23" value="23" aria-label="Hour of the day">
@@ -109,7 +117,7 @@
       <div class="anCard"><h3>Top places by plays</h3><div class="anTable" id="anTPlays"></div></div>
       <div class="anCard"><h3>Top places by minutes played</h3><div class="anTable" id="anTMins"></div></div>
     </div>
-    <div class="anPrivacy">${shield}<span><b>Totals by the hour, never by the person.</b> A city shows on days with 5 or more plays. Smaller towns add up to their county, and a county shows once its total passes 5. The rest rolls into the state. Minutes come from ranges (under 2, 2 to 5, 5 to 15, 15 plus), so no single play is timed. Mojialand counts plays, not people.</span></div>
+    <div class="anPrivacy">${shield}<span><b>Totals by the hour, never by the person.</b> A city shows on days with 5 or more plays. Smaller towns add up to their county, and a county shows once its total passes 5. The rest rolls into the state or province. A country, and a region inside it, shows once it has 5 or more plays in the chosen range. The rest adds up to Other countries. Minutes come from ranges (under 2, 2 to 5, 5 to 15, 15 plus), so no single play is timed. Mojialand counts plays, not people.</span></div>
   </section>
 
   <section id="anCampaigns" hidden style="display:grid;gap:16px">
@@ -134,22 +142,32 @@
         <div class="row"><button class="primary" type="submit" id="anMakeBtn">Make campaign</button></div>
       </form>
     </div>
-    <div class="anPrivacy">${shield}<span><b>Campaigns count events, never people.</b> The first open from a QR code counts once, then the label leaves the address bar. The device keeps only the event label for 7 days to credit a later play, gift code or pass. Places under 5 opens add up to their county, then their state.</span></div>
+    <div class="anPrivacy">${shield}<span><b>Campaigns count events, never people.</b> The first open from a QR code counts once, then the label leaves the address bar. The device keeps only the event label for 7 days to credit a later play, gift code or pass. Places under 5 opens add up to their county, then their state or province. Countries under 5 opens add up to Other countries.</span></div>
   </section>
   <p class="anMuted" id="anCredit"></p>`;
 
-  const legend = GAMES.map((g) => `<span><i style="background:${g.c}"></i>${g.e} ${g.n}</span>`).join('') + '<span><i style="background:#fff;border:2px dashed #7138D1"></i>Dashed ring = a county, several small towns together</span><span><i style="background:#fff;border:2px solid #D9CCEE"></i>+N = smaller places in the state</span>';
+  const legend = GAMES.map((g) => `<span><i style="background:${g.c}"></i>${g.e} ${g.n}</span>`).join('') + '<span><i style="background:#fff;border:2px dashed #7138D1"></i>Dashed ring = a county, several small towns together</span><span><i style="background:#fff;border:2px solid #D9CCEE"></i>+N = smaller places in the state</span><span class="anLgW" hidden><i style="background:#B8B0C8"></i>Gray = blocked country, plays from before the block</span>';
   root.querySelectorAll('[data-legend]').forEach((el) => { el.innerHTML = legend; });
   const setErr = (m) => { $('anErr').textContent = m || ''; };
 
   // ---------------- map data
-  let MAP = null;
-  const COUNTIES = {};
+  // US map: states, counties, cities (us-atlas, GeoNames). North America and
+  // World maps (Admin 1, #62): Natural Earth provinces, Mexican states and
+  // countries. Each loads only when its map opens.
+  let MAP = null, NAMAP = null, WORLD = null;
+  const COUNTIES = {}, NACITIES = {};
+  const CNAME = { US: 'United States', CA: 'Canada', MX: 'Mexico' };
+  const cName = (co) => (WORLD && WORLD.byCo[co] ? WORLD.byCo[co].n : CNAME[co] || co || 'Unknown place');
   const mapReady = fetch('/admin/usmap.json', { credentials: 'same-origin' }).then((r) => r.json()).then((m) => {
     MAP = m;
     MAP.stateBy = Object.fromEntries(m.states.map((s) => [s.ab, s]));
-    $('anCredit').textContent = (m.attribution || '') + ' County outlines: US Census Bureau via us-atlas (ISC).';
   });
+  $('anCredit').textContent = 'State outlines: US Census Bureau via us-atlas (ISC). County outlines: US Census Bureau via us-atlas (ISC). Province, Mexican state and country outlines: Natural Earth (public domain), countries via world-atlas (ISC). City locations: GeoNames (CC BY 4.0) via all-the-cities.';
+  let naP = null, worldP = null, regionNamesP = null;
+  const getJSON = (u, empty) => fetch(u, { credentials: 'same-origin' }).then((r) => (r.ok ? r.json() : empty)).catch(() => empty);
+  const naReady = () => naP || (naP = getJSON('/admin/namap.json', { regions: [], vb: [0, 0, 975, 610] }).then((m) => { NAMAP = m; NAMAP.byId = Object.fromEntries(m.regions.map((r) => [r.id, r])); }));
+  const worldReady = () => worldP || (worldP = getJSON('/admin/world.json', { countries: [], vb: [0, 0, 975, 500] }).then((m) => { WORLD = m; WORLD.byCo = Object.fromEntries(m.countries.map((c) => [c.co, c])); }));
+  const regionNames = () => regionNamesP || (regionNamesP = getJSON('/admin/regions.json', {}));
   function loadCounties(st) {
     if (!COUNTIES[st]) {
       COUNTIES[st] = fetch('/admin/counties/' + encodeURIComponent(st) + '.json', { credentials: 'same-origin' })
@@ -159,6 +177,11 @@
     }
     return COUNTIES[st];
   }
+  function loadNACities(rid) {
+    if (!/^(CA|MX)-[A-Z]{2,3}$/.test(rid)) return Promise.resolve({});
+    if (!NACITIES[rid]) NACITIES[rid] = getJSON('/admin/nacities/' + encodeURIComponent(rid) + '.json', { cities: {} }).then((d) => d.cities || {});
+    return NACITIES[rid];
+  }
   const VB_US = [0, 0, 975, 610];
   const VB_LAKES = [560, 110, 250, 156];
   function pos(state, city) {
@@ -167,12 +190,13 @@
     const s = MAP.stateBy[state];
     return s ? s.c : null;
   }
-  function fitBox(b, pad) {
+  function fitBox(b, pad, base) {
     let [x0, y0, x1, y1] = b;
     const p = pad == null ? 0.08 : pad;
+    const vb0 = base || VB_US;
     let w = Math.max(x1 - x0, 8), h = Math.max(y1 - y0, 6);
     x0 -= w * p; y0 -= h * p; w *= 1 + 2 * p; h *= 1 + 2 * p;
-    const want = 610 / 975;
+    const want = vb0[3] / vb0[2];
     if (h / w > want) { const nw = h / want; x0 -= (nw - w) / 2; w = nw; } else { const nh = w * want; y0 -= (nh - h) / 2; h = nh; }
     return [x0, y0, w, h];
   }
@@ -181,19 +205,36 @@
     for (const c of list) { b[0] = Math.min(b[0], c.b[0]); b[1] = Math.min(b[1], c.b[1]); b[2] = Math.max(b[2], c.b[2]); b[3] = Math.max(b[3], c.b[3]); }
     return b;
   }
+  const blk = '<span class="anBlk">Blocked</span>';
 
-  // ---------------- the map: US, then a state with its counties, then a county
-  // data: { cities:[{city,state,county,total,byGame}], counties:[{id,name,state,total,byGame}], rolls:{st:n}, states:[{state,total,byGame}] }
+  // ---------------- the map
+  // geo 'us': US, then a state with its counties, then a county.
+  //   data: { cities:[{city,state,county,total,byGame}], counties:[{id,name,state,total,byGame}], rolls:{st:n}, states:[{state,total,byGame}] }
+  // geo 'na': North America, one bubble per state or province; tap a Canadian
+  //   or Mexican one for its cities, tap a US state to open it on the US map.
+  //   data: { regions:[{region,country,total,byGame}], cities:[{city,state:'CA-ON',code,country,total,byGame}], rolls:{'CA-ON':n} }
+  // geo 'world': one bubble per country; tap a country for its regions.
+  //   data: { countries:[{co,total,byGame,blocked,regions:[{id,total,blocked}],smaller}], otherCountries, otherCount, unnamed }
   function makeMap(wrap, opts) {
+    const kind = opts.geo || 'us';
+    const base = kind === 'us' ? VB_US : kind === 'na' ? NAMAP.vb : WORLD.vb;
+    const shapes = kind === 'us' ? MAP.states.map((s) => ({ id: s.ab, n: s.n, d: s.d, c: s.c }))
+      : kind === 'na' ? NAMAP.regions
+      : WORLD.countries.filter((c) => c.d).map((c) => ({ id: c.co, n: c.n, d: c.d, c: c.c, b: c.b }));
+    const shapeBy = kind === 'us' ? MAP.stateBy : kind === 'na' ? NAMAP.byId : WORLD.byCo;
+    const nameOf = (id) => (shapeBy[id] ? shapeBy[id].n : kind === 'world' ? cName(id) : id);
+    const centerOf = (id) => (shapeBy[id] ? shapeBy[id].c : null);
+    const topLabel = kind === 'us' ? 'Whole US' : kind === 'na' ? 'North America' : 'World';
     wrap.innerHTML = '';
-    const svg = sv('svg', { viewBox: VB_US.join(' '), role: 'img', 'aria-label': opts.label });
+    const svg = sv('svg', { viewBox: base.join(' '), role: 'img', 'aria-label': opts.label });
     const gS = sv('g'), gC = sv('g'), gR = sv('g'), gL = sv('g'), gB = sv('g');
     const stateEls = {};
-    for (const s of MAP.states) {
-      const p = sv('path', { d: s.d, class: 'anState', tabindex: '-1' });
-      p.dataset.st = s.ab;
+    for (const s of shapes) {
+      const p = sv('path', { d: s.d, class: 'anState' + (kind !== 'us' ? ' ' + kind : ''), tabindex: '-1' });
+      p.dataset.st = s.id;
+      if (kind === 'na') p.dataset.co = s.co;
       gS.appendChild(p);
-      stateEls[s.ab] = p;
+      stateEls[s.id] = p;
     }
     svg.append(gS, gC, gR, gL, gB);
     wrap.appendChild(svg);
@@ -205,9 +246,11 @@
     tip.hidden = true;
     wrap.appendChild(tip);
     const panel = opts.panel || null;
-    let vb = VB_US.slice(), items = [], rolls = [], data = { cities: [], counties: [], rolls: {}, states: [] };
+    let vb = base.slice(), items = [], rolls = [];
+    let data = { cities: [], counties: [], rolls: {}, states: [], regions: [], countries: [] };
     let level = { kind: 'us' };
     const nodes = new Map();
+    const cityPts = {};
     const width = () => svg.getBoundingClientRect().width || 900;
 
     function setVB(t) {
@@ -222,9 +265,9 @@
       })(t0);
     }
     function drawTools() {
-      const crumbs = ['<button type="button" data-go="us" aria-pressed="' + (level.kind === 'us') + '">Whole US</button>'];
-      if (level.kind === 'us') crumbs.push('<button type="button" data-go="lakes" aria-pressed="false">Great Lakes</button>');
-      if (level.st) crumbs.push('<button type="button" data-go="state" aria-pressed="' + (level.kind === 'state') + '">' + esc(MAP.stateBy[level.st] ? MAP.stateBy[level.st].n : level.st) + '</button>');
+      const crumbs = ['<button type="button" data-go="us" aria-pressed="' + (level.kind === 'us') + '">' + topLabel + '</button>'];
+      if (kind === 'us' && level.kind === 'us') crumbs.push('<button type="button" data-go="lakes" aria-pressed="false">Great Lakes</button>');
+      if (level.st) crumbs.push('<button type="button" data-go="state" aria-pressed="' + (level.kind === 'state') + '">' + esc(nameOf(level.st)) + '</button>');
       if (level.kind === 'county') crumbs.push('<button type="button" data-go="county" aria-pressed="true">' + esc(level.name + ' ' + countyWord(level.st)) + '</button>');
       tools.innerHTML = '<div class="anSeg anCrumbs" role="group" aria-label="Map level">' + crumbs.join('') + '</div>' + (level.kind !== 'us' ? '<button type="button" class="anBack" data-go="back" aria-label="Back one level">← Back</button>' : '');
     }
@@ -241,16 +284,31 @@
       level = { kind: 'us' };
       gC.innerHTML = '';
       for (const p of Object.values(stateEls)) p.classList.remove('dim', 'sel');
-      drawTools(); setVB(VB_US); drawPanel();
+      drawTools(); setVB(base);
+      if (kind !== 'us') build();
+      drawPanel();
       if (opts.onLevel) opts.onLevel(level);
     }
     async function zoomState(st) {
-      const cs = await loadCounties(st);
+      if (kind === 'na' && st.startsWith('US-')) { if (opts.onJump) opts.onJump('us', st.slice(3)); return; }
+      if (kind === 'us') {
+        const cs = await loadCounties(st);
+        level = { kind: 'state', st };
+        for (const [ab, p] of Object.entries(stateEls)) { p.classList.toggle('dim', ab !== st); p.classList.toggle('sel', ab === st); }
+        drawCounties(st, cs);
+        drawTools();
+        setVB(cs.list.length ? fitBox(unionBox(cs.list)) : VB_US);
+        drawPanel();
+        if (opts.onLevel) opts.onLevel(level);
+        return;
+      }
+      if (kind === 'na') cityPts[st] = await loadNACities(st); else await regionNames();
       level = { kind: 'state', st };
-      for (const [ab, p] of Object.entries(stateEls)) { p.classList.toggle('dim', ab !== st); p.classList.toggle('sel', ab === st); }
-      drawCounties(st, cs);
+      for (const [id, p] of Object.entries(stateEls)) { p.classList.toggle('dim', id !== st); p.classList.toggle('sel', id === st); }
       drawTools();
-      setVB(cs.list.length ? fitBox(unionBox(cs.list)) : VB_US);
+      const sh = shapeBy[st];
+      if (sh && sh.b) setVB(fitBox(sh.b, kind === 'world' ? 0.2 : 0.1, base));
+      build();
       drawPanel();
       if (opts.onLevel) opts.onLevel(level);
     }
@@ -284,6 +342,15 @@
         gC.appendChild(p);
       }
     }
+    // North America and World: shade each state, province or country by its total
+    function shade(totals) {
+      const max = Math.max(1, ...Object.values(totals));
+      for (const [id, p] of Object.entries(stateEls)) {
+        const v = totals[id] || 0;
+        p.classList.toggle('has', v > 0);
+        p.style.fillOpacity = v ? String(0.12 + 0.45 * Math.sqrt(v / max)) : '';
+      }
+    }
     svg.addEventListener('click', (e) => {
       const bub = e.target.closest('.anBub');
       if (bub) return;
@@ -302,7 +369,7 @@
     const hideTip = () => { tip.hidden = true; };
     function showTip(it) {
       const rows = it.byGame ? GAMES.map((g, i) => (it.byGame[i] ? `<div class="r"><span>${g.e} ${g.n}</span><span class="anNum">${fmtN(it.byGame[i])}</span></div>` : '')).join('') : '';
-      tip.innerHTML = `<b>${esc(it.title)}</b>${it.sub ? `<div style="opacity:.8;margin-bottom:4px">${esc(it.sub)}</div>` : ''}${rows}${it.extra ? `<div class="r" style="margin-top:4px;opacity:.8"><span>${esc(it.extra)}</span></div>` : ''}`;
+      tip.innerHTML = `<b>${esc(it.title)}</b>${it.blocked ? ' ' + blk : ''}${it.sub ? `<div style="opacity:.8;margin-bottom:4px">${esc(it.sub)}</div>` : ''}${rows}${it.extra ? `<div class="r" style="margin-top:4px;opacity:.8"><span>${esc(it.extra)}</span></div>` : ''}`;
       tip.hidden = false;
       const wr = wrap.getBoundingClientRect(), n = nodes.get(it.key), br = n.getBoundingClientRect();
       let x = br.left - wr.left + br.width / 2 + 12, y = br.top - wr.top - 8;
@@ -355,7 +422,7 @@
         let n = nodes.get(it.key);
         const r = it.rpx;
         if (!n) {
-          n = sv('g', { class: 'anBub' + (it.county ? ' cty' : ''), tabindex: '0', role: 'button' });
+          n = sv('g', { class: 'anBub' + (it.county ? ' cty' : '') + (it.region ? ' reg' : '') + (it.blocked ? ' blk' : ''), tabindex: '0', role: 'button' });
           const inner = sv('g', { class: 'in' }), bob = sv('g', { class: 'bob' });
           bob.append(sv('circle', { class: 'ring' }), sv('circle', { class: 'fillc' }), sv('text', { class: 'em' }));
           const badge = sv('g', { class: 'badge' });
@@ -366,6 +433,7 @@
           nodes.set(it.key, n);
           n.addEventListener('pointerenter', () => showTip(n._it));
           n.addEventListener('click', (e) => { e.stopPropagation(); showTip(n._it); });
+          n.addEventListener('dblclick', (e) => { e.stopPropagation(); if (n._it.zoom) zoomState(n._it.zoom); });
           n.addEventListener('focus', () => showTip(n._it));
           n.addEventListener('blur', hideTip);
           const st = (idx % 11) * 0.13;
@@ -374,7 +442,7 @@
         } else if (n._it && n._it.count !== it.count && !reduce) { n.classList.remove('bump'); void n.getBBox(); n.classList.add('bump'); }
         idx++;
         n._it = it;
-        n.setAttribute('aria-label', it.title);
+        n.setAttribute('aria-label', it.title + (it.blocked ? ', blocked' : ''));
         const [ring, fillc, em] = n.querySelector('.bob').childNodes;
         ring.setAttribute('r', r + 3);
         fillc.setAttribute('r', r);
@@ -393,13 +461,17 @@
       }
       items = newItems;
     }
-    // Builds bubbles from the data. County bubbles sit at the county label point.
+    const val = (x) => (opts.value ? opts.value(x) : x.total);
+    const unit = opts.unit ? ' ' + opts.unit : '';
+    const colorOf = (x) => (x.blocked ? '#B8B0C8' : opts.color ? opts.color(x) : x.byGame ? GAMES[top(x.byGame)].c : '#7138D1');
+    const emojiOf = (x) => (opts.emoji ? opts.emoji(x) : x.byGame ? GAMES[top(x.byGame)].e : '📍');
+    // Builds bubbles from the data. US county bubbles sit at the county label point.
     async function render(d) {
+      if (kind !== 'us') { data = { regions: d.regions || [], cities: d.cities || [], rolls: d.rolls || {}, countries: d.countries || [], otherCountries: d.otherCountries || 0, otherCount: d.otherCount || 0, unnamed: d.unnamed || 0 }; if (level.st) { if (kind === 'na') cityPts[level.st] = await loadNACities(level.st); else await regionNames(); } build(); drawPanel(); return; }
       data = { cities: d.cities || [], counties: d.counties || [], rolls: d.rolls || {}, states: d.states || [] };
       const needStates = [...new Set(data.counties.map((c) => c.state))];
       const loaded = {};
       await Promise.all(needStates.map(async (st) => { loaded[st] = await loadCounties(st); }));
-      const val = opts.value || ((x) => x.total);
       const all = data.cities.map(val).concat(data.counties.map(val));
       const maxV = Math.max(1, ...all);
       const size = (v) => 10 + 14 * Math.sqrt(v / maxV);
@@ -407,15 +479,15 @@
       for (const c of data.cities) {
         const p = pos(c.state, c.city);
         if (!p) continue;
-        const v = val(c), t = c.byGame ? top(c.byGame) : -1;
-        out.push({ key: 'c|' + c.state + '|' + c.city, x: p[0], y: p[1], rpx: size(v), color: opts.color ? opts.color(c) : GAMES[t].c, emoji: opts.emoji ? opts.emoji(c) : GAMES[t].e, badge: opts.badge ? v : null, count: v, byGame: c.byGame, title: `${c.city}, ${c.state}: ${fmtN(v)}${opts.unit ? ' ' + opts.unit : ''}`, sub: c.countyName ? c.countyName + ' ' + countyWord(c.state) : '', extra: opts.extra ? opts.extra(c) : '' });
+        const v = val(c);
+        out.push({ key: 'c|' + c.state + '|' + c.city, x: p[0], y: p[1], rpx: size(v), color: colorOf(c), emoji: emojiOf(c), badge: opts.badge ? v : null, count: v, byGame: c.byGame, title: `${c.city}, ${c.state}: ${fmtN(v)}${unit}`, sub: c.countyName ? c.countyName + ' ' + countyWord(c.state) : '', extra: opts.extra ? opts.extra(c) : '' });
       }
       for (const k of data.counties) {
         const cs = loaded[k.state], cc = cs && cs.by[k.id];
         const p = cc ? cc.c : pos(k.state, '');
         if (!p) continue;
-        const v = val(k), t = k.byGame ? top(k.byGame) : -1;
-        out.push({ key: 'k|' + k.id, county: true, x: p[0], y: p[1], rpx: size(v), color: opts.color ? opts.color(k) : GAMES[t].c, emoji: opts.emoji ? opts.emoji(k) : GAMES[t].e, badge: opts.badge ? v : null, count: v, byGame: k.byGame, title: `${k.name} ${countyWord(k.state)}, ${k.state}: ${fmtN(v)}${opts.unit ? ' ' + opts.unit : ''}`, sub: 'Several small towns together', extra: '' });
+        const v = val(k);
+        out.push({ key: 'k|' + k.id, county: true, x: p[0], y: p[1], rpx: size(v), color: colorOf(k), emoji: emojiOf(k), badge: opts.badge ? v : null, count: v, byGame: k.byGame, title: `${k.name} ${countyWord(k.state)}, ${k.state}: ${fmtN(v)}${unit}`, sub: 'Several small towns together', extra: '' });
       }
       drawBubbles(out);
       rolls = [];
@@ -428,11 +500,98 @@
       layout();
       drawPanel();
     }
-    // The place list under the map for the zoomed state or county.
-    function drawPanel() {
+    // North America and World bubbles, for the current level
+    function build() {
+      const out = [];
+      rolls = [];
+      if (kind === 'na') {
+        shade(Object.fromEntries(data.regions.map((r) => [r.region, val(r)])));
+        if (level.kind === 'state') {
+          const st = level.st;
+          const list = data.cities.filter((c) => c.state === st);
+          const maxV = Math.max(1, ...list.map(val), data.rolls[st] || 0);
+          const size = (v) => 9 + 13 * Math.sqrt(v / maxV);
+          for (const c of list) {
+            const p = (cityPts[st] || {})[c.city] || centerOf(st);
+            if (!p) continue;
+            const v = val(c);
+            out.push({ key: 'c|' + st + '|' + c.city, x: p[0], y: p[1], rpx: size(v), color: colorOf(c), emoji: emojiOf(c), badge: opts.badge ? v : null, count: v, byGame: c.byGame, title: `${c.city}, ${c.code}: ${fmtN(v)}${unit}`, sub: nameOf(st) + ', ' + cName(c.country), extra: opts.extra ? opts.extra(c) : '' });
+          }
+          const rv = data.rolls[st] || 0, cp = centerOf(st);
+          if (rv > 0 && cp) rolls.push({ x: cp[0], y: cp[1] + 16, text: '+' + fmtN(rv) });
+        } else {
+          const list = data.regions.filter((r) => val(r) > 0);
+          const maxV = Math.max(1, ...list.map(val));
+          const size = (v) => 8 + 14 * Math.sqrt(v / maxV);
+          for (const r of list) {
+            const p = centerOf(r.region);
+            if (!p) continue;
+            const v = val(r);
+            out.push({ key: 'r|' + r.region, region: true, zoom: r.region, x: p[0], y: p[1], rpx: size(v), color: colorOf(r), emoji: emojiOf(r), badge: opts.badge ? v : null, count: v, byGame: r.byGame, title: `${nameOf(r.region)}: ${fmtN(v)}${unit}`, sub: cName(r.country) + (r.country === 'US' ? ' · tap the state to open it on the US map' : ' · tap the province or state for its cities'), extra: '' });
+          }
+        }
+      } else if (kind === 'world') {
+        shade(Object.fromEntries(data.countries.map((c) => [c.co, val(c)])));
+        const maxV = Math.max(1, ...data.countries.map(val));
+        const size = (v) => 7 + 15 * Math.sqrt(v / maxV);
+        for (const c of data.countries) {
+          const p = centerOf(c.co);
+          if (!p) continue;
+          const v = val(c);
+          out.push({ key: 'w|' + c.co, region: true, zoom: c.co, blocked: c.blocked, x: p[0], y: p[1], rpx: size(v), color: colorOf(c), emoji: emojiOf(c), badge: opts.badge ? v : null, count: v, byGame: c.byGame, title: `${cName(c.co)}: ${fmtN(v)}${unit}`, sub: c.blocked ? 'Blocked since Release 1.5. Plays from before the block.' : 'Tap the country for its regions', extra: '' });
+        }
+      }
+      drawBubbles(out);
+      layout();
+    }
+    // The place list under the map for the zoomed state, province, county or country.
+    async function drawPanel() {
       if (!panel) return;
+      const max0 = (arr) => Math.max(1, ...arr);
+      const row = (ic, name, sub, v, max, tag) => `<div class="anRow"><span class="anDot" style="background:#F3ECFC">${ic}</span><div class="nm"><div>${esc(name)}${tag || ''}${sub ? ` <span class="anMuted">${esc(sub)}</span>` : ''}</div><div class="anTrack"><div class="anFill" style="width:${((v / max) * 100).toFixed(0)}%;background:var(--purple)"></div></div></div><span class="v">${fmtN(v)}</span></div>`;
+      if (kind === 'na') {
+        if (level.kind === 'us') {
+          const by = { US: 0, CA: 0, MX: 0 };
+          for (const r of data.regions) by[r.country] = (by[r.country] || 0) + val(r);
+          const max = max0(Object.values(by));
+          panel.innerHTML = `<div class="anPlaces"><div class="anBoard">${['US', 'CA', 'MX'].map((co) => row(co === 'US' ? '🇺🇸' : co === 'CA' ? '🇨🇦' : '🇲🇽', cName(co), '', by[co], max)).join('')}</div><p class="anMuted" style="margin:8px 0 0">Tap a province or a Mexican state to see its cities. Tap a US state to open it on the US map.</p></div>`;
+          return;
+        }
+        const st = level.st;
+        const cities = data.cities.filter((c) => c.state === st).sort((a, b) => val(b) - val(a));
+        const roll = data.rolls[st] || 0;
+        const reg = data.regions.find((r) => r.region === st);
+        const max = max0([...cities.map(val), roll]);
+        const rows = cities.map((c) => row('📍', c.city, '', val(c), max));
+        if (roll) rows.push(row('➕', 'Smaller places in ' + nameOf(st), 'below the rule, not shown by name', roll, max));
+        panel.innerHTML = `<div class="anPlaces"><div class="anHead"><h3 style="margin:0">${esc(nameOf(st))}, ${esc(cName(st.slice(0, 2)))}</h3>${reg ? `<span class="anMuted">${fmtN(val(reg))} ${opts.unit || 'in all'} in ${esc(nameOf(st))}</span>` : ''}</div><div class="anBoard">${rows.join('') || '<div class="anEmpty">No place here passes the small-number rule yet.</div>'}</div></div>`;
+        return;
+      }
+      if (kind === 'world') {
+        if (level.kind === 'us') {
+          const list = data.countries;
+          const max = max0([...list.map(val), data.otherCountries]);
+          const rows = list.map((c) => row('🌎', cName(c.co), '', val(c), max, c.blocked ? ' ' + blk : ''));
+          if (data.otherCountries) rows.push(row('➕', 'Other countries', data.otherCount + (data.otherCount === 1 ? ' country' : ' countries') + ' under the rule, not shown by name', data.otherCountries, max));
+          if (data.unnamed) rows.push(row('❔', 'Unknown place', 'the network could not name the country', data.unnamed, max));
+          panel.innerHTML = `<div class="anPlaces"><div class="anBoard">${rows.join('') || '<div class="anEmpty">No country passes the small-number rule yet.</div>'}</div><p class="anMuted" style="margin:8px 0 0">Tap a country to see its regions.</p></div>`;
+          return;
+        }
+        const names = await regionNames();
+        const c = data.countries.find((x) => x.co === level.st);
+        if (!c) { panel.innerHTML = `<div class="anPlaces"><h3 style="margin:0">${esc(cName(level.st))}</h3><div class="anEmpty">This country is under the small-number rule. Its plays count in Other countries.</div></div>`; return; }
+        const regName = (id) => names[id] || (c.co === 'US' && MAP.stateBy[id.slice(3)] ? MAP.stateBy[id.slice(3)].n : NAMAP && NAMAP.byId[id] ? NAMAP.byId[id].n : id.slice(3) || id);
+        const max = max0([...(c.regions || []).map(val), c.smaller || 0]);
+        const regs = c.regions || [];
+        const rows = regs.map((r) => row('🗺️', regName(r.id), '', val(r), max, r.blocked ? ' ' + blk : ''));
+        if (c.smaller) rows.push(row('➕', 'Smaller regions in ' + cName(c.co), 'below the rule or unnamed', c.smaller, max));
+        const naBtn = ['US', 'CA', 'MX'].includes(c.co) && opts.onJump ? `<button type="button" class="secondary" data-jump="na">Open on the North America map</button>` : '';
+        panel.innerHTML = `<div class="anPlaces"><div class="anHead"><h3 style="margin:0">${esc(cName(c.co))}${c.blocked ? ' ' + blk : ''}</h3><span class="anMuted">${fmtN(val(c))} ${opts.unit || 'in all'}</span></div>${c.blocked ? '<p class="anMuted" style="margin:4px 0 8px">Mojialand blocks this country since Release 1.5. These plays came before the block.</p>' : ''}<div class="anBoard">${rows.join('')}</div>${naBtn ? '<div class="row" style="margin-top:8px">' + naBtn + '</div>' : ''}</div>`;
+        const jb = panel.querySelector('[data-jump]');
+        if (jb) jb.addEventListener('click', () => opts.onJump('na', c.co));
+        return;
+      }
       if (level.kind === 'us') { panel.innerHTML = ''; return; }
-      const val = opts.value || ((x) => x.total);
       const st = level.st, stName = MAP.stateBy[st] ? MAP.stateBy[st].n : st;
       const inCounty = (c) => level.kind !== 'county' || c.county === level.id;
       const cities = data.cities.filter((c) => c.state === st && inCounty(c)).sort((a, b) => val(b) - val(a));
@@ -442,19 +601,60 @@
       const title = level.kind === 'county' ? `${level.name} ${countyWord(st)}, ${stName}` : stName;
       const rows = [];
       const max = Math.max(1, ...cities.map(val), ...counties.map(val), roll);
-      const row = (ic, name, sub, v) => `<div class="anRow"><span class="anDot" style="background:#F3ECFC">${ic}</span><div class="nm"><div>${esc(name)}${sub ? ` <span class="anMuted">${esc(sub)}</span>` : ''}</div><div class="anTrack"><div class="anFill" style="width:${((v / max) * 100).toFixed(0)}%;background:var(--purple)"></div></div></div><span class="v">${fmtN(v)}</span></div>`;
-      for (const c of cities) rows.push(row('📍', c.city, level.kind === 'state' && c.countyName ? c.countyName + ' ' + countyWord(st) : '', val(c)));
-      for (const k of counties) rows.push(row('🗺️', level.kind === 'county' ? 'Other small towns' : 'Small towns in ' + k.name + ' ' + countyWord(st), '', val(k)));
-      if (roll) rows.push(row('➕', 'Smaller places in ' + stName, 'below the rule, not shown by name', roll));
+      for (const c of cities) rows.push(row('📍', c.city, level.kind === 'state' && c.countyName ? c.countyName + ' ' + countyWord(st) : '', val(c), max));
+      for (const k of counties) rows.push(row('🗺️', level.kind === 'county' ? 'Other small towns' : 'Small towns in ' + k.name + ' ' + countyWord(st), '', val(k), max));
+      if (roll) rows.push(row('➕', 'Smaller places in ' + stName, 'below the rule, not shown by name', roll, max));
       panel.innerHTML = `<div class="anPlaces"><div class="anHead"><h3 style="margin:0">${esc(title)}</h3>${level.kind === 'state' && stTot ? `<span class="anMuted">${fmtN(stTot)} ${opts.unit || 'in all'} in ${esc(stName)}</span>` : ''}</div>${level.kind === 'state' ? '<p class="anMuted" style="margin:4px 0 8px">Tap a county on the map to zoom in.</p>' : ''}<div class="anBoard">${rows.join('') || '<div class="anEmpty">No place here passes the small-number rule yet.</div>'}</div></div>`;
     }
     drawTools();
     new ResizeObserver(() => layout()).observe(svg);
-    return { render, zoomTo: (z) => { if (z === 'lakes' && level.kind === 'us') { tools.querySelector('[data-go="lakes"]').click(); } }, zoomState, zoomCounty, goUS, hideTip, level: () => level };
+    return { render, zoomTo: (z) => { if (z === 'lakes' && level.kind === 'us' && kind === 'us') { tools.querySelector('[data-go="lakes"]').click(); } }, zoomState, zoomCounty, goUS, hideTip, level: () => level };
+  }
+  // A map card with a US, North America and World switch. The US map shows
+  // first (Danny, October 15). The other two load when first picked.
+  function scopedMaps(ids, opts) {
+    const seg = $(ids.seg), maps = {}, wraps = { us: $(ids.us), na: $(ids.na), world: $(ids.world) }, panels = { us: $(ids.usP), na: $(ids.naP), world: $(ids.worldP) };
+    let scope = 'us', last = null;
+    const dataFor = { us: (d) => d, na: (d) => d.na || { regions: [], cities: [], rolls: {} }, world: (d) => d.world || { countries: [] } };
+    async function ensure(sc) {
+      if (maps[sc]) return maps[sc];
+      if (sc === 'na') await naReady();
+      if (sc === 'world') { await worldReady(); await naReady(); }
+      if (!maps[sc]) maps[sc] = makeMap(wraps[sc], { ...opts, ...(opts.per && opts.per[sc]), geo: sc, panel: panels[sc], label: opts.label + (sc === 'us' ? '' : sc === 'na' ? ', North America' : ', world'), onJump: (to, at) => jump(to, at) });
+      return maps[sc];
+    }
+    async function show(sc) {
+      scope = sc;
+      seg.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.scope === sc)));
+      for (const k of Object.keys(wraps)) { wraps[k].hidden = k !== sc; panels[k].hidden = k !== sc; }
+      if (opts.onScope) opts.onScope(sc);
+      const m = await ensure(sc);
+      if (last) await m.render(dataFor[sc](last));
+      return m;
+    }
+    async function jump(to, at) {
+      const m = await show(to);
+      if (to === 'us' && at) await m.zoomState(at);
+    }
+    seg.addEventListener('click', (e) => { const b = e.target.closest('button[data-scope]'); if (b) show(b.dataset.scope); });
+    return {
+      async render(d) { last = d; const m = await ensure(scope); await m.render(dataFor[scope](d)); },
+      map: (sc) => maps[sc || 'us'],
+      scope: () => scope,
+      show,
+    };
   }
   const inLakes = (list) => list.length > 0 && list.every((c) => { const p = pos(c.state, c.city || ''); return p && p[0] >= VB_LAKES[0] && p[0] <= VB_LAKES[0] + VB_LAKES[2] && p[1] >= VB_LAKES[1] && p[1] <= VB_LAKES[1] + VB_LAKES[3]; });
   const barRow = (g, label, v, max, sub) => `<div class="anRow"><span class="anDot" style="background:${g.c}">${g.e}</span><div class="nm"><div>${esc(label)}</div><div class="anTrack"><div class="anFill" style="width:${((v / Math.max(1, max)) * 100).toFixed(0)}%;background:${g.c}"></div></div></div><span class="v">${fmtN(v)}${sub ? `<small>${esc(sub)}</small>` : ''}</span></div>`;
-  const placesOf = (d) => [...d.cities.map((c) => ({ ...c, name: c.city + ', ' + c.state })), ...d.counties.map((k) => ({ ...k, name: k.name + ' ' + countyWord(k.state) + ', ' + k.state }))].sort((a, b) => b.total - a.total);
+  const placesOf = (d) => [...d.cities.map((c) => ({ ...c, name: c.city + ', ' + c.state })), ...d.counties.map((k) => ({ ...k, name: k.name + ' ' + countyWord(k.state) + ', ' + k.state })), ...(d.na ? d.na.cities.map((c) => ({ ...c, name: c.city + ', ' + c.code + ', ' + cName(c.country) })) : [])].sort((a, b) => b.total - a.total);
+  // The hint line and the blocked legend follow the map area picked
+  function onScope(hintId, sc) {
+    $(hintId).textContent = SCOPE_HINT[sc];
+    const card = $(hintId).closest('.anCard');
+    if (card) card.querySelectorAll('.anLgW').forEach((x) => { x.hidden = sc !== 'world'; });
+  }
+  const mapIds = (pre) => ({ seg: pre + 'Scope', us: pre + 'Map', na: pre + 'NA', world: pre + 'World', usP: pre + 'Places', naP: pre + 'NAPlaces', worldP: pre + 'WorldPlaces' });
+  const outside = (d) => (d.other ? ' Pick North America or World above to see places outside the US.' : '');
 
   // ---------------- live
   let view = 'live', liveMap = null, liveTimer = null, seenFeed = new Set(), liveZoomed = false;
@@ -462,13 +662,13 @@
     let d;
     try { d = await api('analytics.live'); setErr(''); } catch (e) { setErr(e.message); return; }
     await mapReady;
-    if (!liveMap) liveMap = makeMap($('anLiveMap'), { label: 'Map of places with games open right now', panel: $('anLivePlaces'), badge: true, unit: 'open' });
+    if (!liveMap) liveMap = scopedMaps(mapIds('anLive'), { label: 'Map of places with games open right now', badge: true, unit: 'open', onScope: (sc) => onScope('anLiveHint', sc) });
     $('anTotal').textContent = fmtN(d.total);
     $('anAsOf').textContent = 'Counts as of ' + fmtTime(d.asOf) + '. Updates every 30 seconds.';
     $('anChips').innerHTML = GAMES.map((g, i) => `<span class="anChip"><span class="anDot" style="background:${g.c}">${g.e}</span>${g.n} <span class="anNum">${fmtN(d.byGame[i])}</span></span>`).join('');
     await liveMap.render(d);
-    if (!liveZoomed && inLakes([...d.cities, ...d.counties])) { liveZoomed = true; liveMap.zoomTo('lakes'); }
-    $('anLiveOther').textContent = d.other ? fmtN(d.other) + ' more open outside the US or in a place the network could not name.' : '';
+    if (!liveZoomed && liveMap.scope() === 'us' && inLakes([...d.cities, ...d.counties])) { liveZoomed = true; liveMap.map('us').zoomTo('lakes'); }
+    $('anLiveOther').textContent = d.other ? fmtN(d.other) + ' more open outside the US or in a place the network could not name.' + outside(d) : '';
     const busy = placesOf(d).slice(0, 6);
     $('anBusy').innerHTML = busy.length ? busy.map((c) => barRow(GAMES[top(c.byGame)], c.name, c.total, busy[0].total, 'open')).join('') : '<div class="anEmpty">No place has 3 or more games open right now.</div>';
     const gsum = d.byGame.reduce((a, b) => a + b, 0) || 1, gmax = Math.max(1, ...d.byGame);
@@ -476,7 +676,7 @@
     $('anFeed').innerHTML = d.feed.length ? d.feed.map((f) => {
       const g = GAMES[GI[f.game]] || GAMES[0], key = f.t + f.city + f.state, fresh = !seenFeed.has(key);
       seenFeed.add(key);
-      return `<div class="it${fresh && seenFeed.size > d.feed.length ? ' new' : ''}"><span class="t">${fmtTime(f.t)}</span><span class="anDot" style="background:${g.c}">${g.e}</span><span class="c">${esc(f.city)}, ${esc(f.state)}</span><span class="anNum" style="font-weight:900;color:var(--deep)">${fmtN(f.n)}</span></div>`;
+      return `<div class="it${fresh && seenFeed.size > d.feed.length ? ' new' : ''}"><span class="t">${fmtTime(f.t)}</span><span class="anDot" style="background:${g.c}">${g.e}</span><span class="c">${esc(f.city)}, ${esc(f.state)}${f.country && f.country !== 'US' ? ', ' + esc(cName(f.country)) : ''}</span><span class="anNum" style="font-weight:900;color:var(--deep)">${fmtN(f.n)}</span></div>`;
     }).join('') : '<div class="anEmpty">No city passed 3 open games in the last 30 minutes.</div>';
   }
   function startLive() { stopLive(); loadLive(); liveTimer = setInterval(() => { if (!document.hidden && view === 'live' && !root.closest('[hidden]')) loadLive(); }, 30000); }
@@ -491,7 +691,14 @@
     const counties = H.counties.map((k) => ({ ...k, total: sum(H.countyHours[k.id]) })).filter((k) => k.total > 0);
     const rolls = {};
     for (const [st, hrs] of Object.entries(H.stateHours)) { const v = sum(hrs); if (v) rolls[st] = v; }
-    return { cities, counties, rolls, states: H.states };
+    const N = H.na, Wd = H.world;
+    const na = N ? {
+      regions: N.regions.map((r) => ({ ...r, total: sum(N.regionHours[r.region]) })).filter((r) => r.total > 0),
+      cities: N.cities.map((c) => ({ ...c, total: sum(N.cityHours[c.state + '|' + c.city]) })).filter((c) => c.total > 0),
+      rolls: Object.fromEntries(Object.entries(N.rollHours).map(([k, h]) => [k, sum(h)]).filter(([, v]) => v > 0)),
+    } : undefined;
+    const world = Wd ? { ...Wd, countries: Wd.countries.map((c) => ({ ...c, total: sum(Wd.countryHours[c.co]) })).filter((c) => c.total > 0) } : undefined;
+    return { cities, counties, rolls, states: H.states, na, world };
   }
   function drawHistMap() { return histMap.render(capData(hourCap)); }
   const pct = (a, b) => (b ? Math.round(((a - b) / b) * 100) : null);
@@ -500,18 +707,19 @@
     stopReplay();
     try { H = await api('analytics.history', { range }); setErr(''); } catch (e) { setErr(e.message); return; }
     await mapReady;
-    if (!histMap) histMap = makeMap($('anHistMap'), { label: 'Map of plays by place', panel: $('anHistPlaces'), unit: 'plays', extra: (c) => (c.minutes != null && hourCap >= 24 ? fmtN(c.minutes) + ' minutes played' : '') });
+    if (!histMap) histMap = scopedMaps(mapIds('anHist'), { label: 'Map of plays by place', unit: 'plays', extra: (c) => (c.minutes != null && hourCap >= 24 ? fmtN(c.minutes) + ' minutes played' : ''), onScope: (sc) => onScope('anHistHint', sc) });
     hourCap = 24; $('anHour').value = 23; $('anHourLbl').textContent = 'All day';
     $('anReplayRow').hidden = range > 30;
     await drawHistMap();
-    if (!histZoomed && inLakes([...H.cities, ...H.counties])) { histZoomed = true; histMap.zoomTo('lakes'); }
+    if (!histZoomed && histMap.scope() === 'us' && inLakes([...H.cities, ...H.counties])) { histZoomed = true; histMap.map('us').zoomTo('lakes'); }
     const lbl = RANGE_LABEL[range];
-    const places = H.cityCount + H.counties.length;
+    const places = H.cityCount + H.counties.length + (H.na ? H.na.cities.length : 0);
+    const nCountries = H.world ? H.world.countries.length : 0;
     $('anKpis').innerHTML = [
       ['Plays', fmtN(H.plays), H.prev ? change(H.plays, H.prev.plays) : lbl],
       ['Minutes played', fmtN(H.minutes), H.prev ? change(H.minutes, H.prev.minutes) : 'about ' + fmtN(H.minutes / 60) + ' hours'],
       ['Minutes per play', H.minutesPerPlay.toFixed(1), 'from play-length ranges'],
-      ['Places', places + (places === 1 ? ' place' : ' places'), H.stateCount + (H.stateCount === 1 ? ' state' : ' states')],
+      ['Places', places + (places === 1 ? ' place' : ' places'), H.stateCount + (H.stateCount === 1 ? ' state' : ' states') + (nCountries > 1 ? ', ' + nCountries + ' countries' : '')],
       ['Home Screen app', H.appShare + '%', 'of plays'],
     ].map(([l, n, s]) => `<div class="anKpi"><div class="l">${l}</div><div class="n">${n}</div><div class="s">${s}</div></div>`).join('');
     drawTrend();
@@ -538,7 +746,7 @@
     $('anTPlays').innerHTML = tp.length ? `<table><thead><tr><th>Place</th><th>Top game</th><th class="r">Plays</th></tr></thead><tbody>${tp.map((c) => { const g = GAMES[top(c.byGame)]; return `<tr><td>${esc(c.name)}</td><td>${g.e} ${g.n}</td><td class="r">${fmtN(c.total)}</td></tr>`; }).join('')}</tbody></table>` : '<div class="anEmpty">No place passed 5 plays in a day yet.</div>';
     const tm = all.slice().sort((a, b) => b.minutes - a.minutes).slice(0, 8);
     $('anTMins').innerHTML = tm.length ? `<table><thead><tr><th>Place</th><th class="r">Minutes</th><th class="r">Per play</th></tr></thead><tbody>${tm.map((c) => `<tr><td>${esc(c.name)}</td><td class="r">${fmtN(c.minutes)}</td><td class="r">${(c.minutes / Math.max(1, c.total)).toFixed(1)}</td></tr>`).join('')}</tbody></table>` : '<div class="anEmpty">No place passed 5 plays in a day yet.</div>';
-    $('anHistSub').textContent = (range === 1 ? 'Today so far.' : 'The ' + RANGE_LABEL[range] + '.') + ' Bubble size shows plays. Color shows the favorite game in that place.' + (H.other ? ' ' + fmtN(H.other) + ' plays came from outside the US or an unnamed place.' : '');
+    $('anHistSub').textContent = (range === 1 ? 'Today so far.' : 'The ' + RANGE_LABEL[range] + '.') + ' Bubble size shows plays. Color shows the favorite game in that place.' + (H.other ? ' ' + fmtN(H.other) + ' plays came from outside the US or an unnamed place.' + outside(H) : '');
   }
   // groups daily values into 7-day weeks, ending with the latest day
   function weekly(vals, add, zero) {
@@ -645,7 +853,10 @@
     const c = C[sel], b = $('anBoardC'), bought = c.pass48 + c.forever;
     const pctO = (v) => (c.open ? Math.round((v / c.open) * 100) + '%' : '0%');
     const link = linkBase() + c.label;
-    const placeRows = [...c.cities.map((x) => ({ name: x.city + ', ' + x.state, sub: x.countyName ? x.countyName + ' ' + countyWord(x.state) : '', n: x.n, ic: '📍' })), ...c.counties.map((x) => ({ name: 'Small towns in ' + x.name + ' ' + countyWord(x.state) + ', ' + x.state, sub: '', n: x.n, ic: '🗺️' })), ...Object.entries(c.rolls).map(([st, v]) => ({ name: 'Smaller places, ' + st, sub: '', n: v, ic: '➕' }))].sort((a, b) => b.n - a.n);
+    const cna = c.na || { cities: [], rolls: {} }, cw = c.world || { countries: [], otherCountries: 0, unnamed: 0 };
+    const placeRows = [...c.cities.map((x) => ({ name: x.city + ', ' + x.state, sub: x.countyName ? x.countyName + ' ' + countyWord(x.state) : '', n: x.n, ic: '📍' })), ...c.counties.map((x) => ({ name: 'Small towns in ' + x.name + ' ' + countyWord(x.state) + ', ' + x.state, sub: '', n: x.n, ic: '🗺️' })), ...Object.entries(c.rolls).map(([st, v]) => ({ name: 'Smaller places, ' + st, sub: '', n: v, ic: '➕' })),
+      ...cna.cities.map((x) => ({ name: x.city + ', ' + x.code + ', ' + cName(x.country), sub: '', n: x.n, ic: '📍' })), ...Object.entries(cna.rolls).map(([rid, v]) => ({ name: 'Smaller places, ' + rid.slice(3) + ', ' + cName(rid.slice(0, 2)), sub: '', n: v, ic: '➕' })),
+      ...cw.countries.filter((x) => !['US', 'CA', 'MX'].includes(x.co)).map((x) => ({ name: cName(x.co), sub: x.blocked ? 'blocked since Release 1.5' : '', n: x.n, ic: '🌎' })), ...(cw.otherCountries ? [{ name: 'Other countries', sub: 'under the rule', n: cw.otherCountries, ic: '➕' }] : [])].sort((a, b) => b.n - a.n);
     const pmax = Math.max(1, ...placeRows.map((r) => r.n));
     b.innerHTML = `<div class="anHead"><div style="min-width:0"><h2><span class="anTag" style="background:${c.color}"></span>${esc(c.name)}</h2><p>${c.note ? esc(c.note) + ' · ' : ''}Started ${fmtDay(c.start)}${c.active ? '' : ' · paused, new scans count nothing'}</p></div>
       <div class="row"><button type="button" class="secondary" id="anPrintC">Print QR cards</button><button type="button" class="secondary" id="anCopyC">Copy link</button><button type="button" class="${c.active ? 'danger' : 'secondary'}" id="anPause">${c.active ? 'Pause' : 'Resume'}</button></div></div>
@@ -658,12 +869,20 @@
         <div class="anStep"><div class="l">Open to purchase</div><div class="n">${c.avgDays == null ? '-' : c.avgDays.toFixed(1)}</div><div class="s">days, average</div></div>
       </div>
       <div class="anGrid2" style="align-items:start">
-        <div style="display:grid;gap:8px;min-width:0"><h3>Where the cards traveled</h3><div class="anMap" id="anCampMap"></div><div id="anCampPlaces"></div></div>
+        <div style="display:grid;gap:8px;min-width:0"><div class="anHead"><h3>Where the cards traveled</h3>${scopeSeg('anCampScope')}</div><p class="anMuted" id="anCampHint" style="margin:0">${SCOPE_HINT.us}</p><div class="anMap" id="anCampMap"></div><div class="anMap" id="anCampNA" hidden></div><div class="anMap anWorld" id="anCampWorld" hidden></div><div id="anCampPlaces"></div><div id="anCampNAPlaces" hidden></div><div id="anCampWorldPlaces" hidden></div></div>
         <div style="display:grid;gap:8px;min-width:0"><h3>Opens per day</h3><div class="anChart">${campCols(c)}</div>
           <h3 style="margin-top:6px">Places reached</h3><div class="anBoard">${placeRows.length ? placeRows.map((r) => `<div class="anRow"><span class="anDot" style="background:${r.ic === '➕' ? '#F3ECFC' : c.color}">${r.ic}</span><div class="nm"><div>${esc(r.name)}${r.sub ? ` <span class="anMuted">${esc(r.sub)}</span>` : ''}</div><div class="anTrack"><div class="anFill" style="width:${((r.n / pmax) * 100).toFixed(0)}%;background:${c.color}"></div></div></div><span class="v">${fmtN(r.n)}</span></div>`).join('') : '<div class="anEmpty">No opens yet. Print the QR cards and hand them out.</div>'}</div></div>
       </div>`;
-    const m = makeMap($('anCampMap'), { label: 'Map of places reached by this campaign', panel: $('anCampPlaces'), badge: true, unit: 'opens', value: (x) => x.n, color: () => c.color, emoji: () => '📍' });
-    m.render({ cities: c.cities, counties: c.counties, rolls: c.rolls, states: [] }).then(() => { if (inLakes([...c.cities, ...c.counties])) m.zoomTo('lakes'); });
+    // North America regions for this campaign: US states from the shown places and rolls, provinces from Canada and Mexico
+    const reg = {};
+    const addR = (rid, n) => { if (!reg[rid]) reg[rid] = { region: rid, country: rid.slice(0, 2), n: 0 }; reg[rid].n += n; };
+    for (const x of c.cities) addR('US-' + x.state, x.n);
+    for (const x of c.counties) addR('US-' + x.state, x.n);
+    for (const [st, v] of Object.entries(c.rolls)) addR('US-' + st, v);
+    for (const x of cna.cities) addR(x.state, x.n);
+    for (const [rid, v] of Object.entries(cna.rolls)) addR(rid, v);
+    const m = scopedMaps(mapIds('anCamp'), { label: 'Map of places reached by this campaign', badge: true, unit: 'opens', value: (x) => x.n, color: () => c.color, emoji: () => '📍', onScope: (sc) => onScope('anCampHint', sc) });
+    m.render({ cities: c.cities, counties: c.counties, rolls: c.rolls, states: [], na: { regions: Object.values(reg), cities: cna.cities, rolls: cna.rolls }, world: { countries: cw.countries, otherCountries: cw.otherCountries, otherCount: 0, unnamed: cw.unnamed } }).then(() => { if (inLakes([...c.cities, ...c.counties])) m.map('us').zoomTo('lakes'); });
     $('anCopyC').addEventListener('click', async () => { let ok = false; try { await navigator.clipboard.writeText(link); ok = true; } catch (e) {} $('anCopyOk').textContent = ok ? 'Link copied.' : 'Copy failed. Select the link above.'; });
     $('anPause').addEventListener('click', async (e) => { e.target.disabled = true; try { loadCampaigns(await api('campaigns.active', { label: c.label, active: !c.active })); } catch (err) { setErr(err.message); e.target.disabled = false; } });
     $('anPrintC').addEventListener('click', () => printCards(c, link));

@@ -39,6 +39,15 @@
 #anRoot .anState:hover{fill:#F6F0FE}
 #anRoot .anState.dim{opacity:.35}
 #anRoot .anState.sel{fill:#FFFFFF;stroke:var(--purple);stroke-width:1.6}
+/* Admin 1 (#62): North America and World maps */
+#anRoot .anScope button{min-height:36px;padding:6px 14px;font-size:13px}
+#anRoot .anState.na.has,#anRoot .anState.world.has{fill:#7138D1}
+#anRoot .anState.na.sel,#anRoot .anState.world.sel{stroke:var(--deep);stroke-width:2}
+#anRoot .anState.world{stroke-width:.6}
+#anRoot .anMap.anWorld{background:linear-gradient(180deg,#EEF8FD,#FFF8E8)}
+#anRoot .anBub.blk .fillc{fill:#B8B0C8}
+#anRoot .anBub.blk .ring{stroke:#8E85A3;stroke-dasharray:3 3}
+#anRoot .anBlk{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;background:#ECE8F2;color:#5E5670;font:900 11px Nunito,sans-serif;vertical-align:middle}
 #anRoot .anCounty{fill:#FFFFFF;fill-opacity:1;stroke:#C9B8EA;stroke-width:.6;vector-effect:non-scaling-stroke;cursor:pointer}
 #anRoot .anCounty.has{fill:#7138D1}
 #anRoot .anCounty:hover{stroke:var(--purple);stroke-width:1.4}

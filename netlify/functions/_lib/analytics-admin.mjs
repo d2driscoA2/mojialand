@@ -1,8 +1,9 @@
 // Builds what the admin Analytics tab shows. Small places are folded into
-// their county or state here, on the server, so the admin page never receives
-// a city or county count below the small-number rule.
+// their county, state, province or country here, on the server, so the admin
+// page never receives a place below the small-number rule.
 import { rest } from './db.mjs';
 import { GAMES, LABEL_RE } from './analytics.mjs';
+import { NA, regionId, BLOCKED, BLOCKED_REGIONS } from './geo.mjs';
 import UC from './uscounty.json' with { type: 'json' };
 
 export const TZ = 'America/Detroit';
@@ -48,8 +49,59 @@ export function countyOf(st, ci) {
 }
 export const countyName = (id) => UC.names[id] || '';
 const isUS = (r) => r.co === 'US' && !!r.st;
+// Canada and Mexico: cities follow the same rule as US cities, with no county
+// level. Their entries use the region id (CA-ON) in place of the state.
+const isCAMX = (r) => (r.co === 'CA' || r.co === 'MX') && !!r.st;
 const top = (by) => by.indexOf(Math.max(...by));
 const addBy = (a, b) => { for (let i = 0; i < a.length; i++) a[i] += b[i] || 0; };
+const oneGame = (g, n) => { const by = zeros(); by[gi(g)] = n; return by; };
+const addHour = (o, k, h, v) => { (o[k] = o[k] || new Array(24).fill(0))[h] += v; };
+
+// North America map: every play counts toward its state or province, like
+// the US state totals. list: [{rid, co, n, by}]
+function regionTotals(list) {
+  const out = {};
+  for (const e of list) {
+    if (!out[e.rid]) out[e.rid] = { region: e.rid, country: e.co, total: 0, byGame: zeros() };
+    out[e.rid].total += e.n;
+    addBy(out[e.rid].byGame, e.by);
+  }
+  return Object.values(out).sort((a, b) => b.total - a.total);
+}
+// Shown Canadian and Mexican cities with their country and short code.
+function naCities(list) {
+  return list.map((c) => ({ ...c, country: c.state.slice(0, 2), code: c.state.slice(3) }));
+}
+// World view: a country shows once its total passes the rule; inside it a
+// region shows once its total passes the rule. The rest adds up.
+// list: [{co, rid, n, by, min}]. Countries blocked in Release 1.5 keep their
+// earlier plays, tagged blocked.
+export function worldFold(list, min) {
+  const by = new Map();
+  let unnamed = 0;
+  for (const e of list) {
+    if (!e.co) { unnamed += e.n; continue; }
+    if (!by.has(e.co)) by.set(e.co, { co: e.co, total: 0, byGame: zeros(), minutes: 0, blocked: BLOCKED.has(e.co), regions: new Map() });
+    const c = by.get(e.co);
+    c.total += e.n; c.minutes += e.min || 0; addBy(c.byGame, e.by);
+    const rid = e.rid || '';
+    if (!c.regions.has(rid)) c.regions.set(rid, { id: rid, total: 0, byGame: zeros(), blocked: BLOCKED_REGIONS.has(rid) });
+    const r = c.regions.get(rid);
+    r.total += e.n; addBy(r.byGame, e.by);
+  }
+  const countries = [];
+  let otherCountries = 0, otherCount = 0;
+  for (const c of by.values()) {
+    if (c.total < min) { otherCountries += c.total; otherCount++; continue; }
+    const regions = [];
+    let smaller = 0;
+    for (const r of c.regions.values()) { if (r.id && r.total >= min) regions.push(r); else smaller += r.total; }
+    regions.sort((a, b) => b.total - a.total);
+    countries.push({ co: c.co, total: c.total, byGame: c.byGame, minutes: Math.round(c.minutes), blocked: c.blocked, regions, smaller });
+  }
+  countries.sort((a, b) => b.total - a.total);
+  return { countries, otherCountries, otherCount, unnamed, rule: min };
+}
 
 // entries: [{st, ci, n, by}] for US places only. Returns shown cities,
 // shown counties (what is left in them after shown cities) and state rolls.
@@ -129,26 +181,35 @@ export async function liveView(now = Date.now()) {
     const byGame = zeros();
     let total = 0;
     let other = 0;
-    const entries = [];
+    const entries = [], naEntries = [], naReg = [], wl = [];
     for (const r of list) {
       total += r.n;
       byGame[gi(r.g)] += r.n;
+      const by = oneGame(r.g, r.n);
+      const rid = regionId(r.co, r.st);
+      wl.push({ co: r.co, rid, n: r.n, by });
+      if (NA.has(r.co) && rid) naReg.push({ rid, co: r.co, n: r.n, by });
+      if (isCAMX(r)) naEntries.push({ st: rid, ci: r.ci, n: r.n, by });
       if (!isUS(r)) { other += r.n; continue; }
-      const by = zeros();
-      by[gi(r.g)] = r.n;
       entries.push({ st: r.st, ci: r.ci, n: r.n, by });
     }
     const f = foldPlaces(entries, LIVE_MIN);
-    return { total, byGame, other, ...f, states: stateTotals(entries) };
+    const nf = foldPlaces(naEntries, LIVE_MIN);
+    const na = { cities: naCities(nf.cities), rolls: nf.rolls, regions: regionTotals(naReg) };
+    return { total, byGame, other, ...f, states: stateTotals(entries), na, world: worldFold(wl, LIVE_MIN) };
   };
   const cur = slotView(bySlot.get(asOf) || []);
   delete cur.rollBy;
   const feed = [];
   for (const t of [...bySlot.keys()].sort((a, b) => b - a)) {
-    for (const c of slotView(bySlot.get(t)).cities) feed.push({ t: new Date(t).toISOString(), city: c.city, state: c.state, game: GAMES[top(c.byGame)], n: c.total });
+    const sv = slotView(bySlot.get(t));
+    for (const c of sv.cities) feed.push({ t: new Date(t).toISOString(), city: c.city, state: c.state, country: 'US', game: GAMES[top(c.byGame)], n: c.total });
+    for (const c of sv.na.cities) feed.push({ t: new Date(t).toISOString(), city: c.city, state: c.code, country: c.country, game: GAMES[top(c.byGame)], n: c.total });
   }
   cur.cities.forEach((c) => { c.countyName = countyName(c.county); delete c.minutes; });
   cur.counties.forEach((c) => { delete c.minutes; });
+  cur.na.cities.forEach((c) => { delete c.minutes; delete c.county; });
+  cur.world.countries.forEach((c) => { delete c.minutes; });
   return { asOf: new Date(asOf).toISOString(), games: GAMES, ...cur, feed: feed.slice(0, 8), rule: LIVE_MIN };
 }
 
@@ -177,6 +238,8 @@ export async function historyView(range, now = Date.now()) {
   let other = 0;
   const dayEntries = days.map(() => []);
   const allEntries = [];
+  const naDay = days.map(() => []);
+  const naReg = [], wl = [];
   for (const r of dayRows) {
     const o = Number(r.o) || 0;
     const b = [r.b0, r.b1, r.b2, r.b3].map((v) => Number(v) || 0);
@@ -188,6 +251,11 @@ export async function historyView(range, now = Date.now()) {
     plays += o;
     if (r.m === 'app') app += o;
     b.forEach((v, i) => { buckets[i] += v; closes[j] += v; minutesGame[j] += v * BUCKET_MIN[i]; });
+    const rid = regionId(r.co, r.st);
+    const oneBy = oneGame(r.g, o);
+    wl.push({ co: r.co, rid, n: o, by: oneBy, min: minutesOf(b) });
+    if (NA.has(r.co) && rid) naReg.push({ rid, co: r.co, n: o, by: oneBy });
+    if (isCAMX(r)) naDay[di].push({ st: rid, ci: r.ci || '', n: o, by: oneBy, min: minutesOf(b) });
     if (!isUS(r)) { other += o; continue; }
     const by = zeros();
     by[j] = o;
@@ -204,6 +272,14 @@ export async function historyView(range, now = Date.now()) {
   countyList.forEach((c) => { c.minutes = Math.round(c.minutes); });
   const shownCity = new Set(cityList.map((c) => c.state + '|' + c.city));
   const shownCounty = new Set(countyList.map((c) => c.id));
+  // Canada and Mexico: the same rule, day by day
+  const naAcc = { cities: new Map(), counties: new Map(), rolls: {}, rollBy: {} };
+  for (const list of naDay) mergeFold(naAcc, foldPlaces(list, DAY_MIN));
+  const naList = naCities([...naAcc.cities.values()].sort((a, b) => b.total - a.total));
+  naList.forEach((c) => { c.minutes = Math.round(c.minutes); delete c.county; });
+  const naShown = new Set(naList.map((c) => c.state + '|' + c.city));
+  const na = { cities: naList, rolls: naAcc.rolls, regions: regionTotals(naReg), cityHours: {}, rollHours: {}, regionHours: {} };
+  const world = { ...worldFold(wl, DAY_MIN), countryHours: {} };
 
   // hours of the day (local): busiest hours, today's chart and the replay
   const hours = new Array(24).fill(0);
@@ -217,6 +293,14 @@ export async function historyView(range, now = Date.now()) {
     if (!(h >= 0 && h < 24) || gi(r.g) < 0) continue;
     hours[h] += o;
     hoursGame[h][gi(r.g)] += o;
+    if (r.co) addHour(world.countryHours, r.co, h, o);
+    const rid = regionId(r.co, r.st);
+    if (NA.has(r.co) && rid) addHour(na.regionHours, rid, h, o);
+    if (isCAMX(r)) {
+      const nk = rid + '|' + (r.ci || '');
+      if (r.ci && naShown.has(nk)) addHour(na.cityHours, nk, h, o);
+      else addHour(na.rollHours, rid, h, o);
+    }
     if (!isUS(r)) continue;
     const ck = r.st + '|' + (r.ci || '');
     const cty = countyOf(r.st, r.ci);
@@ -254,7 +338,7 @@ export async function historyView(range, now = Date.now()) {
     buckets, plays, minutes,
     minutesPerPlay: closed ? Math.round((minutes / closed) * 10) / 10 : 0,
     appShare: plays ? Math.round((app / plays) * 100) : 0,
-    cities: cityList, counties: countyList, rolls: acc.rolls, rollBy: acc.rollBy, states, other,
+    cities: cityList, counties: countyList, rolls: acc.rolls, rollBy: acc.rollBy, states, other, na, world,
     cityCount: cityList.length, stateCount: states.length,
     hours, hoursGame, cityHours, countyHours, stateHours, rule: DAY_MIN, prev,
     todayHour: Number(parts(now, TZ).hour),
@@ -269,7 +353,7 @@ export async function campaignsView(now = Date.now()) {
   const list = (Array.isArray(src.campaigns) ? src.campaigns : []).map((c) => ({
     label: c.label, name: c.name, note: c.note || '', active: c.active !== false, created_at: c.created_at,
     start: localDate(new Date(c.created_at).getTime()),
-    open: 0, play: 0, gift: 0, pass48: 0, forever: 0, daysSum: 0, daily: {}, places: [], other: 0,
+    open: 0, play: 0, gift: 0, pass48: 0, forever: 0, daysSum: 0, daily: {}, places: [], naPlaces: [], wl: [], other: 0,
   }));
   const by = new Map(list.map((c) => [c.label, c]));
   for (const r of Array.isArray(src.days) ? src.days : []) {
@@ -284,6 +368,9 @@ export async function campaignsView(now = Date.now()) {
     const c = by.get(r.l);
     if (!c) continue;
     const nn = Number(r.n) || 0;
+    const rid = regionId(r.co, r.st);
+    c.wl.push({ co: r.co, rid, n: nn, by: [] });
+    if (isCAMX(r)) c.naPlaces.push({ st: rid, ci: r.ci || '', n: nn });
     if (!isUS(r)) c.other += nn;
     else c.places.push({ st: r.st, ci: r.ci || '', n: nn });
   }
@@ -293,6 +380,12 @@ export async function campaignsView(now = Date.now()) {
     c.counties = f.counties.map((x) => ({ id: x.id, name: x.name, state: x.state, n: x.total }));
     c.rolls = f.rolls;
     delete c.places;
+    const nf = foldPlaces(c.naPlaces, CAMP_MIN);
+    c.na = { cities: nf.cities.map((x) => ({ city: x.city, state: x.state, country: x.state.slice(0, 2), code: x.state.slice(3), n: x.total })), rolls: nf.rolls };
+    const w = worldFold(c.wl, CAMP_MIN);
+    c.world = { countries: w.countries.map((x) => ({ co: x.co, n: x.total, blocked: x.blocked })), otherCountries: w.otherCountries, unnamed: w.unnamed };
+    delete c.naPlaces;
+    delete c.wl;
     const bought = c.pass48 + c.forever;
     c.avgDays = bought ? Math.round((c.daysSum / bought) * 10) / 10 : null;
     delete c.daysSum;
