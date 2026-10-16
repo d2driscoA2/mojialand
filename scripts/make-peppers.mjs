@@ -3,8 +3,7 @@
 // Run on the Mac:  node scripts/make-peppers.mjs ~/Downloads/peppers-staging.txt
 // Paste each value into Netlify (Project configuration, Environment variables,
 // mark as secret), then delete the file. Staging and live each get their own file.
-// ADMIN_PEPPER scrambles admin sign-in codes, admin sessions and Home Screen
-// pairing numbers. RATE_SALT scrambles the rate limit keys. Setting them signs
+// ADMIN_PEPPER scrambles admin sign-in codes and admin sessions. RATE_SALT scrambles the rate limit keys. Setting them signs
 // every admin session out once and resets rate limit counters. Pass codes and
 // device counts keep RESTORE_CODE_PEPPER, so no family loses a pass.
 import crypto from 'node:crypto';

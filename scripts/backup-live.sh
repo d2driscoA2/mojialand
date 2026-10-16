@@ -18,7 +18,10 @@ setopt ERR_EXIT PIPE_FAIL NO_UNSET
 BIN=/opt/homebrew/opt/libpq/bin
 DEST="$HOME/Library/Mobile Documents/com~apple~CloudDocs/Work & Professional/Clients/Mojialand/Backups"
 LOG="$DEST/backup-log.txt"
-export PGHOST=aws-0-us-east-2.pooler.supabase.com PGPORT=5432 PGUSER=postgres.wkrveadsyqbmljaxrxxk PGDATABASE=postgres PGSSLMODE=require
+# Release 1.5 #52: verify-full checks the database server's certificate and name against Supabase's
+# public CA certificate (scripts/supabase-ca.crt, copied next to this script by install-backup.sh).
+CA="${0:A:h}/supabase-ca.crt"
+export PGHOST=aws-0-us-east-2.pooler.supabase.com PGPORT=5432 PGUSER=postgres.wkrveadsyqbmljaxrxxk PGDATABASE=postgres PGSSLMODE=verify-full PGSSLROOTCERT="$CA"
 TABLES=(passes devices granted_checkouts stripe_events settings support_messages campaigns)
 
 mkdir -p "$DEST"
@@ -28,6 +31,7 @@ fail() {
   exit 1
 }
 trap 'fail "the script stopped early (line $LINENO)"' ZERR
+[[ -s "$CA" ]] || fail "no Supabase certificate next to the script (supabase-ca.crt); run zsh scripts/install-backup.sh"
 
 PGPASSWORD="$(/usr/bin/security find-generic-password -s mojialand-live-db -a postgres -w 2>/dev/null)" || fail "no password in the keychain (item mojialand-live-db)"
 export PGPASSWORD

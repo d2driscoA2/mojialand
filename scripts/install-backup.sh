@@ -15,6 +15,7 @@ PLIST="$HOME/Library/LaunchAgents/com.mojialand.backup.plist"
 
 mkdir -p "$SUP" "$HOME/Applications" "$HOME/Library/LaunchAgents"
 cp "$REPO/scripts/backup-live.sh" "$SUP/backup-live.sh"; chmod 700 "$SUP/backup-live.sh"
+cp "$REPO/scripts/supabase-ca.crt" "$SUP/supabase-ca.crt"; chmod 644 "$SUP/supabase-ca.crt" # Release 1.5 #52
 rm -rf "$APP"
 osacompile -o "$APP" \
   -e 'set s to POSIX path of (path to library folder from user domain) & "Application Support/Mojialand/backup-live.sh"' \
