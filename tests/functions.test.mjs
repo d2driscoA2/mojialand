@@ -1537,3 +1537,55 @@ test('#67 SQL: cleanup deletes ended Forever gift codes, never paid Forever; blo
   assert.match(sql, /delete from blocked_hourly\s+where hour_start < now\(\) - make_interval\(days => 400\)/);
   for (const f of ['release-1.5-codes.sql', 'release-1.5-blocked.sql']) assert.ok(!/'/.test(fs.readFileSync('supabase/' + f, 'utf8').replace(/^--.*$/gm, '')), f + ' uses $$ in place of quote marks');
 });
+
+// ---------------------------------------------------------------- Release 1.5 #56: past 24 and 48 hours
+import { historyView } from '../netlify/functions/_lib/analytics-admin.mjs';
+test('#56 past 24 and 48 hours: rolling windows across midnight, compared with the window before, city rule per window', async () => {
+  const now = Date.parse('2026-10-15T18:30:00Z'); // 2:30 PM in Michigan
+  const end = Date.parse('2026-10-15T18:00:00Z');
+  const H = 3600e3;
+  const at = (h) => new Date(end - h * H).toISOString();
+  // Troy: 3 plays on each side of midnight (6 in the window, under 5 on either day). Novi: 2 plays an hour earlier, outside 24 hours.
+  const q24 = { days: [{ d: '2026-10-14', co: 'US', st: 'MI', ci: 'Troy', g: 'draw', m: 'web', o: 3, b0: 0, b1: 3, b2: 0, b3: 0 }, { d: '2026-10-15', co: 'US', st: 'MI', ci: 'Troy', g: 'match', m: 'app', o: 3, b0: 3, b1: 0, b2: 0, b3: 0 }],
+    hours: [{ h: 22, co: 'US', st: 'MI', ci: 'Troy', g: 'draw', o: 3 }, { h: 9, co: 'US', st: 'MI', ci: 'Troy', g: 'match', o: 3 }] };
+  const q48 = { days: q24.days.concat([{ d: '2026-10-14', co: 'US', st: 'MI', ci: 'Novi', g: 'pattern', m: 'web', o: 2, b0: 2, b1: 0, b2: 0, b3: 0 }]),
+    hours: q24.hours.concat([{ h: 9, co: 'US', st: 'MI', ci: 'Novi', g: 'pattern', o: 2 }]) };
+  const q96 = { days: q48.days.concat([{ d: '2026-10-12', co: 'US', st: 'MI', ci: 'Troy', g: 'draw', m: 'web', o: 10, b0: 0, b1: 0, b2: 10, b3: 0 }]), hours: q48.hours };
+  const seen = [];
+  const base = globalThis.fetch;
+  globalThis.fetch = async (url, opts) => {
+    if (String(url).endsWith('/rpc/analytics_history')) {
+      const f = JSON.parse(opts.body).p_from; seen.push(f);
+      const body = f === at(23) ? q24 : f === at(47) ? q48 : f === at(95) ? q96 : null;
+      return new Response(JSON.stringify(body || {}), { status: 200 });
+    }
+    return base(url, opts);
+  };
+  try {
+    let r = await historyView('h24', now);
+    assert.deepEqual(seen, [at(23), at(47)], 'the window, then the window plus the one before');
+    assert.equal(r.range, 'h24'); assert.equal(r.hours24, 24);
+    assert.equal(r.plays, 6); assert.equal(r.prev.plays, 2, 'the 24 hours before: Novi');
+    assert.equal(r.slots.length, 24);
+    assert.equal(r.slots[0].h, 15, 'starts 3 PM yesterday'); assert.equal(r.slots.at(-1).h, 14, 'ends at the current hour');
+    assert.equal(r.slots[9].h, 0, 'crosses midnight'); assert.equal(r.slots[9].d, '2026-10-15');
+    assert.equal(r.slots[7].g[GAMES_I('draw')], 3); assert.equal(r.slots[18].g[GAMES_I('match')], 3);
+    assert.deepEqual(r.cities.map((c) => [c.city, c.total]), [['Troy', 6]], 'the 5-play rule counts the whole window');
+    assert.equal(r.startHour, 15);
+    seen.length = 0;
+    r = await historyView('h48', now);
+    assert.deepEqual(seen, [at(47), at(23), at(95)]);
+    assert.equal(r.slots.length, 48); assert.equal(r.plays, 8); assert.equal(r.prev.plays, 10);
+    assert.equal(r.slots[18].g[GAMES_I('pattern')], 2, 'Novi sits in the first 24 hours');
+    assert.equal(r.slots[42].g[GAMES_I('pattern')], 0);
+    // numbers still mean days; Today stays accepted for old pages
+    seen.length = 0;
+    r = await historyView(7, now); assert.equal(r.range, 7); assert.equal(r.slots, null);
+  } finally { globalThis.fetch = base; }
+  // the admin page opens on Past 24 hours
+  const fs = await import('node:fs');
+  const js = fs.readFileSync('site/admin/analytics.js', 'utf8');
+  assert.match(js, /data-r="h24" aria-pressed="true">Past 24 hours<\/button>\s*<button type="button" data-r="h48" aria-pressed="false">Past 48 hours<\/button>\s*<button type="button" data-r="7"/);
+  assert.match(js, /let range = 'h24'/); assert.ok(!/>Today</.test(js), 'Today is gone');
+});
+const GAMES_I = (g) => ['pattern', 'bounce', 'match', 'parade', 'draw', 'share', 'feelings'].indexOf(g);

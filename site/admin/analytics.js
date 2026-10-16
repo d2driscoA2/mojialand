@@ -32,7 +32,7 @@
   const sv = (tag, attrs) => { const e = document.createElementNS(SVGNS, tag); for (const k in attrs || {}) e.setAttribute(k, attrs[k]); return e; };
   const shield = '<span aria-hidden="true">🛡️</span>';
   const countyWord = (st) => (st === 'LA' ? 'Parish' : st === 'AK' ? 'Area' : 'County');
-  const RANGE_LABEL = { 1: 'today', 7: 'last 7 days', 30: 'last 30 days', 60: 'last 60 days', 90: 'last 90 days', 365: 'last 12 months' };
+  const RANGE_LABEL = { h24: 'past 24 hours', h48: 'past 48 hours', 1: 'today', 7: 'last 7 days', 30: 'last 30 days', 60: 'last 60 days', 90: 'last 90 days', 365: 'last 12 months' };
 
   // ---------------- markup
   root.innerHTML = `
@@ -70,8 +70,9 @@
 
   <section id="anHistory" hidden style="display:grid;gap:16px">
     <div class="anSeg" role="group" aria-label="Time range" id="anRanges">
-      <button type="button" data-r="1" aria-pressed="false">Today</button>
-      <button type="button" data-r="7" aria-pressed="true">7 days</button>
+      <button type="button" data-r="h24" aria-pressed="true">Past 24 hours</button>
+      <button type="button" data-r="h48" aria-pressed="false">Past 48 hours</button>
+      <button type="button" data-r="7" aria-pressed="false">7 days</button>
       <button type="button" data-r="30" aria-pressed="false">30 days</button>
       <button type="button" data-r="60" aria-pressed="false">60 days</button>
       <button type="button" data-r="90" aria-pressed="false">90 days</button>
@@ -484,7 +485,7 @@
   function stopLive() { if (liveTimer) clearInterval(liveTimer); liveTimer = null; }
 
   // ---------------- history
-  let range = 7, H = null, histMap = null, hourCap = 24, playing = null, histZoomed = false;
+  let range = 'h24', H = null, histMap = null, hourCap = 24, playing = null, histZoomed = false;
   function capData(cap) {
     if (cap >= 24) return H;
     const sum = (arr) => (arr ? arr.slice(0, cap).reduce((a, b) => a + b, 0) : 0);
@@ -496,14 +497,19 @@
   }
   function drawHistMap() { return histMap.render(capData(hourCap)); }
   const pct = (a, b) => (b ? Math.round(((a - b) / b) * 100) : null);
-  const change = (a, b) => { const p = pct(a, b); if (p == null) return ''; const up = p >= 0; return `<span class="anChange ${up ? 'up' : 'down'}">${up ? '▲' : '▼'} ${Math.abs(p)}%</span> vs the ${range === 365 ? '12 months' : range + ' days'} before`; };
+  // Release 1.5 #56: h24 and h48 are rolling windows (the past 24 or 48 hours); numbers are days.
+  const rolling = () => typeof range === 'string';
+  const winHours = () => (range === 'h48' ? 48 : 24);
+  const change = (a, b) => { const p = pct(a, b); if (p == null) return ''; const up = p >= 0; return `<span class="anChange ${up ? 'up' : 'down'}">${up ? '▲' : '▼'} ${Math.abs(p)}%</span> vs the ${rolling() ? winHours() + ' hours' : range === 365 ? '12 months' : range + ' days'} before`; };
+  const replayLabel = (h) => fmtHour(((rolling() && H && H.startHour != null ? H.startHour : 0) + h) % 24);
   async function loadHistory() {
     stopReplay();
     try { H = await api('analytics.history', { range }); setErr(''); } catch (e) { setErr(e.message); return; }
     await mapReady;
     if (!histMap) histMap = makeMap($('anHistMap'), { label: 'Map of plays by place', panel: $('anHistPlaces'), unit: 'plays', extra: (c) => (c.minutes != null && hourCap >= 24 ? fmtN(c.minutes) + ' minutes played' : '') });
     hourCap = 24; $('anHour').value = 23; $('anHourLbl').textContent = 'All day';
-    $('anReplayRow').hidden = range > 30;
+    $('anReplayRow').hidden = range === 'h48' || (!rolling() && range > 30);
+    $('anPlay').textContent = rolling() ? '▶ Replay the 24 hours' : '▶ Replay the day';
     await drawHistMap();
     if (!histZoomed && inLakes([...H.cities, ...H.counties])) { histZoomed = true; histMap.zoomTo('lakes'); }
     const lbl = RANGE_LABEL[range];
@@ -516,7 +522,12 @@
       ['Home Screen app', H.appShare + '%', 'of plays'],
     ].map(([l, n, s]) => `<div class="anKpi"><div class="l">${l}</div><div class="n">${n}</div><div class="s">${s}</div></div>`).join('');
     drawTrend();
-    if (range === 1) {
+    if (rolling() && Array.isArray(H.slots)) {
+      $('anOtTitle').textContent = 'Plays by hour, ' + RANGE_LABEL[range];
+      const step = range === 'h48' ? 6 : 3;
+      const labs = H.slots.map((sl, i) => (sl.h === 0 ? wkDay(sl.d) : i % step === 0 ? fmtHour(sl.h) : ''));
+      $('anOverTime').innerHTML = stackCols(H.slots.map((sl) => sl.g), labs, 'Plays by hour, ' + RANGE_LABEL[range]);
+    } else if (range === 1) {
       $('anOtTitle').textContent = 'Plays by hour today';
       $('anOverTime').innerHTML = stackCols(H.hoursGame.map((r, h) => (h <= H.todayHour ? r : null)), H.hoursGame.map((_, h) => (h % 3 === 0 ? fmtHour(h) : '')), 'Plays by hour today');
     } else {
@@ -527,7 +538,7 @@
       $('anOverTime').innerHTML = stackCols(rows.vals, labs, wk ? 'Plays per week by game' : 'Plays per day by game');
     }
     $('anOtLegend').innerHTML = GAMES.map((g) => `<span><i style="background:${g.c}"></i>${g.n}</span>`).join('');
-    $('anHours').innerHTML = hourCols(H.hours.map((v) => v / range));
+    $('anHours').innerHTML = hourCols(H.hours.map((v) => v / (rolling() ? winHours() / 24 : range)));
     const gmax = Math.max(1, ...H.byGame);
     $('anHGames').innerHTML = GAMES.map((g, i) => ({ g, v: H.byGame[i], m: H.avgMinutes[i] })).sort((a, b) => b.v - a.v).map(({ g, v, m }) => barRow(g, g.n, v, gmax, m ? m.toFixed(1) + ' min each' : '')).join('');
     const bl = ['Under 2 min', '2 to 5', '5 to 15', '15 plus'], bc = ['#C9B8EA', '#A98BE0', '#8C61D8', '#7138D1'], bm = Math.max(1, ...H.buckets);
@@ -547,7 +558,7 @@
     $('anBlocked').innerHTML = bl2 === null ? '<div class="anEmpty">Blocked visit counts are not set up yet.</div>'
       : bl2.length ? `<table><thead><tr><th>Country</th><th class="r">Page opens</th><th class="r">Server calls</th></tr></thead><tbody>${bl2.map((b) => `<tr><td>${esc(b.region ? (BREG[b.region] || b.region) + ' (' + regionName(b.country) + ')' : regionName(b.country))}</td><td class="r">${fmtN(b.page)}</td><td class="r">${fmtN(b.calls)}</td></tr>`).join('')}</tbody></table>`
       : '<div class="anEmpty">No visits from blocked countries in this range.</div>';
-    $('anHistSub').textContent = (range === 1 ? 'Today so far.' : 'The ' + RANGE_LABEL[range] + '.') + ' Bubble size shows plays. Color shows the favorite game in that place.' + (H.other ? ' ' + fmtN(H.other) + ' plays came from outside the US or an unnamed place.' : '');
+    $('anHistSub').textContent = (rolling() ? 'The ' + RANGE_LABEL[range] + '.' : range === 1 ? 'Today so far.' : 'The ' + RANGE_LABEL[range] + '.') + ' Bubble size shows plays. Color shows the favorite game in that place.' + (H.other ? ' ' + fmtN(H.other) + ' plays came from outside the US or an unnamed place.' : '');
   }
   // groups daily values into 7-day weeks, ending with the latest day
   function weekly(vals, add, zero) {
@@ -562,8 +573,8 @@
     return { vals: out, labels };
   }
   function drawTrend() {
-    $('anTrendCard').hidden = range === 1;
-    if (range === 1) return;
+    $('anTrendCard').hidden = range === 1 || rolling();
+    if (range === 1 || rolling()) return;
     const wk = range >= 60;
     const num = (a, b) => a + b;
     const cur = wk ? weekly(H.perDay.map((r) => r.reduce(num, 0)), num, () => 0) : { vals: H.perDay.map((r) => r.reduce(num, 0)), labels: H.days };
@@ -618,22 +629,22 @@
     if (vals[peak] > 0) s += `<text class="anAxis" x="${L + peak * bw + bw / 2}" y="${y(vals[peak]) - 4}" text-anchor="middle" style="fill:#5122A5;font-weight:900">Peak</text>`;
     return s + '</svg>';
   }
-  function stopReplay() { if (playing) { clearInterval(playing); playing = null; $('anPlay').textContent = '▶ Replay the day'; } }
+  function stopReplay() { if (playing) { clearInterval(playing); playing = null; $('anPlay').textContent = rolling() ? '▶ Replay the 24 hours' : '▶ Replay the day'; } }
   $('anPlay').addEventListener('click', () => {
     if (!H) return;
     if (playing) { stopReplay(); return; }
-    let h = 5;
+    let h = rolling() ? 0 : 5;
     $('anPlay').textContent = '❚❚ Pause';
     const tick = () => {
-      hourCap = h + 1; $('anHour').value = h; $('anHourLbl').textContent = 'By ' + fmtHour((h + 1) % 24);
+      hourCap = h + 1; $('anHour').value = h; $('anHourLbl').textContent = 'By ' + replayLabel(h + 1);
       drawHistMap(); h++;
       if (h > 23) { stopReplay(); hourCap = 24; $('anHourLbl').textContent = 'All day'; $('anHour').value = 23; drawHistMap(); }
     };
     tick();
     playing = setInterval(tick, reduce ? 900 : 650);
   });
-  $('anHour').addEventListener('input', (e) => { if (!H) return; stopReplay(); const h = +e.target.value; hourCap = h >= 23 ? 24 : h + 1; $('anHourLbl').textContent = hourCap >= 24 ? 'All day' : 'By ' + fmtHour(hourCap); drawHistMap(); });
-  $('anRanges').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; $('anRanges').querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); range = +b.dataset.r; loadHistory(); });
+  $('anHour').addEventListener('input', (e) => { if (!H) return; stopReplay(); const h = +e.target.value; hourCap = h >= 23 ? 24 : h + 1; $('anHourLbl').textContent = hourCap >= 24 ? 'All day' : 'By ' + replayLabel(hourCap); drawHistMap(); });
+  $('anRanges').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; $('anRanges').querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); range = /^h\d+$/.test(b.dataset.r) ? b.dataset.r : +b.dataset.r; loadHistory(); });
 
   // ---------------- campaigns
   let C = [], sel = 0;

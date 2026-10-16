@@ -157,10 +157,33 @@ export const RANGES = [1, 7, 30, 60, 90, 365];
 const KEEP_DAYS = 400;
 const minutesOf = (b) => b.reduce((a, v, i) => a + v * BUCKET_MIN[i], 0);
 
+// Release 1.5 #56: rolling windows. h24 = the past 24 hours, h48 = the past 48 hours (hourly rows, no new SQL).
+export const ROLLING = { h24: 24, h48: 48 };
+const HOUR = 3600e3;
+const hourStart = (t) => Math.floor(t / HOUR) * HOUR;
+const history = async (from) => (await rest('POST', 'rpc/analytics_history', { body: { p_from: new Date(from).toISOString(), p_tz: TZ } })).data || {};
+// Plays per hour of the day (local) per game, from one history answer.
+function hourGames(src) {
+  const out = Array.from({ length: 24 }, zeros);
+  for (const r of Array.isArray(src.hours) ? src.hours : []) { const h = Number(r.h); if (h >= 0 && h < 24 && gi(r.g) >= 0) out[h][gi(r.g)] += Number(r.o) || 0; }
+  return out;
+}
+// Plays and minutes in one history answer.
+function totalsOf(src) {
+  let plays = 0, minutes = 0;
+  for (const r of Array.isArray(src.days) ? src.days : []) { if (gi(r.g) < 0) continue; plays += Number(r.o) || 0; minutes += minutesOf([r.b0, r.b1, r.b2, r.b3].map((v) => Number(v) || 0)); }
+  return { plays, minutes };
+}
+
 export async function historyView(range, now = Date.now()) {
-  const n = RANGES.includes(Number(range)) ? Number(range) : 7;
-  const from = localMidnight(now, n - 1);
-  const { data } = await rest('POST', 'rpc/analytics_history', { body: { p_from: new Date(from).toISOString(), p_tz: TZ } });
+  const hrs = ROLLING[range] || 0;
+  const n0 = RANGES.includes(Number(range)) ? Number(range) : 7;
+  const end = hourStart(now);
+  const from = hrs ? end - (hrs - 1) * HOUR : localMidnight(now, n0 - 1);
+  const data = await history(from);
+  // local days the window touches (a rolling window crosses midnight)
+  let n = n0;
+  if (hrs) { n = 1; while (localDate(localMidnight(now, n - 1)) > localDate(from)) n++; }
   const days = lastDays(n, now);
   const dayIx = new Map(days.map((d, i) => [d, i]));
   const src = data && typeof data === 'object' ? data : {};
@@ -195,9 +218,10 @@ export async function historyView(range, now = Date.now()) {
     dayEntries[di].push(e);
     allEntries.push(e);
   }
-  // The rule applies day by day, then the days add up.
+  // The rule applies day by day, then the days add up. A rolling window counts as one whole (Release 1.5 #56).
   const acc = { cities: new Map(), counties: new Map(), rolls: {}, rollBy: {} };
-  for (const list of dayEntries) mergeFold(acc, foldPlaces(list, DAY_MIN));
+  if (hrs) mergeFold(acc, foldPlaces(allEntries, DAY_MIN));
+  else for (const list of dayEntries) mergeFold(acc, foldPlaces(list, DAY_MIN));
   const cityList = [...acc.cities.values()].sort((a, b) => b.total - a.total);
   cityList.forEach((c) => { c.minutes = Math.round(c.minutes); c.countyName = countyName(c.county); });
   const countyList = [...acc.counties.values()].sort((a, b) => b.total - a.total);
@@ -225,9 +249,30 @@ export async function historyView(range, now = Date.now()) {
     else (stateHours[r.st] = stateHours[r.st] || new Array(24).fill(0))[h] += o;
   }
 
-  // the period before, for the change figures (not for Today, and only inside the 400 days kept)
+  // Release 1.5 #56: rolling windows. The hour chart runs from the window start to now, across midnight,
+  // and the change figures compare with the window before. Each hour of the day appears once in 24 hours,
+  // so the past 48 hours = (from 48 hours ago) minus (from 24 hours ago) for its first half.
+  let slots = null, startHour = null;
   let prev = null;
-  if (n > 1 && 2 * n <= KEEP_DAYS) {
+  if (hrs) {
+    const hgAll = hourGames(data);
+    const hg24 = hrs === 24 ? hgAll : hourGames(await history(end - 23 * HOUR));
+    slots = [];
+    for (let i = 0; i < hrs; i++) {
+      const t = from + i * HOUR;
+      const h = Number(parts(t, TZ).hour);
+      const g = hrs === 24 || i >= hrs - 24 ? hg24[h] : hgAll[h].map((v, j) => Math.max(0, v - hg24[h][j]));
+      slots.push({ t: new Date(t).toISOString(), h, d: localDate(t), g });
+    }
+    startHour = slots[0].h;
+    const both = totalsOf(await history(end - (2 * hrs - 1) * HOUR));
+    const cur = totalsOf(data);
+    prev = { plays: Math.max(0, both.plays - cur.plays), minutes: Math.max(0, Math.round(both.minutes - cur.minutes)) };
+    // the replay steps through the window in order: hour arrays start at the window's first hour
+    if (hrs === 24) for (const obj of [cityHours, countyHours, stateHours]) for (const k of Object.keys(obj)) obj[k] = obj[k].slice(startHour).concat(obj[k].slice(0, startHour));
+  }
+  // the period before, for the change figures (not for Today, and only inside the 400 days kept)
+  if (!hrs && n > 1 && 2 * n <= KEEP_DAYS) {
     const pDays = lastDays(2 * n, now).slice(0, n);
     const pIx = new Map(pDays.map((d, i) => [d, i]));
     const { data: pd } = await rest('POST', 'rpc/analytics_history', { body: { p_from: new Date(localMidnight(now, 2 * n - 1)).toISOString(), p_tz: TZ } });
@@ -250,7 +295,7 @@ export async function historyView(range, now = Date.now()) {
   const closed = buckets.reduce((a, b) => a + b, 0);
   const states = stateTotals(allEntries);
   return {
-    range: n, tz: TZ, games: GAMES, days, perDay, perDayMinutes: perDayMinutes.map(Math.round), byGame,
+    range: hrs ? range : n, hours24: hrs || null, slots, startHour, tz: TZ, games: GAMES, days, perDay, perDayMinutes: perDayMinutes.map(Math.round), byGame,
     avgMinutes: minutesGame.map((m, i) => (closes[i] ? Math.round((m / closes[i]) * 10) / 10 : 0)),
     buckets, plays, minutes,
     minutesPerPlay: closed ? Math.round((minutes / closed) * 10) / 10 : 0,

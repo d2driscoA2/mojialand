@@ -35,7 +35,7 @@ async function analyticsSamples() {
     const body = u.includes('plays_live') ? live : u.includes('analytics_history') ? { days, hours } : camp;
     return new Response(JSON.stringify(body), { status: 200 });
   };
-  const out = { live: await liveView(), history: await historyView(7), history1: await historyView(1), history90: await historyView(90), campaigns: await campaignsView() };
+  const out = { live: await liveView(), history: await historyView(7), history1: await historyView(1), history24: await historyView('h24'), history48: await historyView('h48'), history90: await historyView(90), campaigns: await campaignsView() };
   globalThis.fetch = saved;
   return out;
 }
@@ -762,7 +762,7 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
     if (signedIn && /^(analytics|campaigns)\./.test(b.action)) {
       if (b.action === 'campaigns.create' && !/^[a-z0-9][a-z0-9-]{1,23}$/.test(b.label || '')) return r.fulfill({ status: 400, contentType: 'application/json', body: '{"error":"Use 2 to 24 lowercase letters, numbers or dashes for the label."}' });
       const made = b.action === 'campaigns.create' ? { campaigns: [{ ...AN.campaigns.campaigns[0], label: b.label, name: b.name, open: 0, play: 0, gift: 0, pass48: 0, forever: 0, cities: [], rolls: {}, daily: [{ d: AN.campaigns.campaigns[0].daily.at(-1).d, n: 0 }], avgDays: null }, ...AN.campaigns.campaigns] } : null;
-      const o = { 'analytics.live': AN.live, 'analytics.history': b.range === 1 ? AN.history1 : b.range === 90 ? AN.history90 : AN.history, 'campaigns.list': AN.campaigns, 'campaigns.create': made, 'campaigns.active': AN.campaigns }[b.action];
+      const o = { 'analytics.live': AN.live, 'analytics.history': b.range === 'h24' ? AN.history24 : b.range === 'h48' ? AN.history48 : b.range === 1 ? AN.history1 : b.range === 90 ? AN.history90 : AN.history, 'campaigns.list': AN.campaigns, 'campaigns.create': made, 'campaigns.active': AN.campaigns }[b.action];
       return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(o) });
     }
     if (!signedIn) return r.fulfill({ status: 401, contentType: 'application/json', body: '{"error":"Please sign in."}' });
@@ -973,9 +973,10 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   await page.fill('#anHour', '9');
   await page.dispatchEvent('#anHour', 'input');
   check('analytics: hour slider replays the day', /By /.test(await page.textContent('#anHourLbl')));
-  await page.click('#anRanges [data-r="1"]');
-  await page.waitForFunction(() => /by hour today/.test(document.querySelector('#anOtTitle').textContent));
-  check('analytics: Today shows plays by hour', calls.filter((c) => c === 'analytics.history').length === 2);
+  check('1.5 #56 analytics: History opens on Past 24 hours with the hour chart across the window', bodiesBy['analytics.history'].range === 'h24' && /Plays by hour, past 24 hours/.test(await page.textContent('#anOtTitle')) && (await page.locator('#anRanges [data-r="h24"][aria-pressed="true"]').count()) === 1 && (await page.locator('#anRanges [data-r="1"]').count()) === 0 && await page.isHidden('#anTrendCard') && /Replay the 24 hours/.test(await page.textContent('#anPlay')));
+  await page.click('#anRanges [data-r="h48"]');
+  await page.waitForFunction(() => /past 48 hours/.test(document.querySelector('#anOtTitle').textContent));
+  check('1.5 #56 analytics: Past 48 hours shows 48 hourly columns and compares with the 48 hours before', calls.filter((c) => c === 'analytics.history').length === 2 && (await page.locator('#anOverTime svg text.anAxis').count()) >= 8 && (!AN.history48.prev || !AN.history48.prev.plays || /vs the 48 hours before/.test(await page.textContent('#anKpis'))) && await page.isHidden('#anReplayRow'));
   await page.click('#anRanges [data-r="7"]');
   await page.waitForFunction(() => /per day/.test(document.querySelector('#anOtTitle').textContent));
   check('analytics: usage trend with the week before', (await page.locator('#anTrendPlays polyline.anCur').count()) === 1 && (await page.locator('#anTrendPlays polyline.anPrev').count()) === 1 && /vs the 7 days before/.test(await page.textContent('#anKpis')));
