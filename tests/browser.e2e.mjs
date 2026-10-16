@@ -762,7 +762,7 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
     if (signedIn && /^(analytics|campaigns)\./.test(b.action)) {
       if (b.action === 'campaigns.create' && !/^[a-z0-9][a-z0-9-]{1,23}$/.test(b.label || '')) return r.fulfill({ status: 400, contentType: 'application/json', body: '{"error":"Use 2 to 24 lowercase letters, numbers or dashes for the label."}' });
       const made = b.action === 'campaigns.create' ? { campaigns: [{ ...AN.campaigns.campaigns[0], label: b.label, name: b.name, open: 0, play: 0, gift: 0, pass48: 0, forever: 0, cities: [], rolls: {}, daily: [{ d: AN.campaigns.campaigns[0].daily.at(-1).d, n: 0 }], avgDays: null }, ...AN.campaigns.campaigns] } : null;
-      const o = { 'analytics.live': AN.live, 'analytics.history': b.range === 'h24' ? AN.history24 : b.range === 'h48' ? AN.history48 : b.range === 1 ? AN.history1 : b.range === 90 ? AN.history90 : AN.history, 'campaigns.list': AN.campaigns, 'campaigns.create': made, 'campaigns.active': AN.campaigns }[b.action];
+      const o = { 'analytics.live': AN.live, 'analytics.website': { range: 7, ready: true, days: lastDays(7, Date.now()), perDay: [3, 5, 8, 6, 9, 12, 7], visits: 50, funnel: { visit: 50, play: 21, pass: 6, bought: 2 }, prev: { visits: 40 }, other: 4, sources: [{ source: 'qr', n: 20 }, { source: 'google', n: 18 }, { source: 'typed', n: 12 }], cities: [{ city: 'Troy', state: 'MI', total: 14 }], counties: [{ id: '26125', name: 'Oakland', state: 'MI', total: 6 }], states: [{ state: 'MI', total: 30 }, { state: 'OH', total: 8 }], rule: 5 }, 'analytics.history': b.range === 'h24' ? AN.history24 : b.range === 'h48' ? AN.history48 : b.range === 1 ? AN.history1 : b.range === 90 ? AN.history90 : AN.history, 'campaigns.list': AN.campaigns, 'campaigns.create': made, 'campaigns.active': AN.campaigns }[b.action];
       return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(o) });
     }
     if (!signedIn) return r.fulfill({ status: 401, contentType: 'application/json', body: '{"error":"Please sign in."}' });
@@ -1003,6 +1003,12 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   await page.click('#anRanges [data-r="7"]');
   await page.waitForFunction(() => /per day/.test(document.querySelector('#anTrendPlaysT').textContent));
   await page.screenshot({ path: path.join(SHOTS, 'admin-analytics-history.png'), fullPage: true });
+  await page.click('#anViews [data-v="website"]');
+  await page.waitForSelector('#anWKpis .anKpi');
+  check('1.5 #64 admin Website view: visits with change, sources, funnel, places', /Visits50/.test(await page.textContent('#anWKpis')) && /vs the 7 days before/.test(await page.textContent('#anWKpis')) && (await page.locator('#anWSources .anRow').count()) === 3 && /QR cards/.test(await page.textContent('#anWSources')) && (await page.locator('#anWFunnel .anRow').count()) === 4 && /Troy, MI/.test(await page.textContent('#anWPlaces')) && /Small towns in Oakland/.test(await page.textContent('#anWPlaces')) && (await page.locator('#anWTrend polyline.anCur').count()) === 1);
+  await page.screenshot({ path: path.join(SHOTS, 'admin-analytics-website.png'), fullPage: true });
+  await page.click('#anWRanges [data-w="30"]'); await page.waitForTimeout(200);
+  check('1.5 #64 admin Website view: range buttons ask for 30 days', bodiesBy['analytics.website'].range === 30);
   await page.click('#anViews [data-v="campaigns"]');
   await page.waitForSelector('#anCamps .anCamp');
   check('analytics: campaign cards with QR codes', (await page.locator('#anCamps .anCamp img[src^="data:image/"]').count()) === 2);
@@ -1116,11 +1122,39 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   await page.route('**/api/ping', (r) => { pings.push(JSON.parse(r.request().postData() || 'null')); r.fulfill({ status: 204 }); });
   await page.goto(base + '/?c=oh-pumpkin-sep');
   await page.waitForTimeout(300);
+  const camps = () => pings.filter((p) => p && p.e === 'camp');
+  check('1.5 #64 counts: a website QR visit counts once, with source qr', JSON.stringify(pings.filter((p) => p && p.e === 'site')) === '[{"e":"site","s":"visit","r":"qr"}]', JSON.stringify(pings));
+  pings.splice(0, pings.length, ...camps());
   check('counts: website QR link saves the label and counts the open', pings.length === 1 && pings[0].e === 'camp' && pings[0].c === 'oh-pumpkin-sep' && !/c=/.test(page.url()) && JSON.parse(await page.evaluate(() => localStorage.getItem('mojia.camp'))).l === 'oh-pumpkin-sep');
   await page.goto(base + '/?c=BAD LABEL<script>');
   await page.waitForTimeout(200);
-  check('counts: a bad label counts nothing', pings.length === 1);
+  check('counts: a bad label counts nothing', camps().length === 1);
+  check('1.5 #64 counts: the same tab never counts a second visit', !pings.some((p) => p && p.e === 'site'));
   check('counts: website no CSP violations', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
+  await ctx.close();
+}
+
+// Release 1.5 #64: website visit, Play free tap and pass page counts, once per tab
+{
+  const { ctx, page } = await newPage({ viewport: { width: 1280, height: 900 }, isMobile: false, hasTouch: false });
+  const pings = [];
+  await page.route('**/api/ping', (r) => { pings.push(r.request().postData()); r.fulfill({ status: 204 }); });
+  await page.route('https://js.stripe.com/**', (r) => r.fulfill({ contentType: 'application/javascript', body: FAKE_STRIPE }));
+  await page.route('**/.netlify/functions/create-checkout', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ clientSecret: 'cs_test_x_secret', publishableKey: 'pk_test_x' }) }));
+  await page.goto(base + '/'); await page.waitForTimeout(300);
+  check('1.5 #64 a home page visit with no referrer counts once as typed', JSON.stringify(pings) === '["{\\"e\\":\\"site\\",\\"s\\":\\"visit\\",\\"r\\":\\"typed\\"}"]', JSON.stringify(pings));
+  await page.click('[data-play]'); await page.waitForTimeout(200);
+  await page.keyboard.press('Escape').catch(() => {}); await page.click('#closePlayer').catch(() => {});
+  await page.click('[data-play]').catch(() => {}); await page.waitForTimeout(200);
+  check('1.5 #64 Play free counts once per tab', pings.filter((x) => x === '{"e":"site","s":"play"}').length === 1, JSON.stringify(pings));
+  await page.goto(base + '/pass/?plan=pass'); await page.waitForSelector('#checkout >> text=Apple Pay');
+  await page.reload(); await page.waitForSelector('#checkout >> text=Apple Pay');
+  check('1.5 #64 the pass page counts once per tab, with no plan, code or device', pings.filter((x) => x === '{"e":"site","s":"pass"}').length === 1 && pings.filter((x) => /"e":"site"/.test(x)).every((x) => !/plan|code|device|id/.test(x)), JSON.stringify(pings));
+  check('1.5 #64 no CSP violations on the website or pass page', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
+  const p2 = await ctx.newPage(); const pings2 = [];
+  await p2.route('**/api/ping', (r) => { pings2.push(r.request().postData()); r.fulfill({ status: 204 }); });
+  await p2.goto(base + '/', { referer: 'https://www.google.com/search?q=kids+emoji+games' }); await p2.waitForTimeout(300);
+  check('1.5 #64 a visit from Google counts as google, never the search words', pings2.length === 1 && /"r":"google"/.test(pings2[0]) && !/kids|search/.test(pings2[0]), JSON.stringify(pings2));
   await ctx.close();
 }
 

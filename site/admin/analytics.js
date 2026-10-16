@@ -41,6 +41,7 @@
       <button type="button" data-v="live" aria-pressed="true">Live</button>
       <button type="button" data-v="history" aria-pressed="false">History</button>
       <button type="button" data-v="campaigns" aria-pressed="false">Campaigns</button>
+      <button type="button" data-v="website" aria-pressed="false">Website</button>
     </div>
     <span class="anMuted" id="anErr" role="status"></span>
   </div>
@@ -112,6 +113,22 @@
     </div>
     <div class="anCard" id="anBlockedCard"><h3>Visits from blocked countries</h3><p class="anMuted" style="margin:0 0 8px">People in these countries see the not available page. Page opens count each visit to that page; server calls count refused payments, codes and pass checks.</p><div class="anTable" id="anBlocked"></div></div>
     <div class="anPrivacy">${shield}<span><b>Totals by the hour, never by the person.</b> A city shows on days with 5 or more plays. Smaller towns add up to their county, and a county shows once its total passes 5. The rest rolls into the state. Minutes come from ranges (under 2, 2 to 5, 5 to 15, 15 plus), so no single play is timed. Mojialand counts plays, not people.</span></div>
+  </section>
+
+  <section id="anWebsite" hidden style="display:grid;gap:16px">
+    <div class="anSeg" role="group" aria-label="Website time range" id="anWRanges">
+      <button type="button" data-w="7" aria-pressed="true">7 days</button>
+      <button type="button" data-w="30" aria-pressed="false">30 days</button>
+      <button type="button" data-w="90" aria-pressed="false">90 days</button>
+    </div>
+    <div class="anKpis" id="anWKpis"></div>
+    <div class="anCard" style="display:grid;gap:10px"><div class="anHead"><h2>Website visits per day</h2><div class="anLegend" style="padding:0" id="anWLegend"></div></div><div class="anChart" id="anWTrend"></div></div>
+    <div class="anGrid2">
+      <div class="anCard anBoard"><h3>Where visits come from</h3><div class="anBoard" id="anWSources"></div></div>
+      <div class="anCard anBoard"><h3>From visit to purchase</h3><div class="anBoard" id="anWFunnel"></div></div>
+    </div>
+    <div class="anCard"><h3>Top places by visits</h3><div class="anTable" id="anWPlaces"></div><p class="anMuted" id="anWOther" style="margin:8px 0 0"></p></div>
+    <div class="anPrivacy">${shield}<span><b>Counts only.</b> One count per browser tab for a visit, a Play free tap and a pass page open. The source is a site name, never the address of the page. No cookies, no device IDs, no outside services. A city shows on days with 5 or more visits. Mojialand counts visits, not people.</span></div>
   </section>
 
   <section id="anCampaigns" hidden style="display:grid;gap:16px">
@@ -728,15 +745,47 @@
   });
   updPrev();
 
+  // ---------------- website (Release 1.5 #64)
+  let wRange = 7;
+  const SRC_LABEL = { typed: ['⌨️', 'Typed in or a bookmark'], qr: ['🔳', 'QR cards and campaign links'], google: ['🔎', 'Google'], bing: ['🔎', 'Bing'], duckduckgo: ['🔎', 'DuckDuckGo'], yahoo: ['🔎', 'Yahoo'],
+    facebook: ['💬', 'Facebook'], instagram: ['📸', 'Instagram'], tiktok: ['🎵', 'TikTok'], youtube: ['▶️', 'YouTube'], x: ['💬', 'X'], linkedin: ['💼', 'LinkedIn'], pinterest: ['📌', 'Pinterest'], reddit: ['💬', 'Reddit'], other: ['🌐', 'Another site'] };
+  async function loadWebsite() {
+    let W;
+    try { W = await api('analytics.website', { range: wRange }); setErr(''); } catch (e) { setErr(e.message); return; }
+    if (!W.ready) { $('anWKpis').innerHTML = '<div class="anEmpty">Website counts are not set up yet.</div>'; ['anWTrend', 'anWSources', 'anWFunnel', 'anWPlaces'].forEach((id) => { $(id).innerHTML = ''; }); $('anWOther').textContent = ''; return; }
+    const ch = (a, b) => { const p = pct(a, b); if (p == null) return 'last ' + W.range + ' days'; const up = p >= 0; return `<span class="anChange ${up ? 'up' : 'down'}">${up ? '▲' : '▼'} ${Math.abs(p)}%</span> vs the ${W.range} days before`; };
+    const f = W.funnel;
+    $('anWKpis').innerHTML = [
+      ['Visits', fmtN(W.visits), W.prev ? ch(W.visits, W.prev.visits) : 'last ' + W.range + ' days'],
+      ['Play free taps', fmtN(f.play), f.visit ? Math.round((f.play / f.visit) * 100) + '% of visits' : ''],
+      ['Pass page opens', fmtN(f.pass), ''],
+      ['Passes bought', fmtN(f.bought), 'from any page'],
+    ].map(([l, n, sub]) => `<div class="anKpi"><div class="l">${l}</div><div class="n">${n}</div><div class="s">${sub}</div></div>`).join('');
+    const step = W.range === 7 ? 1 : W.range === 30 ? 5 : 10;
+    const labs = W.days.map((d, i) => (i % step === 0 || i === W.days.length - 1 ? (W.range === 7 ? wkDay(d) : fmtDay(d)) : ''));
+    $('anWTrend').innerHTML = lineChart(W.perDay, null, labs, W.days, 'Website visits per day', '#4DBCEC');
+    $('anWLegend').innerHTML = '<span><i style="background:#4DBCEC"></i>last ' + W.range + ' days</span>';
+    const smax = Math.max(1, ...W.sources.map((x) => x.n));
+    $('anWSources').innerHTML = W.sources.length ? W.sources.map((x) => { const L = SRC_LABEL[x.source] || SRC_LABEL.other; return barRow({ c: '#4DBCEC', e: L[0] }, L[1], x.n, smax, W.visits ? Math.round((x.n / W.visits) * 100) + '%' : ''); }).join('') : '<div class="anEmpty">No visits yet.</div>';
+    const steps = [['🏠', 'Visits', f.visit, '#7138D1'], ['▶️', 'Play free taps', f.play, '#FF5FA2'], ['🎟️', 'Pass page opens', f.pass, '#FFC83D'], ['✅', 'Passes bought', f.bought, '#72D69A']];
+    $('anWFunnel').innerHTML = steps.map(([e, l, v, c]) => barRow({ c, e }, l, v, Math.max(1, f.visit, f.bought), '')).join('');
+    const pl = W.cities.map((c) => ({ name: c.city + ', ' + c.state, total: c.total })).concat(W.counties.map((k) => ({ name: 'Small towns in ' + k.name + ', ' + k.state, total: k.total }))).sort((a, b) => b.total - a.total).slice(0, 10);
+    $('anWPlaces').innerHTML = pl.length ? `<table><thead><tr><th>Place</th><th class="r">Visits</th></tr></thead><tbody>${pl.map((x) => `<tr><td>${esc(x.name)}</td><td class="r">${fmtN(x.total)}</td></tr>`).join('')}</tbody></table>` : '<div class="anEmpty">No place passed 5 visits in a day yet.</div>';
+    const st = W.states.slice(0, 6).map((x) => x.state + ' ' + fmtN(x.total)).join(' · ');
+    $('anWOther').textContent = (st ? 'By state: ' + st + '. ' : '') + (W.other ? fmtN(W.other) + ' visits came from outside the US or an unnamed place.' : '');
+  }
+  $('anWRanges').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; $('anWRanges').querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); wRange = +b.dataset.w; loadWebsite(); });
+
   // ---------------- views
   function showView(v) {
     view = v;
     $('anViews').querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.v === v)));
-    $('anLive').hidden = v !== 'live'; $('anHistory').hidden = v !== 'history'; $('anCampaigns').hidden = v !== 'campaigns';
+    $('anLive').hidden = v !== 'live'; $('anHistory').hidden = v !== 'history'; $('anCampaigns').hidden = v !== 'campaigns'; $('anWebsite').hidden = v !== 'website';
     stopReplay();
     if (v === 'live') startLive(); else stopLive();
     if (v === 'history') loadHistory();
     if (v === 'campaigns') loadCampaigns();
+    if (v === 'website') loadWebsite();
   }
   $('anViews').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) showView(b.dataset.v); });
   window.MojiAnalytics = { show: () => showView(view), hide: () => { stopLive(); stopReplay(); } };

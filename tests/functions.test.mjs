@@ -1589,3 +1589,47 @@ test('#56 past 24 and 48 hours: rolling windows across midnight, compared with t
   assert.match(js, /let range = 'h24'/); assert.ok(!/>Today</.test(js), 'Today is gone');
 });
 const GAMES_I = (g) => ['pattern', 'bounce', 'match', 'parade', 'draw', 'share', 'feelings'].indexOf(g);
+
+// ---------------------------------------------------------------- Release 1.5 #64: website visits
+import { websiteView } from '../netlify/functions/_lib/analytics-admin.mjs';
+test('#64 website counts: visit with a listed source, play and pass taps; nothing else kept', async () => {
+  assert.deepEqual(readPing({ e: 'site', s: 'visit', r: 'google' }), { e: 'site', s: 'visit', r: 'google' });
+  assert.deepEqual(readPing({ e: 'site', s: 'visit', r: 'https://evil.example/path?kid=ava' }), { e: 'site', s: 'visit', r: 'other' }, 'unknown sources become other');
+  assert.deepEqual(readPing({ e: 'site', s: 'play', r: 'google', id: 'x' }), { e: 'site', s: 'play', r: '' });
+  assert.equal(readPing({ e: 'site', s: 'buy' }), null);
+  const req = (b) => new Request('https://mojialand.displayedux.com/api/ping', { method: 'POST', body: JSON.stringify(b) });
+  assert.equal((await ping(req({ e: 'site', s: 'visit', r: 'qr' }), ctx())).status, 204);
+  assert.equal((await ping(req({ e: 'site', s: 'pass' }), ctx())).status, 204);
+  const adds = db.calls.filter((c) => c.endsWith('/rpc/site_add'));
+  assert.equal(adds.length, 2);
+  // Stop play counts pauses these too
+  db.settings.push({ key: 'play_counts_off', value: 1 }); resetSwitchCache();
+  assert.equal((await ping(req({ e: 'site', s: 'visit', r: 'qr' }), ctx())).status, 204);
+  assert.equal(db.calls.filter((c) => c.endsWith('/rpc/site_add')).length, 2);
+});
+
+test('#64 admin Website view: visits per day, sources, funnel, the 5-visit city rule, change vs the days before', async () => {
+  const now = Date.now();
+  const d = lastDays(7, now);
+  const cur = { days: [
+    { d: d[6], co: 'US', st: 'MI', ci: 'Troy', s: 'visit', r: 'google', n: 4 }, { d: d[5], co: 'US', st: 'MI', ci: 'Troy', s: 'visit', r: 'qr', n: 6 },
+    { d: d[6], co: 'US', st: 'MI', ci: 'Novi', s: 'visit', r: 'typed', n: 2 }, { d: d[6], co: 'CA', st: 'ON', ci: 'Toronto', s: 'visit', r: 'typed', n: 3 },
+    { d: d[6], co: 'US', st: 'MI', ci: 'Troy', s: 'play', r: '', n: 5 }, { d: d[6], co: 'US', st: 'MI', ci: 'Troy', s: 'pass', r: '', n: 2 }], bought: 1 };
+  const both = { days: cur.days.concat([{ d: '2020-01-01', co: 'US', st: 'MI', ci: 'Troy', s: 'visit', r: 'typed', n: 5 }]), bought: 3 };
+  const base = globalThis.fetch;
+  let call = 0;
+  globalThis.fetch = async (url, opts) => String(url).endsWith('/rpc/site_stats') ? new Response(JSON.stringify(call++ === 0 ? cur : both), { status: 200 }) : base(url, opts);
+  try {
+    const w = await websiteView(7, now);
+    assert.equal(w.ready, true); assert.equal(w.visits, 15);
+    assert.deepEqual(w.funnel, { visit: 15, play: 5, pass: 2, bought: 1 });
+    assert.deepEqual(w.perDay.slice(-2), [6, 9]);
+    assert.deepEqual(w.sources, [{ source: 'qr', n: 6 }, { source: 'typed', n: 5 }, { source: 'google', n: 4 }]);
+    assert.deepEqual(w.cities.map((c) => [c.city, c.total]), [['Troy', 6]], 'Troy shows on the day with 6; the day with 4 and Novi stay in the state');
+    assert.equal(w.other, 3); assert.equal(w.prev.visits, 5);
+    assert.ok(!JSON.stringify(w).includes('Toronto'));
+  } finally { globalThis.fetch = base; }
+  db.rpcData = {};
+  const w2 = await websiteView(30, now);
+  assert.equal(w2.ready, false, 'before the SQL runs the view says so');
+});

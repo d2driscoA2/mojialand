@@ -69,6 +69,8 @@ var q=new URLSearchParams(location.search);
 var plan=q.get('plan')||'';
 var promo=(q.get('promo')||'').trim().slice(0,40);
 var checkout=null, busy=false;
+/* Release 1.5 #64: one pass page count per tab (a number in admin Analytics; no device, no code, no plan) */
+try{ if(!sessionStorage.getItem('mojia.vs')){ sessionStorage.setItem('mojia.vs','1'); fetch('/api/ping',{method:'POST',headers:{'Content-Type':'application/json'},body:'{"e":"site","s":"pass"}',keepalive:true}).catch(function(){}); } }catch(e){}
 try{ var sp=JSON.parse(localStorage.getItem('mojia.pass')||'null'); if(sp&&sp.kind==='48h') PLANS.up[1]='$13.49'; }catch(e){} /* Release 1.4: Forever after an old 48-hour pass stays $13.49 */
 if(Object.prototype.hasOwnProperty.call(PLANS,plan)){ $('coItem').textContent=PLANS[plan][0]; $('coPrice').textContent=PLANS[plan][1]; }
 

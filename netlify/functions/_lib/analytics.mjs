@@ -7,7 +7,11 @@ import { notify } from './push.mjs';
 // (supabase/release-1.3-games.sql must run on the database first).
 export const GAMES = ['pattern', 'bounce', 'match', 'parade', 'draw', 'share', 'feelings'];
 export const LABEL_RE = /^[a-z0-9][a-z0-9-]{1,23}$/;
-const EVENTS = ['open', 'beat', 'close', 'camp', 'first'];
+const EVENTS = ['open', 'beat', 'close', 'camp', 'first', 'site'];
+// Release 1.5 #64: website counts. visit (home page, once per tab), play (a Play free tap), pass (the pass page opens).
+// A visit carries its source as a site name from this list only, never an address.
+export const SITE_EVENTS = ['visit', 'play', 'pass'];
+export const SOURCES = ['typed', 'qr', 'google', 'bing', 'duckduckgo', 'yahoo', 'facebook', 'instagram', 'tiktok', 'youtube', 'x', 'linkedin', 'pinterest', 'reddit', 'other'];
 
 // City and state from Netlify's geo data. Everything else is dropped here.
 export function placeFromGeo(geo) {
@@ -27,6 +31,12 @@ export function readPing(body) {
   const out = { e };
   // First start on a new device (Release 1.1 #23): no game, no label, nothing else.
   if (e === 'first') return out;
+  if (e === 'site') {
+    if (!SITE_EVENTS.includes(body.s)) return null;
+    out.s = body.s;
+    out.r = body.s === 'visit' ? (SOURCES.includes(body.r) ? body.r : 'other') : '';
+    return out;
+  }
   if (e === 'camp') {
     if (typeof body.c !== 'string' || !LABEL_RE.test(body.c)) return null;
     out.c = body.c;
@@ -80,6 +90,10 @@ export async function recordPing(raw, geo, ip) {
     return 204;
   }
   const place = placeFromGeo(geo);
+  if (p.e === 'site') {
+    await rest('POST', 'rpc/site_add', { body: { p_country: place.country, p_state: place.state, p_city: place.city, p_event: p.s, p_source: p.r } });
+    return 204;
+  }
   if (p.e === 'camp') {
     await campaignHit(p.c, 'open', place);
     return 204;

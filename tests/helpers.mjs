@@ -117,6 +117,9 @@ export function fakeDb() {
     if (table === 'rpc/analytics_add') { db.analytics.push(body); return reply(204); }
     // Release 1.5 #67: fast counts; missing until the test sets rpcData (like before the SQL runs).
     if (table === 'rpc/batch_stats' || table === 'rpc/gifts_summary') { const k = table.slice(4); if (!(k in db.rpcData)) return reply(404, { message: 'no function' }); db.fastCalls = (db.fastCalls || []).concat([k]); return reply(200, db.rpcData[k]); }
+    // Release 1.5 #64: website counts.
+    if (table === 'rpc/site_add') { (db.site = db.site || []).push(body); return reply(204); }
+    if (table === 'rpc/site_stats') { if (!('site_stats' in db.rpcData)) return reply(404, { message: 'no function' }); return reply(200, db.rpcData.site_stats); }
     // Release 1.5 #66: blocked visit counts.
     if (table === 'rpc/blocked_add') { (db.blocked = db.blocked || []).push(body); return reply(204); }
     if (table === 'rpc/blocked_stats') { (db.blockedCalls = db.blockedCalls || []).push(body); if (db.blockedStatsMissing) return reply(404, { message: 'no function' }); return reply(200, db.rpcData.blocked_stats || []); }

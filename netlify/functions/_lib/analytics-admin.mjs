@@ -307,6 +307,56 @@ export async function historyView(range, now = Date.now()) {
   };
 }
 
+// Release 1.5 #64: website visits. Same rules as plays: counts only, a city shows on days with 5 or more visits.
+export const SITE_RANGES = [7, 30, 90];
+export async function websiteView(range, now = Date.now()) {
+  const n = SITE_RANGES.includes(Number(range)) ? Number(range) : 7;
+  const from = localMidnight(now, n - 1);
+  const ask = async (f) => {
+    try { const { data } = await rest('POST', 'rpc/site_stats', { body: { p_from: new Date(f).toISOString(), p_tz: TZ } }); return data && typeof data === 'object' ? data : null; } catch { return null; }
+  };
+  const data = await ask(from);
+  if (!data) return { range: n, ready: false };
+  const days = lastDays(n, now);
+  const dayIx = new Map(days.map((d, i) => [d, i]));
+  const perDay = days.map(() => 0);
+  const funnel = { visit: 0, play: 0, pass: 0, bought: Number(data.bought) || 0 };
+  const sources = {};
+  const dayEntries = days.map(() => []);
+  const allEntries = [];
+  let other = 0;
+  for (const r of Array.isArray(data.days) ? data.days : []) {
+    if (!dayIx.has(r.d) || !(r.s in funnel)) continue;
+    const v = Number(r.n) || 0;
+    funnel[r.s] += v;
+    if (r.s !== 'visit') continue;
+    perDay[dayIx.get(r.d)] += v;
+    sources[r.r || 'other'] = (sources[r.r || 'other'] || 0) + v;
+    if (!isUS(r)) { other += v; continue; }
+    const e = { st: r.st, ci: r.ci || '', n: v, by: [], min: 0 };
+    dayEntries[dayIx.get(r.d)].push(e);
+    allEntries.push(e);
+  }
+  const acc = { cities: new Map(), counties: new Map(), rolls: {}, rollBy: {} };
+  for (const list of dayEntries) mergeFold(acc, foldPlaces(list, DAY_MIN));
+  const cities = [...acc.cities.values()].sort((a, b) => b.total - a.total).map((c) => ({ city: c.city, state: c.state, total: c.total }));
+  const counties = [...acc.counties.values()].sort((a, b) => b.total - a.total).map((k) => ({ id: k.id, name: k.name, state: k.state, total: k.total }));
+  let prev = null;
+  if (2 * n <= KEEP_DAYS) {
+    const both = await ask(localMidnight(now, 2 * n - 1));
+    if (both) {
+      let all = 0;
+      for (const r of Array.isArray(both.days) ? both.days : []) if (r.s === 'visit') all += Number(r.n) || 0;
+      prev = { visits: Math.max(0, all - funnel.visit) };
+    }
+  }
+  return {
+    range: n, ready: true, days, perDay, visits: funnel.visit, funnel, prev, other,
+    sources: Object.entries(sources).map(([k, v]) => ({ source: k, n: v })).sort((a, b) => b.n - a.n),
+    cities, counties, states: stateTotals(allEntries).map((x) => ({ state: x.state, total: x.total })), rule: DAY_MIN,
+  };
+}
+
 // Release 1.5 #66: visits from blocked countries and regions since a time.
 // One row per country and region: page opens, server calls refused. Null when the count is not set up yet.
 export async function blockedView(from) {

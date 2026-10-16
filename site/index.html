@@ -756,6 +756,10 @@ var CONFIG = {
   // A QR card link (?c=event-label): remember only the event name for 7 days and count the first open once.
   try{ var cu=new URL(location.href), cq=cu.searchParams.get('c'); if(cq!=null){ cu.searchParams.delete('c'); history.replaceState(null,'',cu.pathname+cu.search+cu.hash); var cl=cq.toLowerCase(), co=null; try{ co=JSON.parse(localStorage.getItem('mojia.camp')||'null'); }catch(e){}
     if(/^[a-z0-9][a-z0-9-]{1,23}$/.test(cl)&&!(co&&co.l===cl&&Date.now()-co.t<7*864e5)){ try{ localStorage.setItem('mojia.camp',JSON.stringify({l:cl,t:Date.now()})); }catch(e){} var cb=JSON.stringify({e:'camp',c:cl}); if(!(navigator.sendBeacon&&navigator.sendBeacon('/api/ping',new Blob([cb],{type:'application/json'})))) fetch('/api/ping',{method:'POST',headers:{'Content-Type':'application/json'},body:cb,keepalive:true}).catch(function(){}); } } }catch(e){}
+  // Release 1.5 #64: one visit count per tab. The source is the referring site's name from a short list, never an address.
+  try{ if(!sessionStorage.getItem('mojia.v')){ sessionStorage.setItem('mojia.v','1'); var rh=''; try{ rh=document.referrer?new URL(document.referrer).hostname.toLowerCase().replace(/^(www|m|l|lm)\./,''):''; }catch(e){}
+    var src=(typeof cq==='string')?'qr':!rh||rh===location.hostname?'typed':/(^|\.)google\./.test(rh)?'google':/(^|\.)bing\.com$/.test(rh)?'bing':/duckduckgo\.com$/.test(rh)?'duckduckgo':/yahoo\./.test(rh)?'yahoo':/(^|\.)(facebook\.com|fb\.com|fb\.me)$/.test(rh)?'facebook':/instagram\.com$/.test(rh)?'instagram':/tiktok\.com$/.test(rh)?'tiktok':/(youtube\.com|youtu\.be)$/.test(rh)?'youtube':/^(t\.co|x\.com|twitter\.com)$/.test(rh)?'x':/(linkedin\.com|lnkd\.in)$/.test(rh)?'linkedin':/pinterest\./.test(rh)?'pinterest':/reddit\.com$/.test(rh)?'reddit':'other';
+    var vb=JSON.stringify({e:'site',s:'visit',r:src}); if(!(navigator.sendBeacon&&navigator.sendBeacon('/api/ping',new Blob([vb],{type:'application/json'})))) fetch('/api/ping',{method:'POST',headers:{'Content-Type':'application/json'},body:vb,keepalive:true}).catch(function(){}); } }catch(e){}
  var $=function(s,r){return (r||document).querySelector(s)}, $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
  /* Release 1.1.1 #39: a Home Screen app added from this page brings the pass along, the same way the game does.
     iPhone and iPad only: in Safari the address carries the saved pass; in the Home Screen app, Play hands it to the game, which checks the signature. */
@@ -859,6 +863,8 @@ var CONFIG = {
  /* Phones and tablets (touch screens): the game opens full screen, with nothing drawn over its corners, so iPad players get the whole screen to draw on. */
  var phone=function(){ try{ return matchMedia("(max-width:600px), (pointer:coarse)").matches; }catch(e){ return false; } };
  function openPlayer(){
+  /* Release 1.5 #64: one Play free count per tab */
+  try{ if(!sessionStorage.getItem('mojia.vp')){ sessionStorage.setItem('mojia.vp','1'); var pb=JSON.stringify({e:'site',s:'play'}); if(!(navigator.sendBeacon&&navigator.sendBeacon('/api/ping',new Blob([pb],{type:'application/json'})))) fetch('/api/ping',{method:'POST',headers:{'Content-Type':'application/json'},body:pb,keepalive:true}).catch(function(){}); } }catch(e){}
   if(phone()&&CONFIG.embedGame){ location.href=CONFIG.gameUrl; return; }
   lastFocus=document.activeElement;
   host.innerHTML=""; splash.hidden=false;

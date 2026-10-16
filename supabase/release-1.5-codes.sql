@@ -1,5 +1,6 @@
 -- Release 1.5 #67 (October 2026): fast batch and gift counts, and the cleanup gap for ended Forever gift codes.
 -- Run on mojialand-staging first, then on mojialand-live only after Danny's typed OK. Safe to run twice.
+-- Run order: release-1.5-blocked.sql, release-1.5-site.sql, then this file (its cleanup uses both new tables).
 -- Written with $$ in place of quote marks, because the Supabase editor turns pasted quotes curly.
 
 -- One row per batch label (FRIEND excluded): codes, used, open, ended before use, first made, days to first use.
@@ -93,6 +94,7 @@ begin
   delete from plays_live       where slot_start < now() - make_interval(hours => 2);
   delete from plays_hourly     where hour_start < now() - make_interval(days => 400);
   delete from blocked_hourly   where hour_start < now() - make_interval(days => 400);
+  delete from site_hourly      where hour_start < now() - make_interval(days => 400);
 end;
 $f$;
 revoke all on function public.nightly_cleanup() from public, anon, authenticated;

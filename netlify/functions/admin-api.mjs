@@ -8,7 +8,7 @@ import { buildEmail, sendEmail, adminShareText } from './_lib/email.mjs';
 import { friendPass } from './_lib/friend.mjs';
 import { getStripe } from './_lib/stripe.mjs';
 import { pushReady, readSubscription, MODES, alertMode, pushAll, sendPush, summaryText, michiganDay } from './_lib/push.mjs';
-import { liveView, historyView, campaignsView, createCampaign, setCampaignActive } from './_lib/analytics-admin.mjs';
+import { liveView, historyView, websiteView, campaignsView, createCampaign, setCampaignActive } from './_lib/analytics-admin.mjs';
 import { LABEL_RE } from './_lib/analytics.mjs';
 import { lengthOf } from './_lib/kinds.mjs';
 import { FRIEND_BATCH } from './_lib/friend.mjs';
@@ -436,6 +436,7 @@ const actions = {
   // ---- analytics (counts only, small places folded into their state)
   async 'analytics.live'() { return liveView(); },
   async 'analytics.history'({ range }) { return historyView(range); },
+  async 'analytics.website'({ range }) { return websiteView(range); }, // Release 1.5 #64
   async 'campaigns.list'() { return campaignsView(); },
   async 'campaigns.create'(input) { await createCampaign(input); return campaignsView(); },
   async 'campaigns.active'(input) { await setCampaignActive(input); return campaignsView(); },
