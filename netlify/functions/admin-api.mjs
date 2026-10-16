@@ -293,8 +293,8 @@ const actions = {
   async 'codes.create'({ kind, source, days_valid, note, batch }, _event, opts = {}) {
     const lb = cleanBatch(batch);
     if (lb && !opts.ensured) await ensureCampaign(lb);
-    // Release 1.4 #32: gift and support codes are 7 days (default, printed cards), 30 days, or Forever.
-    const k = kind === 'forever' ? 'forever' : kind === '30d' ? '30d' : '7d';
+    // Release 1.4 #32: gift and support codes are 7 days (default, printed cards), 30 days, or Forever. Release 1.5: 90 days too.
+    const k = kind === 'forever' ? 'forever' : kind === '30d' ? '30d' : kind === '90d' ? '90d' : '7d';
     const src = source === 'support' ? 'support' : 'gift';
     const days = Math.min(365, Math.max(1, parseInt(days_valid, 10) || 90));
     const code = randomCode('GIFT');

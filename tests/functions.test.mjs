@@ -750,6 +750,13 @@ test('admin-api: needs the cookie; passes, codes, support, settings', async () =
   assert.ok(!JSON.stringify(db.passes).includes(d.code) && !JSON.stringify(db.passes).includes(d.code.replace(/-/g, '')));
   const rr = await redeemFn(ev({ code: d.code, device_id: 'b'.repeat(32) }));
   assert.equal(rr.statusCode, 200);
+  // Release 1.5: a 90-day gift code (codes only, never sold) runs 90 days from first use
+  [st, d] = await A('codes.create', { kind: '90d', source: 'support', days_valid: 30, note: 'school year' });
+  assert.equal(st, 200); assert.equal(d.pass.kind, '90d');
+  { const r90 = await redeemFn(ev({ code: d.code, device_id: 'e'.repeat(32) })); assert.equal(r90.statusCode, 200);
+    const p90 = db.passes.find((x) => x.id === d.pass.id);
+    assert.ok(Math.abs(new Date(p90.ends_at) - Date.now() - 90 * 864e5) < 60e3, '90 days from first use');
+    assert.equal(JSON.parse(Buffer.from(JSON.parse(r90.body).token.split('.')[0], 'base64url').toString()).k, '90d', 'the token carries kind 90d'); }
   // Release 1.3 #16: a lost unused code is cancelled and replaced with the same settings; used codes are refused
   [st, d] = await A('codes.create', { kind: 'forever', source: 'gift', days_valid: 45, note: 'aunt', batch: 'lincoln-elem' });
   { const oldCode = d.code, oldId = d.pass.id;

@@ -4425,12 +4425,12 @@ const pay=(function(){
 
   /* device id: random, made once, only used later to count devices per code */
   function deviceId(){ let id=store.get('device',''); if(!id){ try{ const b=new Uint8Array(16); crypto.getRandomValues(b); id=[...b].map(x=>x.toString(16).padStart(2,'0')).join(''); store.set('device',id); }catch(e){ id=''; } } return id; }
-  /* pass on the device: {code, kind:'48h'|'30d'|'7d'|'holder'|'forever', ends_at(ms), token, email_masked, device_id}
+  /* pass on the device: {code, kind:'48h'|'30d'|'7d'|'90d'|'holder'|'forever', ends_at(ms), token, email_masked, device_id}
      Release 1.4 #32: 30d is the paid pass, 7d a gift, holder the free-week family's gift holder (free week plus bonus days).
      Honored only when its token carries a valid signature (WebCrypto, ECDSA P-256) and matches kind and end time.
      Checked once per token and cached. No network. */
   const vcache={token:null,payload:null,pending:null};
-  const KINDS=['48h','30d','7d','holder','forever'];
+  const KINDS=['48h','30d','7d','90d','holder','forever'];
   const paidTimed=p=>!!p&&(p.kind==='30d'||p.kind==='48h');
   function b64u(s){ s=s.replace(/-/g,'+').replace(/_/g,'/'); while(s.length%4) s+='='; const bin=atob(s), a=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) a[i]=bin.charCodeAt(i); return a; }
   async function checkToken(tok){
@@ -4730,7 +4730,7 @@ const pay=(function(){
   /* Grown-ups additions */
   function paintStatus(){ const p=getPass(); let h;
     if(passOn(p)&&p.kind==='forever') h='<b>Forever pass on</b><span>Code '+p.code+'</span>';
-    else if(passOn(p)){ const m=Math.max(0,Math.ceil((p.ends_at-Date.now())/MIN)); const label={'48h':'48-hour pass on','30d':'30-day pass on','7d':'Gift days on','holder':'Free days on'}[p.kind]||'Pass on'; h='<b>'+label+'</b><span>Ends '+fmtT(p.ends_at)+(m<=60?' ('+m+' min left)':'')+(p.code?' · Code '+p.code:'')+'</span>'+(p.kind==='holder'?'<span>Your free week plus bonus days from gifts. Then '+SETTINGS.daily_minutes+' minutes a day.</span>':''); }
+    else if(passOn(p)){ const m=Math.max(0,Math.ceil((p.ends_at-Date.now())/MIN)); const label={'48h':'48-hour pass on','30d':'30-day pass on','90d':'90-day pass on','7d':'Gift days on','holder':'Free days on'}[p.kind]||'Pass on'; h='<b>'+label+'</b><span>Ends '+fmtT(p.ends_at)+(m<=60?' ('+m+' min left)':'')+(p.code?' · Code '+p.code:'')+'</span>'+(p.kind==='holder'?'<span>Your free week plus bonus days from gifts. Then '+SETTINGS.daily_minutes+' minutes a day.</span>':''); }
     else if(graceOn()){ const m=Math.max(1,Math.ceil((graceInfo().until-Date.now())/MIN)); h='<b>Your pass is on its way</b><span>Payment received. Free play for '+m+' more min while it arrives. Your code also comes by email.</span>'; }
     else if(inFreeWeek()){ h=passOffLine()+'<b>Free week</b><span>Every game, no limits, until '+fmtT(freeEnd())+'. Then '+SETTINGS.daily_minutes+' minutes a day.</span>'+(standalone()?'<span>Paid already? Type the code from your email under Have a code? below.</span>':''); }
     else { const s=Math.ceil(freeLeft()/1000); h=passOffLine()+'<b>Free play</b><span>'+SETTINGS.daily_minutes+' minutes a day. Resets each morning.</span><span>Left today: '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0')+'</span>'+(standalone()?'<span>Paid already? Type the code from your email under Have a code? below.</span>':''); }

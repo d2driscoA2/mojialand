@@ -786,6 +786,7 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   await page.waitForSelector('#vApp:not([hidden])');
   await page.waitForSelector('#pList .item');
   check('admin: passes list after sign-in', /parent@example\.com/.test(await page.textContent('#pList')) && /2 of 5 devices/.test(await page.textContent('#pList')));
+  check('1.5 admin: Gift codes offers a 90 days kind', (await page.locator('#cKind option[value="90d"]').count()) === 1);
   await page.click('#pList [data-act="note"]');
   await page.waitForFunction(() => /note from test/.test(document.querySelector('#pList').textContent));
   check('admin: note saved through prompt', true);
@@ -1031,7 +1032,29 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   await page.waitForTimeout(400);
   check('analytics: no sideways scroll at phone width', await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
   await page.screenshot({ path: path.join(SHOTS, 'admin-analytics-phone.png'), fullPage: true });
+  // 1.5 sticky bars on phones: a = tabs and time range pin, b = time range pins, c = time range floats at the bottom.
+  await page.click('#anViews [data-v="history"]');
+  await page.waitForTimeout(400);
+  const stickAt = async (m) => { await page.evaluate((x) => window.mojiaSticky.apply(x), m); await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight)); await page.waitForTimeout(300);
+    return page.evaluate(() => { const t = document.getElementById('tabs').getBoundingClientRect(); const r = document.getElementById('anRanges').getBoundingClientRect(); return { tabsTop: Math.round(t.top), tabsBottom: Math.round(t.bottom), rTop: Math.round(r.top), rBottom: Math.round(r.bottom), vh: innerHeight, wide: document.documentElement.scrollWidth <= innerWidth + 1, demo: !!document.getElementById('stickyDemo') }; }); };
+  const sa = await stickAt('a');
+  check('1.5 sticky a: at the bottom of History, the main tabs pin to the top and the time range sits right under them', sa.tabsTop >= 0 && sa.tabsTop <= 2 && Math.abs(sa.rTop - sa.tabsBottom) <= 2 && sa.wide, JSON.stringify(sa));
+  await page.click('#anRanges [data-r="30"]');
+  await page.waitForTimeout(300);
+  check('1.5 sticky a: the pinned time range still switches the range', bodiesBy['analytics.history'].range === 30 && (await page.locator('#anRanges [data-r="30"][aria-pressed="true"]').count()) === 1);
+  await page.screenshot({ path: path.join(SHOTS, 'admin-sticky-a.png') });
+  const sb = await stickAt('b');
+  check('1.5 sticky b: the main tabs scroll away and the time range pins to the top', sb.tabsBottom < 0 && sb.rTop >= 0 && sb.rTop <= 10 && sb.wide, JSON.stringify(sb));
+  await page.screenshot({ path: path.join(SHOTS, 'admin-sticky-b.png') });
+  const sc = await stickAt('c');
+  check('1.5 sticky c: the time range floats at the bottom of the screen', sc.rBottom <= sc.vh && sc.rBottom >= sc.vh - 40 && sc.wide, JSON.stringify(sc));
+  await page.screenshot({ path: path.join(SHOTS, 'admin-sticky-c.png') });
+  await page.evaluate(() => window.scrollTo(0, 0)); await page.waitForTimeout(300);
+  check('1.5 sticky c: back at the top, the time range returns to its place', await page.evaluate(() => !document.getElementById('anRanges').classList.contains('floating')));
+  check('1.5 sticky: the demo switch shows on this test host (staging-style)', sc.demo);
+  await page.evaluate(() => window.mojiaSticky.apply('a'));
   await page.setViewportSize({ width: 1024, height: 900 });
+  check('1.5 sticky: desktop width keeps the old layout (tabs not pinned)', await page.evaluate(() => getComputedStyle(document.getElementById('tabs')).position === 'static'));
   await page.click('[data-tab="services"]');
   await page.click('#outBtn');
   await page.waitForSelector('#vLogin:not([hidden])');

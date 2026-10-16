@@ -115,6 +115,28 @@ textarea{resize:vertical;min-height:80px}
 .gstats b{display:block;font-size:24px;color:var(--deep)}
 .gstats span{font-size:13px;font-weight:700;color:var(--soft,#6B6180)}
 .grounds{width:100%;border-collapse:collapse;margin-top:6px}.grounds td,.grounds th{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);font-size:14px}
+/* Release 1.5: sticky bars on phones (sticky.js). a = both rows pin, b = section row pins, c = section row floats at the bottom. */
+#stickyDemo{display:inline-flex;align-items:center;gap:4px;margin-left:auto;font-size:12px;font-weight:900;color:var(--deep)}
+#stickyDemo span{margin-right:2px}
+#stickyDemo button{border:2px solid var(--line);background:var(--white);color:var(--deep);border-radius:999px;min-width:34px;min-height:34px;font-weight:900;cursor:pointer}
+#stickyDemo button[aria-pressed="true"]{background:var(--purple);border-color:var(--purple);color:var(--white)}
+@media (min-width:761px){#stickyDemo{display:none}}
+@media (max-width:760px){
+  html[data-sticky] .stickRow{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  html[data-sticky] .stickRow::-webkit-scrollbar{display:none}
+  html[data-sticky] .stickRow>button{flex:0 0 auto}
+  html[data-sticky] #anRoot .anSeg.stickRow{display:flex;flex-wrap:nowrap;max-width:100%;overflow-x:auto}
+  header{flex-wrap:wrap}
+  #stickyDemo{order:3;width:100%;margin:6px 0 0}
+  html[data-sticky="a"] #tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:31;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;background:var(--cream);margin:0 -16px 12px;padding:8px 16px;box-shadow:0 6px 10px -8px rgba(81,34,165,.35)}
+  html[data-sticky="a"] #tabs::-webkit-scrollbar{display:none}
+  html[data-sticky="a"] #tabs>button{flex:0 0 auto}
+  html[data-sticky="a"] .stickRow{position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--tabsH,60px));z-index:30;box-shadow:0 6px 12px -6px rgba(81,34,165,.35)}
+  html[data-sticky="b"] .stickRow{position:sticky;top:calc(env(safe-area-inset-top,0px) + 6px);z-index:30;box-shadow:0 6px 12px -6px rgba(81,34,165,.35)}
+  html[data-sticky] #pTabs.stickRow{background:var(--white);padding:6px 0;margin-bottom:10px}
+  html[data-sticky="c"] .stickRow.floating{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:40;background:#F3ECFC;border-radius:999px;padding:4px;box-shadow:0 6px 18px rgba(81,34,165,.35)}
+  html[data-sticky="c"] #pTabs.stickRow.floating{background:var(--white);padding:6px 8px;gap:6px}
+}
 </style>
 </head>
 <body>
@@ -169,7 +191,7 @@ textarea{resize:vertical;min-height:80px}
     <h2>Gift and support codes</h2>
     <p>One code turns on one family's pass, on up to 5 devices. It starts the first time it is used. The code shows once here and is never stored. <button class="textbtn" id="cHist" type="button">Code history</button></p>
     <div class="row">
-      <label>Kind<select id="cKind"><option value="7d">7 free days</option><option value="30d">30 days</option><option value="forever">Forever</option></select></label>
+      <label>Kind<select id="cKind"><option value="7d">7 free days</option><option value="30d">30 days</option><option value="90d">90 days</option><option value="forever">Forever</option></select></label>
       <label>Reason<select id="cSource"><option value="gift">Gift</option><option value="support">Support (something went wrong)</option></select></label>
       <label>Use within (days)<input id="cDays" type="number" min="1" max="365" value="90"></label>
     </div>
@@ -407,9 +429,9 @@ $('pList').addEventListener('click',async e=>{ const cp=e.target.closest('[data-
    until Done. Done unlocks after Share, Copy, Text, Email, or I saved it. Make a code waits until Done, and leaving
    the page asks first, so a code never disappears unsaved. A lost code: Passes, Gifts, Cancel and replace. */
 let made=null;
-const KINDN={'48h':'48 hours','30d':'30 days','7d':'7 free days',holder:'Gift holder',forever:'Forever'}, SRCN={gift:'Gift',support:'Support'};
+const KINDN={'48h':'48 hours','30d':'30 days','90d':'90 days','7d':'7 free days',holder:'Gift holder',forever:'Forever'}, SRCN={gift:'Gift',support:'Support'};
 /* Release 1.4 #32: pass kinds in the Passes list */
-const KINDS_SHORT={'48h':'48h','30d':'30 days','7d':'7-day gift',holder:'gift holder',forever:'Forever'};
+const KINDS_SHORT={'48h':'48h','30d':'30 days','90d':'90 days','7d':'7-day gift',holder:'gift holder',forever:'Forever'};
 function showMade(code,info,head){ made={code,kind:info.kind,label:info.batch||'',saved:false};
   lastLabel=made.label; $('cHead').textContent=head||'Your new code. Save or share it now: it shows only once.';
   $('cCode').textContent=code; const link=linkFor(code); $('cLink').textContent=link; $('cLink').href=link; setShareLinks(code);
@@ -434,7 +456,7 @@ const curLabel=()=>$('cBatch').value.trim().toLowerCase();
 const linkFor=(c,lb)=>location.origin+'/r/'+c.replace(/-/g,'')+((lb===undefined?lastLabel:lb)?'?c='+encodeURIComponent(lb===undefined?lastLabel:lb):'');
 async function loadLabels(){ try{ const d=await api('codes.labels',{}); $('cLabels').innerHTML=d.labels.map(l=>'<button class="secondary" type="button" data-label="'+esc(l)+'">'+esc(l)+'</button>').join(''); }catch(e){} }
 $('cLabels').addEventListener('click',e=>{ const b=e.target.closest('[data-label]'); if(b) $('cBatch').value=b.dataset.label; });
-const msgFor=c=>'A Mojialand gift: '+({forever:'a free Forever pass','30d':'a free 30-day pass'}[((made&&made.kind)||$('cKind').value)]||'7 free days')+' for your family. Tap to turn it on: '+linkFor(c)+' Or open Mojialand, tap Grown-ups, then Have a code? and type '+c;
+const msgFor=c=>'A Mojialand gift: '+({forever:'a free Forever pass','30d':'a free 30-day pass','90d':'a free 90-day pass'}[((made&&made.kind)||$('cKind').value)]||'7 free days')+' for your family. Tap to turn it on: '+linkFor(c)+' Or open Mojialand, tap Grown-ups, then Have a code? and type '+c;
 async function copy(t){ try{ await navigator.clipboard.writeText(t); return true; }catch(e){ return false; } }
 $('cShare').addEventListener('click',async e=>{ const b=e.target.closest('[data-share]'); if(!b) return; const c=$('cCode').textContent; $('cOk').textContent='';
   if(b.dataset.share==='share'){ if(navigator.share){ try{ await navigator.share({title:'Mojialand gift pass',text:msgFor(c),url:linkFor(c)}); markSaved(); }catch(err){} } else { $('cOk').textContent=(await copy(msgFor(c)))?'Copied the message. This computer has no share sheet; paste it anywhere.':'Copy failed.'; } }
@@ -447,7 +469,7 @@ function setShareLinks(c){ $('cSms').href='sms:?&body='+encodeURIComponent(msgFo
 let batch=[], bLabel='';
 function qrImg(url){ try{ const q=qrcode(0,'M'); q.addData(url); q.make(); return q.createDataURL(4,0); }catch(e){ return ''; } }
 function bPer(){ return $('bPer').value==='3'?3:1; }
-function cardTitle(kind,per){ if(kind==='forever') return per===1?'A free Forever pass':'Free Forever passes'; if(kind==='30d') return per===1?'A free 30-day pass':'3 free 30-day passes'; if(kind==='48h') return per===1?'A free 48-hour pass':'3 free 48-hour passes'; return per===1?'7 free days of Mojialand':'7 free days for 3 families'; }
+function cardTitle(kind,per){ if(kind==='forever') return per===1?'A free Forever pass':'Free Forever passes'; if(kind==='30d') return per===1?'A free 30-day pass':'3 free 30-day passes'; if(kind==='90d') return per===1?'A free 90-day pass':'3 free 90-day passes'; if(kind==='48h') return per===1?'A free 48-hour pass':'3 free 48-hour passes'; return per===1?'7 free days of Mojialand':'7 free days for 3 families'; }
 function buildSheet(codes,kind,lb,per){ per=per===3?3:1; const cards=[]; for(let i=0;i<codes.length;i+=per) cards.push(codes.slice(i,i+per));
   const host=location.hostname==='mojialand.com'?'mojialand.com':location.host;
   $('sheet').innerHTML=cards.map(cs=>'<div class="bc'+(per===1?' one':'')+'"><div class="l"><img src="/logo/logo-3d-1000.webp" alt="Mojialand"><b>'+cardTitle(kind,per)+'</b><small>Emoji games for kids 3 and up. No ads, nothing collected from your child. '+(per===1?'One family, up to 5 devices. Scan the code':'One code per family, up to 5 devices. Scan a code')+', or type it at '+esc(host)+' under Grown-ups.</small>'+(lb?'<em class="blabel">'+esc(lb)+'</em>':'')+'</div><div class="r">'
@@ -556,5 +578,6 @@ login().then(d=>{ if(d&&d.signed_in) showApp(); else showLogin(); }).catch(()=>s
 })();
 </script>
 <script src="/admin/analytics.js"></script>
+<script src="/admin/sticky.js"></script>
 </body>
 </html>

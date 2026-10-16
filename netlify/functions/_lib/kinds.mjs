@@ -2,13 +2,14 @@
 //   48h     old 48-hour pass (kept for running passes and cards printed before 1.4)
 //   30d     30-day pass, $4.99, never renews by itself
 //   7d      gift of 7 free days
+//   90d     90 days, gift and support codes only, never sold (Release 1.5, Danny October 16)
 //   holder  gift holder for a free-week family (end time = free week end plus reward days)
 //   forever Forever
 const HOUR = 3600e3;
 export const DAY = 24 * HOUR;
-export const KIND_MS = { '48h': 48 * HOUR, '30d': 30 * DAY, '7d': 7 * DAY };
-export const TIMED = ['48h', '30d', '7d', 'holder'];
-export const KINDS = ['48h', '30d', '7d', 'holder', 'forever'];
+export const KIND_MS = { '48h': 48 * HOUR, '30d': 30 * DAY, '7d': 7 * DAY, '90d': 90 * DAY };
+export const TIMED = ['48h', '30d', '7d', '90d', 'holder'];
+export const KINDS = ['48h', '30d', '7d', '90d', 'holder', 'forever'];
 export const FREE_DAYS = 7;          // free week from the first open on a device
 export const GIFT_DAYS = 7;          // what one gift gives a friend
 export const GIFTS_PER_FAMILY = 3;
