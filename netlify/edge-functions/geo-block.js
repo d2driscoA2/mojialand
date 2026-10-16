@@ -30,5 +30,5 @@ export default async (req, context) => {
 };
 
 export const config = {
-  path: ['/', '/index.html', '/play/', '/play/index.html', '/pass/', '/pass/index.html', '/pass/done/', '/pass/done/index.html', '/r/*', '/g/*'],
+  path: ['/', '/index.html', '/play/', '/play/index.html', '/pass/', '/pass/index.html', '/pass/done/', '/pass/done/index.html', '/r/*', '/g/*', '/home-screen/'],
 };

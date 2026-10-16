@@ -1633,3 +1633,15 @@ test('#64 admin Website view: visits per day, sources, funnel, the 5-visit city 
   const w2 = await websiteView(30, now);
   assert.equal(w2.ready, false, 'before the SQL runs the view says so');
 });
+
+// ---------------------------------------------------------------- Release 1.5 #61: Home Screen video in the code email
+import { buildEmail as buildEmail61 } from '../netlify/functions/_lib/email.mjs';
+test('#61 code email: still image and Watch how button to /home-screen/; no video in the email', () => {
+  const e = buildEmail61({ plan: 'pass', pass: { kind: '30d', ends_at: new Date(Date.now() + 864e6).toISOString() }, code: 'MOJI-ABCD-EFGH-JKMN', origin: 'https://mojialand.com' });
+  assert.match(e.html, /href="https:\/\/mojialand\.com\/home-screen\/"[^>]*>Watch how</);
+  assert.match(e.html, /src="https:\/\/mojialand\.com\/img\/a2hs-email\.jpg"/);
+  assert.ok(!/<video/.test(e.html));
+  assert.match(e.text, /Watch how: https:\/\/mojialand\.com\/home-screen\//);
+  const noCode = buildEmail61({ plan: 'pass', pass: { kind: '30d', ends_at: new Date(Date.now() + 864e6).toISOString() }, code: null, origin: 'https://mojialand.com' });
+  assert.ok(!/home-screen/.test(noCode.html), 'only emails that carry a code');
+});

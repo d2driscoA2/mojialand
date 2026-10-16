@@ -74,7 +74,7 @@ function parseHeaders(site) {
   return blocks;
 }
 const matches = (pat, p) => pat.endsWith('*') ? p.startsWith(pat.slice(0, -1)) : p === pat;
-const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml', '.webp': 'image/webp', '.woff2': 'font/woff2', '.json': 'application/json', '.webmanifest': 'application/manifest+json' };
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml', '.webp': 'image/webp', '.woff2': 'font/woff2', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.mp4': 'video/mp4', '.jpg': 'image/jpeg' };
 
 function serve(site) {
   const blocks = parseHeaders(site);
@@ -1132,6 +1132,62 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   check('1.5 #64 counts: the same tab never counts a second visit', !pings.some((p) => p && p.e === 'site'));
   check('counts: website no CSP violations', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
   await ctx.close();
+}
+
+// Release 1.5 #61: Add to Home Screen video for grown-ups (iPhone Safari only)
+{
+  const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1';
+  const IPAD = 'Mozilla/5.0 (iPad; CPU OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1';
+  const spy = () => { window.__plays = []; const orig = HTMLMediaElement.prototype.play; HTMLMediaElement.prototype.play = function () { if (this.tagName !== 'VIDEO') return orig.call(this); window.__plays.push({ id: this.id, muted: this.muted }); return Promise.resolve(); }; };
+  const openGU = async (page) => {
+    await page.click('#splash'); await page.waitForTimeout(400); await page.click('#lockBtn'); await page.waitForSelector('#s-ngate:not(.hidden)');
+    { const ans = await page.getAttribute('#pwChoices', 'data-a'); await page.click('#pwChoices [data-n="' + ans + '"]'); }
+    await page.waitForSelector('#s-gate:not(.hidden)'); await page.waitForTimeout(400);
+  };
+  {
+    const { ctx, page } = await newPage({ userAgent: IPHONE });
+    await page.addInitScript(spy);
+    await page.goto(base + '/play/'); await page.waitForTimeout(600);
+    check('1.5 #61 kid screens never show the video', await page.isHidden('#pwGuVid') && await page.evaluate(() => [...document.querySelectorAll('video')].every((v) => !!v.closest('#s-gate,#pwOvHS'))));
+    await openGU(page);
+    const first = await page.evaluate(() => window.__plays.slice());
+    check('1.5 #61 first Grown-ups open on iPhone Safari plays the video once, muted', await page.isVisible('#pwGuVid') && await page.isHidden('#pwMini') && first.length === 1 && first[0].id === 'pwGuVid' && first[0].muted === true && await page.isHidden('#pwGuVidAgain'), JSON.stringify(first));
+    check('1.5 #61 video loads only on play, from this site, with a poster', await page.evaluate(() => { const v = document.getElementById('pwGuVid'); return v.preload === 'none' && v.getAttribute('poster') === '/img/a2hs-iphone-poster.jpg' && v.querySelector('source').getAttribute('src') === '/img/a2hs-iphone.mp4'; }));
+    await page.goto(base + '/play/'); await page.waitForTimeout(600);
+    await openGU(page);
+    check('1.5 #61 later opens show Watch again and do not play by themselves', (await page.evaluate(() => window.__plays.length)) === 0 && await page.isVisible('#pwGuVidAgain'));
+    await page.click('#pwGuVidAgain');
+    check('1.5 #61 Watch again plays from the start', (await page.evaluate(() => window.__plays.length)) === 1);
+    await page.click('#pwHSbtn'); await page.waitForTimeout(200);
+    check('1.5 #61 Show me how opens the steps with the video playing', await page.isVisible('#pwOvVid') && await page.isHidden('#pwMiniBig') && (await page.evaluate(() => window.__plays.at(-1).id)) === 'pwOvVid');
+    check('1.5 #61 no CSP violations with the video', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await newPage({ userAgent: IPAD, viewport: { width: 820, height: 1180 } });
+    await page.addInitScript(spy);
+    await page.goto(base + '/play/'); await page.waitForTimeout(600);
+    await openGU(page);
+    check('1.5 #61 iPad shows no iPhone video (Share sits at the top there)', await page.isHidden('#pwGuVid') && (await page.evaluate(() => window.__plays.length)) === 0);
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await newPage({ userAgent: IPHONE });
+    await page.addInitScript(spy);
+    await page.addInitScript(() => { Object.defineProperty(navigator, 'standalone', { get: () => true }); });
+    await page.goto(base + '/play/'); await page.waitForTimeout(600);
+    await openGU(page);
+    check('1.5 #61 the Home Screen app never shows the video', await page.isHidden('#pwGuVid') && (await page.evaluate(() => window.__plays.length)) === 0);
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await newPage();
+    const r = await page.goto(base + '/home-screen/'); await page.waitForTimeout(300);
+    const html = await page.content();
+    check('1.5 #61 /home-screen/ plays the video page with no script and no CSP errors', r.status() === 200 && (await page.locator('video source[src="/img/a2hs-iphone.mp4"]').count()) === 1 && !/<script/.test(html) && page.csp.length === 0 && page.errors.length === 0, page.csp.join(' | '));
+    { const buf = fs.readFileSync(path.join(site, 'img', 'a2hs-iphone.mp4')); check('1.5 #61 video file is small and has no sound track', buf.length < 1600000 && !buf.includes(Buffer.from('soun')) && buf.includes(Buffer.from('vide'))); }
+    await ctx.close();
+  }
 }
 
 // Release 1.5 #64: website visit, Play free tap and pass page counts, once per tab

@@ -112,7 +112,7 @@ if STAGING:
 # Game: same strict policy as before. The website may show the game in its
 # play window, so the game allows framing by its own site only.
 game_csp = ("default-src 'none'; script-src 'self' 'sha256-%s'; style-src 'self' 'unsafe-inline'; "
-            "img-src 'self' data:; font-src 'self'; media-src data:; manifest-src 'self'; connect-src 'self'; worker-src 'self'; "
+            "img-src 'self' data:; font-src 'self'; media-src 'self' data:; manifest-src 'self'; connect-src 'self'; worker-src 'self'; "
             "base-uri 'self'; form-action 'none'; frame-ancestors 'self'; upgrade-insecure-requests") % game
 
 # Website: adds the contact form (posts to this site) and the play window.
@@ -133,6 +133,10 @@ friend_csp = ("default-src 'none'; script-src 'sha256-%s'; style-src 'unsafe-inl
 # script sends one count to /api/ping. No links, no outside requests.
 blocked_csp = ("default-src 'none'; script-src 'sha256-%s'; style-src 'unsafe-inline'; img-src 'self'; font-src 'self'; "
                "connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests") % blocked
+
+# Release 1.5 #61: the Home Screen video page (from the code email). No script at all.
+home_screen_csp = ("default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; img-src 'self'; font-src 'self'; media-src 'self'; "
+                   "base-uri 'none'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests")
 
 # Admin page: same-site only, never indexed, never cached.
 admin_csp = ("default-src 'none'; script-src 'self' 'sha256-%s'; style-src 'self' 'unsafe-inline'; "
@@ -182,6 +186,8 @@ headers = "".join([
     "/img/*\n  Cache-Control: public, max-age=604800, stale-while-revalidate=86400\n",
     block('/r/*', redeem_csp, 'DENY') + "  Cache-Control: no-store\n",
     block('/g/*', friend_csp, 'DENY'),
+    block('/home-screen/*', home_screen_csp, 'DENY'),
+    "/img/a2hs-iphone.mp4\n  Cache-Control: public, max-age=604800\n",
     block('/blocked/*', blocked_csp, 'DENY') + "  Cache-Control: no-store\n  X-Robots-Tag: noindex, nofollow\n",
     block('/admin/*', admin_csp, 'DENY') + "  Cache-Control: no-store\n  X-Robots-Tag: noindex, nofollow\n",
     block('/pass/*', pass_csp, 'DENY') + "  Permissions-Policy: %s\n" % pass_pp,

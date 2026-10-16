@@ -62,9 +62,15 @@ export function buildEmail({ plan, pass, code, origin, friend, byAdmin }) {
   const fMsg = 'Here are 48 free hours of Mojialand, emoji games for kids 3 and up. No ads. Tap to play: ' + fLink;
   const fSms = fLink ? 'sms:?&body=' + encodeURIComponent(fMsg) : null;
 
+  // Release 1.5 #61: a still of the 21-second Add to Home Screen video and a button to a small page that plays it
+  // (email apps do not play video reliably).
+  const hsHead = 'Put it on your Home Screen';
+  const hsWhy = 'On iPhone, 4 taps in Safari add the app icon. It opens full screen and keeps your pass.';
+  const hsLink = origin + '/home-screen/';
   const text = [
     head, '', when, '',
     ...(link ? [how, 'Turn on Mojialand: ' + link, '', already, '', byHand, 'Your code: ' + code, '', keep, ''] : []),
+    ...(link ? [hsHead, hsWhy, 'Watch how: ' + hsLink, ''] : []),
     ...(giftLine ? [giftLine, ''] : []),
     ...(fLink ? [fHead, fWhy, 'Send this link to a friend: ' + fLink, ''] : []),
     'Questions? Reply to this email.', '',
@@ -94,6 +100,14 @@ export function buildEmail({ plan, pass, code, origin, friend, byAdmin }) {
 <p style="margin:0 0 ${link ? 20 : 0}px;font:700 16px/1.45 ${F};color:${INK};text-align:center">${esc(when)}</p>
 ${link ? `<p style="margin:0 0 14px;font:800 16px/1.45 ${F};color:${INK};text-align:center">${esc(how)}</p>` : ''}${button}
 </td></tr>
+${link ? `<tr><td style="padding:16px 0 0"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td bgcolor="#FFFFFF" style="background:#FFFFFF;border-radius:24px;padding:22px 20px" align="center">
+<p style="margin:0 0 6px;font:900 21px/1.2 ${F};color:${P};text-align:center">&#128241; ${esc(hsHead)}</p>
+<p style="margin:0 0 14px;font:700 15px/1.45 ${F};color:${INK};text-align:center">${esc(hsWhy)}</p>
+<a href="${esc(hsLink)}" style="display:block;margin:0 auto 12px;max-width:280px"><img src="${esc(origin)}/img/a2hs-email.jpg" width="280" height="280" alt="Video: the 4 taps" style="display:block;width:100%;max-width:280px;height:auto;border:0;border-radius:18px"></a>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td align="center" bgcolor="${P}" style="border-radius:999px">
+<a href="${esc(hsLink)}" style="display:block;padding:14px 20px;font:900 17px/1.2 ${F};color:#FFFFFF;text-decoration:none;border-radius:999px">Watch how</a>
+</td></tr></table>
+</td></tr></table></td></tr>` : ''}
 ${fLink ? `<tr><td style="padding:16px 0 0"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td bgcolor="#FFFFFF" style="background:#FFFFFF;border:2px dashed #FF5FA2;border-radius:24px;padding:22px 20px">
 <p style="margin:0 0 6px;font:900 21px/1.2 ${F};color:#FF5FA2;text-align:center">&#127873; ${esc(fHead)}</p>
 <p style="margin:0 0 16px;font:700 15px/1.45 ${F};color:${INK};text-align:center">${esc(fWhy)}</p>

@@ -457,6 +457,13 @@ body.drawer-open .addbtn{display:none}
 .pw-hsbig p{margin:0;font-size:13px;font-weight:700;color:var(--ink);line-height:1.4}
 .pw-hsbig .pw-hst{font-family:var(--display);font-weight:900;font-size:18px;line-height:1.15;color:var(--purple-d);margin-bottom:4px}
 .pw-hsbig.done{background:#DDF6E7;border-color:#2E9E62}
+/* Release 1.5 #61: Add to Home Screen video for grown-ups (iPhone Safari only, never in the Home Screen app) */
+.pw-hsbig.vid{flex-direction:column;align-items:stretch;padding:14px}
+.pw-hsbig.vid>div:last-child{padding-bottom:0}
+.pw-hsvid{display:grid;justify-items:center;gap:6px}
+.pw-hsvid video,.pw-ovvid video{display:block;width:100%;max-width:220px;aspect-ratio:9/16;border-radius:18px;border:4px solid var(--ink);background:var(--cream)}
+.pw-ovvid{display:grid;justify-items:center;margin:4px 0 10px}
+.pw-ovvid video{max-width:200px;max-height:46vh;width:auto}
 .pw-hsbig.done .pw-hst{color:#1E7A48}
 .pw-hsbig .pw-primary{padding:10px;font-size:15px;margin-top:8px}
 /* mini iPhone home screen */
@@ -968,7 +975,7 @@ html.lite #s-home *,html.lite #s-home *::before,html.lite #s-home *::after{anima
   <div class="bar"><button class="pill gear" data-go="home" aria-label="Back to home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7138D1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg></button><div class="gname">Grown-ups</div><div style="width:48px"></div></div>
   <div class="pw-status" id="pwStatus"></div>
   <div class="pw-gulist" id="pwGuList"></div>
-  <div class="pw-hsbig" id="pwHS"><div class="pw-mini" id="pwMini" aria-hidden="true"></div><div><p class="pw-hst" id="pwHSt">Mojialand on your Home Screen!</p><p id="pwHSbody">Add Mojialand to your Home Screen. Your kids find it next to your other apps, and it opens full screen.</p><button class="pw-primary" id="pwHSbtn">Show me how</button></div></div>
+  <div class="pw-hsbig" id="pwHS"><div class="pw-mini" id="pwMini" aria-hidden="true"></div><div class="pw-hsvid" id="pwGuVidWrap" hidden><video id="pwGuVid" muted playsinline preload="none" poster="/img/a2hs-iphone-poster.jpg" aria-label="Video: the four taps that put Mojialand on your Home Screen"><source src="/img/a2hs-iphone.mp4" type="video/mp4"></video><button class="pw-textbtn" id="pwGuVidAgain" type="button" hidden>▶ Watch again</button></div><div><p class="pw-hst" id="pwHSt">Mojialand on your Home Screen!</p><p id="pwHSbody">Add Mojialand to your Home Screen. Your kids find it next to your other apps, and it opens full screen.</p><button class="pw-primary" id="pwHSbtn">Show me how</button></div></div>
   <div class="banner"><span class="e">🔒</span><div>Grown-ups only<div style="font-size:12px;font-weight:700;color:var(--purple-d);opacity:.8">A number question keeps kids out. Tap Grown-ups on the home screen to get here.</div></div></div>
   <div class="row"><div><div class="l">Voice</div><div class="s">Speaks emoji names and how-to cards out loud. Off by default.</div></div><button class="sw" id="swVoice" role="switch" aria-checked="false" aria-label="Voice"></button></div>
   <div class="row"><div><div class="l">Sounds</div><div class="s">Boops, chimes, cheers</div></div><button class="sw" id="swSound" role="switch" aria-checked="true" aria-label="Sounds"></button></div>
@@ -1059,6 +1066,7 @@ html.lite #s-home *,html.lite #s-home *::before,html.lite #s-home *::after{anima
 </main>
 <div class="pw-ov hidden" id="pwOvHS" role="dialog" aria-label="Mojialand on your Home Screen"><div class="pw-card">
   <h3>Mojialand on your Home Screen!</h3>
+  <div class="pw-ovvid" id="pwOvVidWrap" hidden><video id="pwOvVid" muted playsinline preload="none" controls poster="/img/a2hs-iphone-poster.jpg" aria-label="Video: the four taps that put Mojialand on your Home Screen"><source src="/img/a2hs-iphone.mp4" type="video/mp4"></video></div>
   <div class="pw-mini big" id="pwMiniBig" aria-hidden="true"></div>
   <div class="pw-steps">
     <div><b aria-hidden="true">⬆️</b>In Safari, tap the Share button</div>
@@ -4469,8 +4477,16 @@ const pay=(function(){
   function homeGrid(el,n){ const apps=['📷','🗓️','☀️','🎵','🗺️','💬','📚','🧮','🎨','⏰','📝','🛒'], bg=['#F7F7F7','#FFFFFF','#FFE08A','#FF8FB0','#9FE0B8','#7ED67E','#FFB36B','#8C8C8C','#FFD1E6','#1F1F1F','#FFF3B0','#8FD3FF']; let h='';
     for(let i=0;i<n;i++) h+= i===(n>9?5:4) ? '<i class="mj"><img src="/logo/icon-180.png" alt=""></i>' : '<i style="background:'+bg[i%12]+'">'+apps[i%12]+'</i>'; el.innerHTML=h; }
   homeGrid($('#pwMini'),9); homeGrid($('#pwMiniBig'),16);
-  function showHow(){ if(installEvt){ const ev=installEvt; installEvt=null; try{ ev.prompt(); const r=ev.userChoice; if(r&&r.then) r.then(()=>buildGU(),()=>{}); }catch(e){ $('#pwOvHS').classList.remove('hidden'); } return; } $('#pwOvHS').classList.remove('hidden'); }
+  /* Release 1.5 #61: the 21-second video shows the 4 taps. iPhone in Safari only: never in the Home Screen app,
+     never on iPad (Share sits at the top there; the iPad video comes later), never in other browsers. Muted, no sound track. */
+  const iphoneSafari=()=>{ const ua=navigator.userAgent||''; return /iPhone|iPod/.test(ua)&&/Safari\//.test(ua)&&!/CriOS|FxiOS|EdgiOS|OPiOS|GSA\//.test(ua)&&!standalone(); };
+  function playVid(v){ try{ v.muted=true; v.currentTime=0; const pr=v.play(); if(pr&&pr.catch) pr.catch(()=>{}); }catch(e){} }
+  function showHow(){ const vw=$('#pwOvVidWrap'), iv=iphoneSafari(); vw.hidden=!iv; $('#pwMiniBig').hidden=iv; if(iv&&!installEvt){ $('#pwOvHS').classList.remove('hidden'); playVid($('#pwOvVid')); return; }
+    if(installEvt){ const ev=installEvt; installEvt=null; try{ ev.prompt(); const r=ev.userChoice; if(r&&r.then) r.then(()=>buildGU(),()=>{}); }catch(e){ $('#pwOvHS').classList.remove('hidden'); } return; } $('#pwOvHS').classList.remove('hidden'); }
   $('#pwHSbtn').addEventListener('click',()=>{ ctx(); sfx.boop(); showHow(); });
+  $('#pwGuVidAgain').addEventListener('click',()=>{ ctx(); playVid($('#pwGuVid')); });
+  $('#pwGuVid').addEventListener('ended',()=>{ $('#pwGuVidAgain').hidden=false; });
+  $('#pwOvHS').addEventListener('click',e=>{ if(e.target.closest('[data-pw-close]')||e.target===$('#pwOvHS')) try{ $('#pwOvVid').pause(); }catch(err){} });
 
   /* All set: shown once after /pass/done/ saves a verified pass */
   function showAllset(){ const a=store.get('allset',null); try{ localStorage.removeItem('mojia.allset'); }catch(e){}
@@ -4479,7 +4495,7 @@ const pay=(function(){
     const mail=a.plan==='redeem'?'':String(a.email_masked||p.email_masked||'');
     $('#pwOkText').textContent=(p.kind==='forever'?'Forever pass on.':'Pass on until '+fmtT(p.ends_at)+'.')+(mail?' Code emailed to '+mail+'.':'');
     const touch=(navigator.maxTouchPoints||0)>0, ipad=/iPad/.test(navigator.userAgent)||(/Macintosh/.test(navigator.userAgent)&&touch);
-    $('#pwOkHS').hidden=standalone()||!(touch||installEvt); $('#pwOkHSt').textContent=!touch?'Install Mojialand on this computer':ipad?"Put Mojialand on this iPad's Home Screen":"Put Mojialand on this phone's Home Screen";
+    $('#pwOkHS').hidden=standalone()||!(touch||installEvt); $('#pwOkHSt').textContent=!touch?'Install Mojialand on this computer':ipad?"Put Mojialand on this iPad's Home Screen":iphoneSafari()?'Watch how: Mojialand on your Home Screen':"Put Mojialand on this phone's Home Screen";
     $('#pwOkShare').hidden=!p.code; $('#pwOkGift').hidden=true; okMail=!!mail; go('allset'); showGiftOnAllset(); return true; }
   let okMail=false;
   $('#pwOkHS').addEventListener('click',()=>{ ctx(); sfx.boop(); showHow(); });
@@ -4656,6 +4672,11 @@ const pay=(function(){
     const on=standalone(), hb=$('#pwHS'); hb.classList.toggle('done',on); $('#pwHSt').textContent=on?'On your Home Screen':'Mojialand on your Home Screen!';
     $('#pwHSbody').textContent=on?'Mojialand sits next to your other apps on this device. Open it from the icon for full screen play.':'Add Mojialand to your Home Screen. Your kids find it next to your other apps, and it opens full screen.';
     $('#pwHSbtn').hidden=on;
+    /* Release 1.5 #61: first Grown-ups open on an iPhone in Safari plays the video once, muted; later opens offer Watch again */
+    const gv=!on&&iphoneSafari(), gvw=$('#pwGuVidWrap'), gvid=$('#pwGuVid');
+    gvw.hidden=!gv; $('#pwMini').hidden=gv; hb.classList.toggle('vid',gv);
+    if(gv){ if(!store.get('a2hsVid',false)){ store.set('a2hsVid',true); $('#pwGuVidAgain').hidden=true; playVid(gvid); } else $('#pwGuVidAgain').hidden=false; }
+    else { try{ gvid.pause(); }catch(e){} }
     }
   $('#pwGuList').addEventListener('click',e=>{ const b=e.target.closest('.pw-gurow,.pw-offerbtn'); if(!b) return; ctx(); sfx.boop(); const a=b.dataset.a;
     if(a==='add'||a==='up') openGate('plans','gate',a); else if(a==='buy') openGate('plans','gate','life');
