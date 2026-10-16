@@ -1232,7 +1232,7 @@ const nav = (pg, id) => pg.evaluate((x) => { const b = document.createElement('b
     check('1.5 #24 iPad: after 5 minutes of play, on a new day, the walkthrough shows after the splash with the hand at the top right', await page.isVisible('.coach') && (await page.getAttribute('.coach .chand', 'class')) === 'chand topright');
     await ctx.close();
   }
-  for (const [label, ua, extra] of [['the Home Screen app', IPHONE, () => { Object.defineProperty(navigator, 'standalone', { get: () => true }); }], ['Chrome on iPhone', IPHONE.replace('Version/18.5', 'CriOS/140.0'), null], ['three days already shown', IPHONE, null]]) {
+  for (const [label, ua, extra] of [['the Home Screen app', IPHONE, () => { Object.defineProperty(navigator, 'standalone', { get: () => true }); }], ['Chrome on iPhone', IPHONE.replace('Version/18.5', 'CriOS/140.0'), null], ['three days already shown', IPHONE, null], ['a device with a pass on (Security S1)', IPHONE, () => { localStorage.setItem('mojia.pass', JSON.stringify({ kind: 'forever', token: 'x' })); }]]) {
     const { ctx, page } = await newPage({ userAgent: ua });
     await page.addInitScript((n) => { localStorage.setItem('mojia.demos', 'false'); localStorage.setItem('mojia.coach', JSON.stringify({ g: 5, ms: 0, day: '', n })); }, label.startsWith('three') ? 3 : 0);
     if (extra) await page.addInitScript(extra);
@@ -1845,7 +1845,7 @@ for (const [w, h, name] of [[375, 667, 'se'], [820, 1180, 'ipad']]) {
   check('1.3 feelings: the right face fills panel 3 and the bubble', await page.evaluate(() => /😢/.test(document.querySelector('#feelingsstage .panel[data-b="3"]').textContent) && document.querySelector('#feelingsstage .bub').classList.contains('has')));
   await page.screenshot({ path: path.join(SHOTS, 'feelings-right-390.png') });
   await page.waitForSelector('#feelingsstage .ffhelp', { timeout: 6000 });
-  await page.click('#feelingsstage .ffhelp');
+  await page.click('#feelingsstage .ffhelp', { force: true }); // the help button bounces; force skips the stillness wait (flake seen October 15)
   await page.waitForSelector('#feelingsstage .nextbtn', { timeout: 8000 });
   check('1.3 feelings: helping finishes the scene and saves it on the device', (await page.evaluate(() => localStorage.getItem('mojia.feelRound'))) === '1');
   await page.click('#s-feelings [data-go="home"]'); await page.waitForTimeout(300);

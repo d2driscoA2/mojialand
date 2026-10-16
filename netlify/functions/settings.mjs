@@ -18,7 +18,8 @@ export const handler = async (event) => {
     const { data } = await rest('GET', 'settings?select=key,value');
     const out = {};
     for (const row of Array.isArray(data) ? data : []) if (KEYS.includes(row.key)) out[row.key] = row.value;
-    return { ...json(200, out), headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=300', 'X-Content-Type-Options': 'nosniff' } };
+    // Security review 1.5 (Danny, October 15): no cache, so the country check runs on every call and blocked counts stay exact.
+    return { ...json(200, out), headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } };
   } catch (e) {
     console.error('settings: failed (' + safeErr(e) + ')');
     return fail(500, 'Not available.');

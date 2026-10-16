@@ -1451,7 +1451,10 @@ const coach=(function(){
     sayAlways("Let's put Mojialand on your Home Screen!"); loop=0;
     let i=-1; const next=()=>{ if(!el) return; i=(i+1)%STEPS.length; if(i===0) loop++; if(loop>4){ close(); return; } step(i); timer=setTimeout(next,i===0?7000:6000); };
     timer=setTimeout(next,2600); }
-  function due(){ const c=st(); return iosSafari()&&(c.g>=2||c.ms>=5*60000)&&c.day!==DAY()&&(c.n||0)<3; }
+  /* Security review 1.5 S1 (Danny, October 15, choice A): never while a pass is on. The address then carries the pass token,
+     and a wrong tap on a contact in the Share sheet would send it. With a pass, the grown-up Home Screen card stays the path. */
+  function passOnHere(){ if(/[?&]restore=/.test(location.search)) return true; const p=store.get('pass',null); return !!p&&typeof p==='object'&&(p.kind==='forever'||Number(p.ends_at)>Date.now()); }
+  function due(){ const c=st(); return iosSafari()&&!passOnHere()&&(c.g>=2||c.ms>=5*60000)&&c.day!==DAY()&&(c.n||0)<3; }
   /* called from go(): counts games and play time, and checks on the way back home */
   function screen(name){ const now=Date.now(); if(inGame&&name!==inGame){ const c=st(); c.ms=(c.ms||0)+Math.min(now-t0,60*60000); save(c); inGame=null; }
     if(HG.some(g=>g.id===name)&&inGame!==name){ const c=st(); c.g=(c.g||0)+1; save(c); inGame=name; t0=now; }

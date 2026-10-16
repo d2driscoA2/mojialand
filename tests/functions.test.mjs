@@ -1645,3 +1645,9 @@ test('#61 code email: still image and Watch how button to /home-screen/; no vide
   const noCode = buildEmail61({ plan: 'pass', pass: { kind: '30d', ends_at: new Date(Date.now() + 864e6).toISOString() }, code: null, origin: 'https://mojialand.com' });
   assert.ok(!/home-screen/.test(noCode.html), 'only emails that carry a code');
 });
+
+test('Security review 1.5: settings answers with no cache, so the country check runs every time', async () => {
+  const r = await settingsFn(ev({}, {}, 'GET'));
+  assert.equal(r.statusCode, 200);
+  assert.equal(r.headers['Cache-Control'], 'no-store');
+});
