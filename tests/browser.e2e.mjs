@@ -1199,6 +1199,48 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
     check('1.5 #24 Safari (not the Home Screen app) never shows Home sweet home', (await page.locator('.hs-party').count()) === 0);
     await ctx.close();
   }
+  // Release 1.5 #24: the unicorn walkthrough (choice B: hand at the usual spot plus a big picture of the button)
+const nav = (pg, id) => pg.evaluate((x) => { const b = document.createElement('button'); b.dataset.go = x; document.body.append(b); b.click(); b.remove(); }, id);
+  const sayInit = () => { window.__said = []; const S = window.SpeechSynthesisUtterance; window.SpeechSynthesisUtterance = function (t) { window.__said.push(t); return new S(t); }; };
+  {
+    const { ctx, page } = await newPage({ userAgent: IPHONE });
+    await page.addInitScript(sayInit);
+    await page.addInitScript(() => { localStorage.setItem('mojia.demos', 'false'); });
+    await page.goto(base + '/play/'); await page.waitForTimeout(600); await page.click('#splash'); await page.waitForTimeout(900);
+    check('1.5 #24 no walkthrough before any play', (await page.locator('.coach').count()) === 0);
+    for (const g of ['pattern', 'bounce']) { await nav(page, g); await page.waitForTimeout(200); await nav(page, 'home'); await page.waitForTimeout(200); }
+    await page.waitForTimeout(1000);
+    check('1.5 #24 after the second game the unicorn shows on the home screen and speaks with Voice off', await page.isVisible('.coach .cuni') && (await page.evaluate(() => window.__said.includes("Let's put Mojialand on your Home Screen!"))) && (await page.evaluate(() => localStorage.getItem('mojia.voice'))) !== 'true');
+    await page.waitForTimeout(2300);
+    check('1.5 #24 step 1: big Share picture, hand at the bottom middle, voice says tap the share button', (await page.getAttribute('.coach', 'data-step')) === '0' && (await page.locator('.coach .cpic svg').count()) === 1 && (await page.getAttribute('.coach .chand', 'class')) === 'chand down' && (await page.evaluate(() => window.__said.includes('Tap the share button.'))));
+    await page.screenshot({ path: path.join(SHOTS, 'coach-step1-390.png') });
+    await page.waitForTimeout(7200);
+    check('1.5 #24 step 2: Add to Home Screen picture and voice', (await page.getAttribute('.coach', 'data-step')) === '1' && (await page.evaluate(() => window.__said.includes('Now tap Add to Home Screen.'))));
+    await page.waitForTimeout(6200);
+    check('1.5 #24 step 3: Add picture, hand at the top right', (await page.getAttribute('.coach', 'data-step')) === '2' && /Add/.test(await page.textContent('.coach .cpic')) && (await page.getAttribute('.coach .chand', 'class')) === 'chand topright');
+    await page.click('.coach .cx'); await page.waitForTimeout(200);
+    check('1.5 #24 the X closes the walkthrough', (await page.locator('.coach').count()) === 0);
+    await nav(page, 'pattern'); await page.waitForTimeout(150); await nav(page, 'home'); await page.waitForTimeout(1000);
+    check('1.5 #24 once a day', (await page.locator('.coach').count()) === 0 && JSON.parse(await page.evaluate(() => localStorage.getItem('mojia.coach'))).n === 1);
+    check('1.5 #24 walkthrough: no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await newPage({ userAgent: IPAD, viewport: { width: 820, height: 1180 } });
+    await page.addInitScript(() => { localStorage.setItem('mojia.demos', 'false'); localStorage.setItem('mojia.coach', JSON.stringify({ g: 0, ms: 6 * 60000, day: '', n: 0 })); });
+    await page.goto(base + '/play/'); await page.waitForTimeout(600); await page.click('#splash'); await page.waitForTimeout(3800);
+    check('1.5 #24 iPad: after 5 minutes of play, on a new day, the walkthrough shows after the splash with the hand at the top right', await page.isVisible('.coach') && (await page.getAttribute('.coach .chand', 'class')) === 'chand topright');
+    await ctx.close();
+  }
+  for (const [label, ua, extra] of [['the Home Screen app', IPHONE, () => { Object.defineProperty(navigator, 'standalone', { get: () => true }); }], ['Chrome on iPhone', IPHONE.replace('Version/18.5', 'CriOS/140.0'), null], ['three days already shown', IPHONE, null]]) {
+    const { ctx, page } = await newPage({ userAgent: ua });
+    await page.addInitScript((n) => { localStorage.setItem('mojia.demos', 'false'); localStorage.setItem('mojia.coach', JSON.stringify({ g: 5, ms: 0, day: '', n })); }, label.startsWith('three') ? 3 : 0);
+    if (extra) await page.addInitScript(extra);
+    await page.goto(base + '/play/'); await page.waitForTimeout(600); await page.click('#splash'); await page.waitForTimeout(1500);
+    await page.click('.hs-party').catch(() => {});
+    check('1.5 #24 no walkthrough in ' + label, (await page.locator('.coach').count()) === 0);
+    await ctx.close();
+  }
   {
     const { ctx, page } = await newPage();
     const r = await page.goto(base + '/home-screen/'); await page.waitForTimeout(300);
