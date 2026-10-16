@@ -115,27 +115,17 @@ textarea{resize:vertical;min-height:80px}
 .gstats b{display:block;font-size:24px;color:var(--deep)}
 .gstats span{font-size:13px;font-weight:700;color:var(--soft,#6B6180)}
 .grounds{width:100%;border-collapse:collapse;margin-top:6px}.grounds td,.grounds th{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);font-size:14px}
-/* Release 1.5: sticky bars on phones (sticky.js). a = both rows pin, b = section row pins, c = section row floats at the bottom. */
-#stickyDemo{display:inline-flex;align-items:center;gap:4px;margin-left:auto;font-size:12px;font-weight:900;color:var(--deep)}
-#stickyDemo span{margin-right:2px}
-#stickyDemo button{border:2px solid var(--line);background:var(--white);color:var(--deep);border-radius:999px;min-width:34px;min-height:34px;font-weight:900;cursor:pointer}
-#stickyDemo button[aria-pressed="true"]{background:var(--purple);border-color:var(--purple);color:var(--white)}
-@media (min-width:761px){#stickyDemo{display:none}}
+/* Release 1.5: sticky bars on phones (sticky.js, pattern A): the main tabs pin to the top, the section row pins under them. */
 @media (max-width:760px){
   html[data-sticky] .stickRow{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
   html[data-sticky] .stickRow::-webkit-scrollbar{display:none}
   html[data-sticky] .stickRow>button{flex:0 0 auto}
   html[data-sticky] #anRoot .anSeg.stickRow{display:flex;flex-wrap:nowrap;max-width:100%;overflow-x:auto}
-  header{flex-wrap:wrap}
-  #stickyDemo{order:3;width:100%;margin:6px 0 0}
-  html[data-sticky="a"] #tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:31;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;background:var(--cream);margin:0 -16px 12px;padding:8px 16px;box-shadow:0 6px 10px -8px rgba(81,34,165,.35)}
-  html[data-sticky="a"] #tabs::-webkit-scrollbar{display:none}
-  html[data-sticky="a"] #tabs>button{flex:0 0 auto}
-  html[data-sticky="a"] .stickRow{position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--tabsH,60px));z-index:30;box-shadow:0 6px 12px -6px rgba(81,34,165,.35)}
-  html[data-sticky="b"] .stickRow{position:sticky;top:calc(env(safe-area-inset-top,0px) + 6px);z-index:30;box-shadow:0 6px 12px -6px rgba(81,34,165,.35)}
+  html[data-sticky] #tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:31;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;background:var(--cream);margin:0 -16px 12px;padding:8px 16px;box-shadow:0 6px 10px -8px rgba(81,34,165,.35)}
+  html[data-sticky] #tabs::-webkit-scrollbar{display:none}
+  html[data-sticky] #tabs>button{flex:0 0 auto}
+  html[data-sticky] .stickRow{position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--tabsH,60px));z-index:30;box-shadow:0 6px 12px -6px rgba(81,34,165,.35)}
   html[data-sticky] #pTabs.stickRow{background:var(--white);padding:6px 0;margin-bottom:10px}
-  html[data-sticky="c"] .stickRow.floating{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:40;background:#F3ECFC;border-radius:999px;padding:4px;box-shadow:0 6px 18px rgba(81,34,165,.35)}
-  html[data-sticky="c"] #pTabs.stickRow.floating{background:var(--white);padding:6px 8px;gap:6px}
 }
 </style>
 </head>
