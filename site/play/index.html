@@ -1436,17 +1436,21 @@ const coach=(function(){
     return !app&&(/iPhone|iPod/.test(ua())||ipad())&&/Safari\//.test(ua())&&!/CriOS|FxiOS|EdgiOS|OPiOS|GSA\//.test(ua()); };
   const SHARE='<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M22 24h-6v32h32V24h-6" fill="none" stroke="#0A84FF" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M32 40V6M21 16 32 5l11 11" fill="none" stroke="#0A84FF" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const ADDHS='<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="9" y="9" width="46" height="46" rx="11" fill="none" stroke="#30254A" stroke-width="5"/><path d="M32 21v22M21 32h22" stroke="#30254A" stroke-width="5" stroke-linecap="round"/></svg>';
-  const STEPS=[
+  const BASE=[
     {pic:SHARE, hand:()=>ipad()?'topright':'down', say:'Tap the share button.'},
     {pic:ADDHS, hand:()=>'', say:'Now tap Add to Home Screen.'},
     {pic:'<span class="addpill">Add</span>', hand:()=>'topright', say:'Tap Add.'},
   ];
+  /* Danny, October 16: on iPad, Add to Home Screen sits under View More in the Share sheet (as in the iPad video) */
+  const VIEWMORE={pic:'<span class="addpill" style="font-size:22px">View More</span>', hand:()=>'', say:'Now tap View More.'};
+  let STEPS=BASE;
   function step(i){ if(!el) return; const s=STEPS[i]; el.querySelector('.cpic').innerHTML=s.pic; el.querySelectorAll('.cdots i').forEach((d,j)=>d.classList.toggle('on',j===i));
     const h=el.querySelector('.chand'), dir=s.hand(); h.hidden=!dir; h.className='chand '+dir; h.textContent=dir==='down'?'👇':'👆'; el.dataset.step=String(i); sayAlways(s.say); }
   function close(){ clearTimeout(timer); timer=null; if(el){ el.remove(); el=null; } try{ speechSynthesis.cancel(); }catch(e){} }
   function show(){ if(el) return; const c=st(); c.day=DAY(); c.n=(c.n||0)+1; save(c);
     el=document.createElement('div'); el.className='coach'; el.setAttribute('role','dialog'); el.setAttribute('aria-label','Put Mojialand on your Home Screen');
-    el.innerHTML='<div class="cbox"><button class="cx" type="button" aria-label="Close">✕</button><div class="cuni" aria-hidden="true">🦄</div><div class="cpic"></div><div class="cdots" aria-hidden="true"><i></i><i></i><i></i></div></div><div class="chand" hidden aria-hidden="true"></div>';
+    STEPS=ipad()?[BASE[0],VIEWMORE,BASE[1],BASE[2]]:BASE;
+    el.innerHTML='<div class="cbox"><button class="cx" type="button" aria-label="Close">✕</button><div class="cuni" aria-hidden="true">🦄</div><div class="cpic"></div><div class="cdots" aria-hidden="true">'+STEPS.map(()=>'<i></i>').join('')+'</div></div><div class="chand" hidden aria-hidden="true"></div>';
     document.body.appendChild(el); el.querySelector('.cx').addEventListener('click',()=>{ try{ sfx.boop(); }catch(e){} close(); });
     sayAlways("Let's put Mojialand on your Home Screen!"); loop=0;
     let i=-1; const next=()=>{ if(!el) return; i=(i+1)%STEPS.length; if(i===0) loop++; if(loop>4){ close(); return; } step(i); timer=setTimeout(next,i===0?7000:6000); };

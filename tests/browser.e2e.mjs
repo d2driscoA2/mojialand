@@ -1230,6 +1230,8 @@ const nav = (pg, id) => pg.evaluate((x) => { const b = document.createElement('b
     await page.addInitScript(() => { localStorage.setItem('mojia.demos', 'false'); localStorage.setItem('mojia.coach', JSON.stringify({ g: 0, ms: 6 * 60000, day: '', n: 0 })); });
     await page.goto(base + '/play/'); await page.waitForTimeout(600); await page.click('#splash'); await page.waitForTimeout(3800);
     check('1.5 #24 iPad: after 5 minutes of play, on a new day, the walkthrough shows after the splash with the hand at the top right', await page.isVisible('.coach') && (await page.getAttribute('.coach .chand', 'class')) === 'chand topright');
+    await page.waitForTimeout(7200);
+    check('1.5 #24 iPad: 4 steps, the second is View More', (await page.locator('.coach .cdots i').count()) === 4 && (await page.getAttribute('.coach', 'data-step')) === '1' && /View More/.test(await page.textContent('.coach .cpic')));
     await ctx.close();
   }
   for (const [label, ua, extra] of [['the Home Screen app', IPHONE, () => { Object.defineProperty(navigator, 'standalone', { get: () => true }); }], ['Chrome on iPhone', IPHONE.replace('Version/18.5', 'CriOS/140.0'), null], ['three days already shown', IPHONE, null], ['a device with a pass on (Security S1)', IPHONE, () => { localStorage.setItem('mojia.pass', JSON.stringify({ kind: 'forever', token: 'x' })); }]]) {
