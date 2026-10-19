@@ -703,14 +703,31 @@
     m.render({ cities: c.cities, counties: c.counties, rolls: c.rolls, states: [] }).then(() => { if (inLakes([...c.cities, ...c.counties])) m.zoomTo('lakes'); });
     $('anCopyC').addEventListener('click', async () => { let ok = false; try { await navigator.clipboard.writeText(link); ok = true; } catch (e) {} $('anCopyOk').textContent = ok ? 'Link copied.' : 'Copy failed. Select the link above.'; });
     $('anPause').addEventListener('click', async (e) => { e.target.disabled = true; try { loadCampaigns(await api('campaigns.active', { label: c.label, active: !c.active })); } catch (err) { setErr(err.message); e.target.disabled = false; } });
-    $('anPrintC').addEventListener('click', () => printCards(c, link));
+    const job = campaignPdf(link);
+    $('anPrintC').addEventListener('click', () => printCards(job));
   }
-  function printCards(c, link) {
+  /* Release 1.5.1 #73 (Danny, October 19): campaign QR cards use the golden ticket. Headline "Scan to play free";
+     the pink pill names the deal a new device gets: the Free days setting. Paused free weeks: no cards. */
+  async function campaignDeal() {
+    const d = await api('settings.get');
+    const v = (k) => { const r = d.settings.find((x) => x.key === k); return r ? String(r.value) : ''; };
+    return { days: parseInt(v('free_days'), 10) || 0, paused: v('new_free_paused') === '1' };
+  }
+  function campaignPdf(link) {
     const host = link.replace(/^https?:\/\//, '');
-    const img = qr(link, 6);
-    const card = `<div class="bc camp"><div class="l"><img src="/logo/logo-3d-1000.webp" alt="Mojialand"><b>Emoji games for kids 3 and up</b><small>No ads. No accounts. Nothing collected from your child. Scan to play free.</small></div><div class="r"><img src="${img}" alt=""><code>${esc(host)}</code></div></div>`;
-    document.getElementById('sheet').innerHTML = new Array(10).fill(card).join('');
-    window.print();
+    const job = { blob: null, err: '' };
+    job.pdf = campaignDeal().then((deal) => {
+      if (deal.paused || deal.days < 1) { job.err = 'New free weeks are paused, so the QR gives no free days. Turn them on in Settings before you print these cards.'; return null; }
+      return window.MojiCardPdf.buildTicket({ campaign: { link, host, freeDays: deal.days } }).then((r) => { job.blob = r.blob; return r.blob; });
+    }).catch(() => { job.err = job.err || 'The PDF did not build. Reload the page and try again.'; return null; });
+    return job;
+  }
+  async function printCards(job) {
+    const b = $('anPrintC');
+    if (!job.blob && !job.err) { b.disabled = true; b.textContent = 'Making the PDF…'; await job.pdf; b.disabled = false; b.textContent = 'Print QR cards'; }
+    if (!job.blob) { setErr(job.err || 'The PDF did not build.'); return; }
+    setErr('');
+    window.MojiCardPdf.deliver(job.blob, 'mojialand-qr-cards.pdf');
   }
   function campCols(c) {
     const W = 420, Hh = 170, L = 34, R = 8, T = 10, B = 26, v = c.daily.map((x) => x.n), n = Math.max(1, v.length);

@@ -417,7 +417,8 @@ const actions = {
     if (lb) await ensureCampaign(lb);
     const out = [];
     for (let i = 0; i < n; i++) out.push(await actions['codes.create']({ kind, source, days_valid, note, batch: lb }, null, { ensured: true }));
-    return { codes: out.map((c) => ({ code: c.code, id: c.pass && c.pass.id })) };
+    // Release 1.5.1 #73: the use-by date prints on the golden ticket ("Turn on by ...").
+    return { codes: out.map((c) => ({ code: c.code, id: c.pass && c.pass.id, use_by: (c.pass && c.pass.use_by) || null })) };
   },
 
   // ---- support inbox

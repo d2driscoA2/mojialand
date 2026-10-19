@@ -611,6 +611,8 @@ test('#2 gift codes by batch: labels, campaigns, tabs, sort, batch rows, notes',
   [st, d] = await A('codes.batch', { kind: '48h', source: 'gift', days_valid: 30, note: 'fair table', count: 6, batch: 'In-Fair-Oct' });
   assert.equal(st, 200); assert.equal(d.codes.length, 6);
   assert.equal(db.passes.filter((p) => p.batch === 'in-fair-oct').length, 6, 'stored lowercase on every code');
+  const ub = new Date(d.codes[0].use_by).getTime() - Date.now();
+  assert.ok(ub > 29.9 * 864e5 && ub < 30.1 * 864e5, 'Release 1.5.1 #73: batch codes carry their use-by date for the printed card');
   assert.equal(db.campaigns.filter((c) => c.label === 'in-fair-oct').length, 1, 'the batch label becomes a campaign once');
   const codes = d.codes.map((c) => c.code);
   [st, d] = await A('codes.create', { kind: '48h', source: 'gift', days_valid: 30, batch: 'lincoln-elem' });

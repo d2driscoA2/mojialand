@@ -757,6 +757,7 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   const pass = { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', code_last4: 'AB12', prefix: 'MOJI', kind: '48h', source: 'stripe', email: 'parent@example.com', stripe_session_id: 'cs_test_x1', amount_cents: 150, created_at: new Date().toISOString(), ends_at: new Date(Date.now() + 3600e3).toISOString(), device_limit: 5, status: 'active', note: null, devices: 2 };
   const AN = await analyticsSamples();
   const tellBodies = []; const bodiesBy = {};
+  let freePaused = false;
   await page.route('**/.netlify/functions/admin-api', (r) => {
     const b = r.request().postDataJSON(); calls.push(b.action); if (/^passes\.(add30|forever)$/.test(b.action)) tellBodies.push(b); bodiesBy[b.action] = b;
     if (signedIn && /^(analytics|campaigns)\./.test(b.action)) {
@@ -770,8 +771,8 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
       'passes.batches': { batches: [{ label: 'in-fair-oct', name: 'in-fair-oct', note: 'Busy table', made: new Date().toISOString(), codes: 30, used: 12, open: 18, voided: 0, pct: 40, avgDays: 2.5, bought: 3 }] }, 'codes.end_unused': { ended: 18 }, 'codes.delete_unused': { deleted: 18 }, 'gifts.report': { totals: { made: 6, on: 3, open: 3, expired: 0, givers: 2, holders: 1, reward_days: 21 }, rounds: [{ round: 1, made: 3, on: 2 }, { round: 2, made: 3, on: 1 }], bought: { passes: 1, forever: 1, cents: 1499 }, holders: [{ last4: 'HD01', prefix: 'MOJI', started: 'free week', kind: 'holder', status: 'active', round: 0, on: 2, left: 1, reward_days: 14, email: null, made: new Date().toISOString() }] },
       'codes.labels': { labels: ['in-fair-oct', 'lincoln-elem'] }, 'campaigns.note': { ok: true },
       'passes.forever': { pass: { ...pass, kind: 'forever', ends_at: null, email: null, source: 'gift', stripe_session_id: null }, tell: { email: 'none', share: 'Good news: your Mojialand pass is Forever now. Open Mojialand on each phone or tablet and Forever shows up.' } },
-      'codes.create': { code: 'GIFT-ABCD-EFGH-JKMN', pass: {} }, 'passes.code': { code: 'MOJI-ABCD-EFGH-JKMN', link: 'https://mojialand.com/r/MOJIABCDEFGHJKMN' }, 'passes.email': b.to === 'real.parent@example.com' ? { pass, sent: true } : null, 'passes.refund': { pass: { ...pass, status: 'refunded' } }, 'codes.batch': { codes: Array.from({ length: b.count }, (_, i) => ({ code: 'GIFT-B' + String(i).padStart(3, '0') + '-EFGH-JKMN', id: 'id' + i })) }, 'support.list': { messages: [{ id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', email: 'mom@example.com', topic: 'pass', message: 'Code not working\n\nCode ending AB12: pass ...', created_at: new Date().toISOString(), status: 'open' }] },
-      'support.set': { ok: true }, 'settings.get': { settings: [{ key: 'daily_minutes', value: 3, help: 'Free play each day.' }, { key: 'daily_reset', value: '04:00', help: 'Reset time.' }] }, 'settings.set': { ok: true }, 'alerts.get': { ready: true, publicKey: 'BAAA', mode: 'each', phones: [], today: 'No new players, no gift codes used.' }, 'alerts.mode': { ok: true, mode: b.mode } }[b.action];
+      'codes.create': { code: 'GIFT-ABCD-EFGH-JKMN', pass: {} }, 'passes.code': { code: 'MOJI-ABCD-EFGH-JKMN', link: 'https://mojialand.com/r/MOJIABCDEFGHJKMN' }, 'passes.email': b.to === 'real.parent@example.com' ? { pass, sent: true } : null, 'passes.refund': { pass: { ...pass, status: 'refunded' } }, 'codes.batch': { codes: Array.from({ length: b.count }, (_, i) => ({ code: 'GIFT-B' + String(i).padStart(3, '0') + '-EFGH-JKMN', id: 'id' + i, use_by: '2027-01-17T17:00:00.000Z' })) }, 'support.list': { messages: [{ id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', email: 'mom@example.com', topic: 'pass', message: 'Code not working\n\nCode ending AB12: pass ...', created_at: new Date().toISOString(), status: 'open' }] },
+      'support.set': { ok: true }, 'settings.get': { settings: [{ key: 'daily_minutes', value: 3, help: 'Free play each day.' }, { key: 'daily_reset', value: '04:00', help: 'Reset time.' }, { key: 'free_days', value: '7', help: 'Free days.' }, { key: 'new_free_paused', value: freePaused ? '1' : '0', help: '' }] }, 'settings.set': { ok: true }, 'alerts.get': { ready: true, publicKey: 'BAAA', mode: 'each', phones: [], today: 'No new players, no gift codes used.' }, 'alerts.mode': { ok: true, mode: b.mode } }[b.action];
     r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(out || { error: 'Unknown action.' }) });
   });
   await page.goto(base + '/admin/');
@@ -881,8 +882,17 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   check('1.4 #57 admin: cards default to 1 code per card and count before making', (await page.inputValue('#bPer')) === '1' && (await page.textContent('#bCount')) === '10 cards, 10 codes');
   await page.fill('#bCards', '3'); await page.click('#bGo');
   await page.waitForSelector('#bOut:not([hidden])');
-  const one = await page.evaluate(() => ({ cards: document.querySelectorAll('#sheet .bc.one').length, qrs: document.querySelectorAll('#sheet .q img').length, title: document.querySelector('#sheet .bc b').textContent }));
-  check('1.4 #57 admin: 1 per card makes 3 codes for 3 cards, one big QR each', (await page.locator('#bList > div').count()) === 3 && /3 cards, 3 codes made \(1 on each card\)/.test(await page.textContent('#bOk')) && one.cards === 3 && one.qrs === 3 && one.title === '7 free days of Mojialand', JSON.stringify(one));
+  await page.waitForFunction(() => document.querySelectorAll('#sheet .tk img.art').length === 3);
+  const one = await page.evaluate(() => ({ cards: document.querySelectorAll('#sheet .bc.one.tk').length, qrs: [...document.querySelectorAll('#sheet .tk img.tq')].filter((i) => i.src.startsWith('data:image/')).length, art: [...document.querySelectorAll('#sheet .tk img.art')].filter((i) => i.src.startsWith('data:image/png')).length, codes: [...document.querySelectorAll('#sheet .tk code')].map((c) => c.textContent) }));
+  check('1.4 #57 admin: 1 per card makes 3 codes for 3 cards, one big QR each', (await page.locator('#bList > div').count()) === 3 && /3 cards, 3 codes made \(1 on each card\)/.test(await page.textContent('#bOk')) && one.cards === 3 && one.qrs === 3, JSON.stringify(one));
+  check('1.5.1 #73 admin: the print sheet shows card B, the golden ticket art with the QR and code on top', one.art === 3 && one.codes.join() === 'GIFT-B000-EFGH-JKMN,GIFT-B001-EFGH-JKMN,GIFT-B002-EFGH-JKMN', JSON.stringify(one));
+  const tk = await page.evaluate(() => { const M = MojiCardPdf; return { heads: ['7d', '30d', '90d', 'forever'].map(M.headlineFor), date: M.useByText('2027-01-17T17:00:00.000Z'), none: M.useByText(''), mine: [...document.querySelectorAll('#sheet .tk .face')].map((f) => f.dataset.useby).join('|'), useWith: M.rightLayout(M.faceOf({ kind: '7d' }, 'Jan 17, 2027')), useWithout: M.rightLayout(M.faceOf({ kind: 'forever' }, '')), label: M.rightLayout(M.faceOf({ kind: '7d', label: 'x' }, 'Jan 17, 2027')).label !== undefined }; });
+  check('1.5.1 #73 admin: headline by pass kind: 7 FREE DAYS, 30 FREE DAYS, 90 FREE DAYS, FOREVER', tk.heads.join('|') === '7 FREE DAYS|30 FREE DAYS|90 FREE DAYS|FOREVER', tk.heads.join('|'));
+  check('1.5.1 #73 admin: use-by date from the code (Turn on by Jan 17, 2027); no date leaves the clause out', tk.mine === 'Jan 17, 2027|Jan 17, 2027|Jan 17, 2027' && tk.date === 'Jan 17, 2027' && tk.none === '' && tk.useWith.use !== undefined && tk.useWithout.use !== undefined && tk.useWith.qr < tk.useWithout.qr && tk.label, JSON.stringify(tk));
+  const big = await page.evaluate(async () => { const t0 = performance.now(); const cards = Array.from({ length: 200 }, (_, i) => ({ code: 'GIFT-' + String(i).padStart(4, '0') + '-EFGH-JKMN', link: location.origin + '/r/GIFT' + String(i).padStart(4, '0') + 'EFGHJKMN?c=lincoln-elem', useBy: i < 150 ? 'Jan 17, 2027' : 'Jan 18, 2027' }));
+    const r = await MojiCardPdf.buildTicket({ kind: '30d', label: 'lincoln-elem', cards }); const t = new TextDecoder('latin1').decode(await r.blob.arrayBuffer());
+    return { pages: (t.match(/\/Type \/Page /g) || []).length, faces: r.faces, bytes: r.blob.size, codes: (t.match(/\(GIFT-\d{4}-EFGH-JKMN\)/g) || []).length, ms: Math.round(performance.now() - t0) }; });
+  check('1.5.1 #73 admin: 200 cards make 20 pages, one art image per distinct face, under 3 MB', big.pages === 20 && big.faces === 2 && big.codes === 200 && big.bytes < 3e6, JSON.stringify(big));
   await page.emulateMedia({ media: 'print' }); await page.screenshot({ path: path.join(SHOTS, 'admin-cards-print-one.png'), fullPage: true });   const fitOne = await page.evaluate(() => ({ fit: [...document.querySelectorAll('#sheet .bc')].every((c) => c.scrollHeight <= c.clientHeight + 1 && c.scrollWidth <= c.clientWidth + 1), shown: [...document.body.children].filter((e) => e.id !== 'sheet' && getComputedStyle(e).display !== 'none').map((e) => e.tagName + '#' + e.id) }));
   const pagesOf = (buf) => (buf.toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length;
   await page.evaluate(() => { const s = document.getElementById('sheet'); s.dataset.keep = s.innerHTML; s.innerHTML = s.innerHTML.repeat(4); });
@@ -898,8 +908,9 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   const [dl1] = await Promise.all([page.waitForEvent('download'), page.click('#bPrint')]);
   const pdf1 = fs.readFileSync(await dl1.path()); fs.writeFileSync(path.join(SHOTS, 'admin-cards-one-real.pdf'), pdf1);
   const s1 = pdf1.toString('latin1');
-  check('1.4 #57 admin: Print cards makes a real PDF, one letter page, every code on it', dl1.suggestedFilename() === 'mojialand-cards.pdf' && s1.startsWith('%PDF-1.4') && (s1.match(/\/Type \/Page /g) || []).length === 1 && s1.includes('/MediaBox [0 0 612 792]') && ['GIFT-B000-EFGH-JKMN', 'GIFT-B001-EFGH-JKMN', 'GIFT-B002-EFGH-JKMN'].every((c) => s1.includes('(' + c + ')')) && s1.includes('(7 free days'));
-  check('1.4 #57 admin: PDF cards are exact business cards, 252 by 144 points', /54 612 252 144 re S|54 \S+ 252 144 re S/.test(s1));
+  check('1.4 #57 admin: Print cards makes a real PDF, one letter page, every code on it', dl1.suggestedFilename() === 'mojialand-cards.pdf' && s1.startsWith('%PDF-1.4') && (s1.match(/\/Type \/Page /g) || []).length === 1 && s1.includes('/MediaBox [0 0 612 792]') && ['GIFT-B000-EFGH-JKMN', 'GIFT-B001-EFGH-JKMN', 'GIFT-B002-EFGH-JKMN'].every((c) => s1.includes('(' + c + ')')));
+  check('1.4 #57 admin: PDF cards are exact business cards, 252 by 144 points, placed like Avery 8371', /252 0 0 144 54 612 cm \/Im1 Do/.test(s1) && /252 0 0 144 306 612 cm \/Im1 Do/.test(s1) && /252 0 0 144 54 468 cm \/Im1 Do/.test(s1));
+  check('1.5.1 #73 admin: the ticket art is one 300 dpi image (1050 by 600) shared by the batch; QR stays vector', (s1.match(/\/Subtype \/Image \/Width 1050 \/Height 600/g) || []).length === 1 && (s1.match(/ re /g) || []).length > 300 && !/emoji/i.test(s1));
   check('1.4 #57 admin: PDF hint says actual size', /100 percent/.test(await page.textContent('#bPdfHint')));
   check('1.4 #57 admin: printing the PDF turns Done on', await page.isEnabled('#bDone'));
   await page.fill('#bNote', 'Lincoln Elementary, Oct 2026');
@@ -915,6 +926,7 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   const s3 = fs.readFileSync(await dl3.path()).toString('latin1');
   fs.writeFileSync(path.join(SHOTS, 'admin-cards-three-real.pdf'), fs.readFileSync(await dl3.path()));
   check('1.4 #57 admin: 3-per-card PDF holds 4 cards and 12 codes on one page', (s3.match(/\/Type \/Page /g) || []).length === 1 && (s3.match(/252 144 re S/g) || []).length === 4 && (s3.match(/\(GIFT-/g) || []).length === 12 && s3.includes('(7 free days for 3'));
+  check('1.5.1 #73 admin: 3-code cards keep the old layout and never say emoji', !/Width 1050/.test(s3) && !/emoji/i.test(s3) && !/emoji/i.test(await page.textContent('#sheet')) && s3.includes('(Picture games for kids 3'));
   check('admin: cards batch makes 3 codes per card', (await page.locator('#bList > div').count()) === 12 && /4 cards, 12 codes made \(3 on each card\)/.test(await page.textContent('#bOk')));
   check('1.4 #57 admin: the count line matches the codes made', (await page.textContent('#bCount')) === '4 cards, 12 codes');
   const sheet = await page.evaluate(() => ({ cards: document.querySelectorAll('#sheet .bc').length, qrs: [...document.querySelectorAll('#sheet .q img')].filter((i) => i.src.startsWith('data:image/')).length, codes: document.querySelectorAll('#sheet .q code').length }));
@@ -1023,9 +1035,17 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   await page.click('#anMakeBtn');
   await page.waitForFunction(() => document.querySelector('#anMakeErr').textContent.length > 0);
   check('analytics: bad label shows the server message', /lowercase/.test(await page.textContent('#anMakeErr')));
-  await page.click('#anPrintC').catch(() => {});
-  const csheet = await page.evaluate(() => ({ cards: document.querySelectorAll('#sheet .bc.camp').length, qr: [...document.querySelectorAll('#sheet .bc.camp .r img')].every((i) => i.src.startsWith('data:image/')) }));
-  check('analytics: campaign print sheet has 10 QR cards', csheet.cards === 10 && csheet.qr, JSON.stringify(csheet));
+  const [dlc] = await Promise.all([page.waitForEvent('download'), page.click('#anPrintC')]);
+  const sc = fs.readFileSync(await dlc.path()).toString('latin1'); fs.writeFileSync(path.join(SHOTS, 'admin-qr-cards.pdf'), fs.readFileSync(await dlc.path()));
+  check('analytics: campaign QR cards print as a PDF page of 10 golden tickets with the campaign link', dlc.suggestedFilename() === 'mojialand-qr-cards.pdf' && (sc.match(/\/Type \/Page /g) || []).length === 1 && (sc.match(/cm \/Im1 Do/g) || []).length === 10 && (sc.match(/\?c=pumpkin-fest-oct\)/g) || []).length === 10 && !/emoji/i.test(sc));
+  const campFace = await page.evaluate(() => MojiCardPdf.faceOf({ campaign: { link: 'x', host: 'x', freeDays: 7 } }));
+  check('1.5.1 #73 analytics: campaign card headline Scan to play free, pill names the Free days setting', campFace.headline === 'Scan to play free' && campFace.pill === '7 FREE DAYS' && bodiesBy['settings.get'] !== undefined, JSON.stringify(campFace));
+  freePaused = true;
+  await page.click('#anCamps .anCamp:nth-child(2)'); await page.waitForSelector('#anPrintC');
+  await page.click('#anPrintC'); await page.waitForFunction(() => /paused/.test(document.querySelector('#anErr').textContent));
+  check('1.5.1 #73 analytics: paused free weeks print no campaign cards and say why', /Turn them on in Settings/.test(await page.textContent('#anErr')));
+  freePaused = false;
+  await page.click('#anCamps .anCamp:nth-child(1)'); await page.waitForSelector('#anPrintC');
   await page.screenshot({ path: path.join(SHOTS, 'admin-analytics-campaigns.png'), fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.click('#anViews [data-v="live"]');
