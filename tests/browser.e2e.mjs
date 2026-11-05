@@ -148,6 +148,26 @@ for (const rel of ['index.html', 'play/index.html', 'pass/index.html', 'pass/don
   check('#18 no "every device" wording: ' + rel, !/every device|all your devices/i.test(t));
 }
 check('#18 website pass card says up to 5 devices', /Up to 5 devices share the same 30 days\./.test(fs.readFileSync(path.join(site, 'index.html'), 'utf8')));
+// Marketing Nov 5: website claims for AI answers (title, JSON-LD, FAQ, /llms.txt)
+{
+  const t = fs.readFileSync(path.join(site, 'index.html'), 'utf8');
+  const title = (t.match(/<title>(.*?)<\/title>/) || [])[1] || '';
+  check('AI claims: title names the category, never "emoji"', /Picture Games for Kids 3 and Up/.test(title) && !/emoji/i.test(title), title);
+  const blocks = [...t.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map(m => m[1]);
+  let ld = null; try { ld = JSON.parse(blocks[0]); } catch (e) {}
+  check('AI claims: one JSON-LD block that parses', blocks.length === 1 && !!ld, String(blocks.length));
+  const graph = (ld && ld['@graph']) || [];
+  const app = graph.find(g => g['@type'] === 'WebApplication') || {};
+  const prices = (app.offers || []).map(o => o.price).join(',');
+  check('AI claims: offers match the pass card ($0, $4.99, $14.99)', prices === '0,4.99,14.99' && /\$4\.99/.test(t) && /\$14\.99/.test(t), prices);
+  const faq = graph.find(g => g['@type'] === 'FAQPage') || { mainEntity: [] };
+  const visible = faq.mainEntity.every(q => t.includes('<summary>' + q.name + '</summary><div class="a">' + q.acceptedAnswer.text + '</div>'));
+  check('AI claims: every FAQPage answer matches a visible FAQ word for word', faq.mainEntity.length === 5 && visible, String(faq.mainEntity.length));
+  const ll = fs.existsSync(path.join(site, 'llms.txt')) ? fs.readFileSync(path.join(site, 'llms.txt'), 'utf8') : '';
+  check('AI claims: /llms.txt exists with the plain claims', /^# Mojialand/.test(ll) && /No ads/.test(ll) && /\$14\.99/.test(ll));
+  const words = t + ll;
+  check('AI claims: never "No tracking", "educational", "learning" or "safe" in the new copy', !/no tracking|educational|learning|\bsafe\b/i.test(ll + blocks.join('') + title));
+}
 
 // 1. WebCrypto verifies node-signed tokens
 {
