@@ -42,7 +42,7 @@ export function setEnv(extra = {}) {
 
 // In-memory PostgREST covering the calls the functions make.
 export function fakeDb() {
-  const db = { passes: [], stripe_events: [], devices: [], support_messages: [], admin_codes: [], admin_sessions: [], granted_checkouts: [], handoffs: [], pairings: [], plays_live: [], campaigns: [], analytics: [], campaignEvents: [], rpcData: {}, push_subs: [], alert_counts: [], alerts: [], pushes: [], pushStatus: 201, settings: [{ key: 'daily_minutes', value: 3, help: 'x' }, { key: 'daily_reset', value: '04:00', help: 'y' }], rate: new Map(), emails: [], calls: [], rateLimit: Infinity };
+  const db = { passes: [], stripe_events: [], devices: [], support_messages: [], admin_codes: [], admin_sessions: [], granted_checkouts: [], handoffs: [], pairings: [], plays_live: [], campaigns: [], campaign_hourly: [], analytics: [], campaignEvents: [], rpcData: {}, push_subs: [], alert_counts: [], alerts: [], pushes: [], pushStatus: 201, settings: [{ key: 'daily_minutes', value: 3, help: 'x' }, { key: 'daily_reset', value: '04:00', help: 'y' }], rate: new Map(), emails: [], calls: [], rateLimit: Infinity };
   const parseFilters = (qs) => {
     const f = [];
     for (const part of qs.split('&')) {
@@ -56,6 +56,7 @@ export function fakeDb() {
       if (k === 'order') continue;
       if (v.startsWith('eq.')) f.push((r) => String(r[k]) === decodeURIComponent(v.slice(3)));
       else if (v === 'is.null') f.push((r) => r[k] == null);
+      else if (v.startsWith('gt.')) f.push((r) => Number(r[k]) > Number(decodeURIComponent(v.slice(3))));
       else if (v.startsWith('gte.')) f.push((r) => String(r[k]) >= decodeURIComponent(v.slice(4)));
     }
     return (r) => f.every((fn) => fn(r));

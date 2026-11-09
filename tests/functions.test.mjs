@@ -1521,6 +1521,61 @@ test('#67 Delete unused: removes codes nobody turned on; used codes, paid passes
   assert.match(html, /data-batch="delete"/); assert.match(html, /confirm\('Delete '\+bb\.dataset\.n\+' unused codes in '/);
 });
 
+// ---------------------------------------------------------------- Release 1.6 #74: delete an empty campaign
+test('#74 campaigns.delete: an empty campaign deletes; one with codes or counts stays; the label is free after', async () => {
+  const cookie = await adminSignIn();
+  const A = (action, extra) => adminApi(withCookie({ action, ...extra }, cookie)).then((r) => [r.statusCode, JSON.parse(r.body)]);
+  await A('campaigns.create', { name: 'Empty one', label: 'empty-nov' });
+  await A('campaigns.create', { name: 'Has opens', label: 'opens-nov' });
+  db.campaign_hourly.push({ label: 'opens-nov', event: 'open', n: 3 });
+  let [st, d] = await A('codes.batch', { kind: '30d', source: 'gift', days_valid: 30, count: 2, batch: 'codes-nov' });
+  db.rpcData.campaign_stats = { campaigns: db.campaigns.map((c) => ({ ...c, active: true, created_at: new Date().toISOString() })), days: [{ l: 'opens-nov', d: '2026-11-09', e: 'open', n: 3, ds: 0 }], places: [] };
+  [st, d] = await A('campaigns.list', {});
+  const flag = Object.fromEntries(d.campaigns.map((c) => [c.label, c.deletable]));
+  assert.deepEqual(flag, { 'empty-nov': true, 'opens-nov': false, 'codes-nov': false }, 'Delete shows only on the empty campaign');
+  [st, d] = await A('campaigns.delete', { label: 'opens-nov' });
+  assert.equal(st, 400); assert.match(d.error, /opens or plays/);
+  [st, d] = await A('campaigns.delete', { label: 'codes-nov' });
+  assert.equal(st, 400); assert.match(d.error, /Codes still carry this label/);
+  [st, d] = await A('campaigns.delete', { label: 'friend' }); assert.equal(st, 400, 'friend refused');
+  [st, d] = await A('campaigns.delete', { label: 'nobody-nov' }); assert.equal(st, 400, 'unknown label refused');
+  [st] = await A('campaigns.delete', { label: 'empty-nov' });
+  assert.equal(st, 200);
+  assert.ok(!db.campaigns.some((c) => c.label === 'empty-nov'), 'campaign row gone');
+  assert.ok(db.campaigns.some((c) => c.label === 'opens-nov') && db.campaigns.some((c) => c.label === 'codes-nov'), 'the others stay');
+  [st] = await A('campaigns.create', { name: 'Again', label: 'empty-nov' });
+  assert.equal(st, 200, 'the label is free to reuse');
+  // the admin page: Delete only when deletable, and the confirm names the label
+  const fs = await import('node:fs');
+  const js = fs.readFileSync('site/admin/analytics.js', 'utf8');
+  assert.match(js, /c\.deletable \? '<button type="button" class="danger" id="anDelC">Delete<\/button>'/);
+  assert.match(js, /confirm\('Delete the campaign ' \+ c\.label/);
+});
+
+test('#74 Delete unused with_campaign: deletes the emptied campaign in the same step, never one with counts', async () => {
+  const cookie = await adminSignIn();
+  const A = (action, extra) => adminApi(withCookie({ action, ...extra }, cookie)).then((r) => [r.statusCode, JSON.parse(r.body)]);
+  await A('codes.batch', { kind: '30d', source: 'gift', days_valid: 30, count: 3, batch: 'trunk-nov' });
+  await A('codes.batch', { kind: '30d', source: 'gift', days_valid: 30, count: 3, batch: 'used-nov' });
+  db.campaign_hourly.push({ label: 'used-nov', event: 'open', n: 1 });
+  db.rpcData.campaign_stats = { campaigns: db.campaigns.map((c) => ({ ...c, active: true, created_at: new Date().toISOString() })), days: [{ l: 'used-nov', d: '2026-11-09', e: 'open', n: 1, ds: 0 }], places: [] };
+  let [st, d] = await A('passes.batches', {});
+  const empty = Object.fromEntries(d.batches.map((b) => [b.label, b.campEmpty]));
+  assert.deepEqual(empty, { 'trunk-nov': true, 'used-nov': false });
+  [st, d] = await A('codes.delete_unused', { batch: 'trunk-nov', with_campaign: true });
+  assert.equal(st, 200); assert.equal(d.deleted, 3); assert.equal(d.campaign_deleted, true);
+  assert.ok(!db.campaigns.some((c) => c.label === 'trunk-nov'));
+  [st, d] = await A('codes.delete_unused', { batch: 'used-nov', with_campaign: true });
+  assert.equal(d.deleted, 3); assert.equal(d.campaign_deleted, false, 'a campaign with opens stays');
+  assert.ok(db.campaigns.some((c) => c.label === 'used-nov'));
+  [st, d] = await A('codes.delete_unused', { batch: 'used-nov' });
+  assert.equal(d.campaign_deleted, false, 'without the flag nothing else is deleted');
+  const fs = await import('node:fs');
+  const html = fs.readFileSync('site/admin/index.html', 'utf8');
+  assert.match(html, /b\.campEmpty&&b\.codes===b\.open\+b\.voided\?' data-camp="1"'/);
+  assert.match(html, /The campaign '\+label\+' gets deleted too/);
+});
+
 test('#67 fast counts: batches and the Gifts tab read one database step when it exists', async () => {
   const cookie = await adminSignIn();
   const A = (action, extra) => adminApi(withCookie({ action, ...extra }, cookie)).then((r) => [r.statusCode, JSON.parse(r.body)]);

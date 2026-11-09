@@ -782,8 +782,8 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
     const b = r.request().postDataJSON(); calls.push(b.action); if (/^passes\.(add30|forever)$/.test(b.action)) tellBodies.push(b); bodiesBy[b.action] = b;
     if (signedIn && /^(analytics|campaigns)\./.test(b.action)) {
       if (b.action === 'campaigns.create' && !/^[a-z0-9][a-z0-9-]{1,23}$/.test(b.label || '')) return r.fulfill({ status: 400, contentType: 'application/json', body: '{"error":"Use 2 to 24 lowercase letters, numbers or dashes for the label."}' });
-      const made = b.action === 'campaigns.create' ? { campaigns: [{ ...AN.campaigns.campaigns[0], label: b.label, name: b.name, open: 0, play: 0, gift: 0, pass48: 0, forever: 0, cities: [], rolls: {}, daily: [{ d: AN.campaigns.campaigns[0].daily.at(-1).d, n: 0 }], avgDays: null }, ...AN.campaigns.campaigns] } : null;
-      const o = { 'analytics.live': AN.live, 'analytics.website': { range: 7, ready: true, days: lastDays(7, Date.now()), perDay: [3, 5, 8, 6, 9, 12, 7], visits: 50, funnel: { visit: 50, play: 21, pass: 6, bought: 2 }, prev: { visits: 40 }, other: 4, sources: [{ source: 'qr', n: 20 }, { source: 'google', n: 18 }, { source: 'typed', n: 12 }], cities: [{ city: 'Troy', state: 'MI', total: 14 }], counties: [{ id: '26125', name: 'Oakland', state: 'MI', total: 6 }], states: [{ state: 'MI', total: 30 }, { state: 'OH', total: 8 }], rule: 5 }, 'analytics.history': b.range === 'h24' ? AN.history24 : b.range === 'h48' ? AN.history48 : b.range === 1 ? AN.history1 : b.range === 90 ? AN.history90 : AN.history, 'campaigns.list': AN.campaigns, 'campaigns.create': made, 'campaigns.active': AN.campaigns }[b.action];
+      const made = b.action === 'campaigns.create' ? { campaigns: [{ ...AN.campaigns.campaigns[0], label: b.label, name: b.name, open: 0, play: 0, gift: 0, pass48: 0, forever: 0, cities: [], rolls: {}, daily: [{ d: AN.campaigns.campaigns[0].daily.at(-1).d, n: 0 }], avgDays: null, deletable: true }, ...AN.campaigns.campaigns] } : null;
+      const o = { 'analytics.live': AN.live, 'analytics.website': { range: 7, ready: true, days: lastDays(7, Date.now()), perDay: [3, 5, 8, 6, 9, 12, 7], visits: 50, funnel: { visit: 50, play: 21, pass: 6, bought: 2 }, prev: { visits: 40 }, other: 4, sources: [{ source: 'qr', n: 20 }, { source: 'google', n: 18 }, { source: 'typed', n: 12 }], cities: [{ city: 'Troy', state: 'MI', total: 14 }], counties: [{ id: '26125', name: 'Oakland', state: 'MI', total: 6 }], states: [{ state: 'MI', total: 30 }, { state: 'OH', total: 8 }], rule: 5 }, 'analytics.history': b.range === 'h24' ? AN.history24 : b.range === 'h48' ? AN.history48 : b.range === 1 ? AN.history1 : b.range === 90 ? AN.history90 : AN.history, 'campaigns.list': AN.campaigns, 'campaigns.create': made, 'campaigns.active': AN.campaigns, 'campaigns.delete': AN.campaigns }[b.action];
       return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(o) });
     }
     if (!signedIn) return r.fulfill({ status: 401, contentType: 'application/json', body: '{"error":"Please sign in."}' });
@@ -1051,6 +1051,7 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   await page.click('#anMakeBtn');
   await page.waitForFunction(() => /Pumpkin Fest Oct!/.test(document.querySelector('#anBoardC').textContent));
   check('analytics: new campaign opens its board', /No opens yet/.test(await page.textContent('#anBoardC')));
+  check('1.6 #74 admin: an empty campaign shows Delete', await page.isVisible('#anDelC'));
   await page.fill('#anName', 'x'); await page.fill('#anLabel', '');
   await page.click('#anMakeBtn');
   await page.waitForFunction(() => document.querySelector('#anMakeErr').textContent.length > 0);
@@ -1064,7 +1065,16 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   await page.click('#anCamps .anCamp:nth-child(2)'); await page.waitForSelector('#anPrintC');
   await page.click('#anPrintC'); await page.waitForFunction(() => /paused/.test(document.querySelector('#anErr').textContent));
   check('1.5.1 #73 analytics: paused free weeks print no campaign cards and say why', /Turn them on in Settings/.test(await page.textContent('#anErr')));
+  check('1.6 #74 admin: a campaign with opens shows no Delete', !(await page.isVisible('#anDelC')));
   freePaused = false;
+  await page.click('#anCamps .anCamp:nth-child(1)'); await page.waitForSelector('#anDelC');
+  let delAsk = '';
+  const recAsk = (dl) => { delAsk = dl.message(); };
+  page.on('dialog', recAsk);
+  await page.click('#anDelC');
+  await page.waitForFunction(() => document.querySelectorAll('#anCamps .anCamp').length === 2);
+  page.off('dialog', recAsk);
+  check('1.6 #74 admin: Delete asks first naming the label, sends it, and the card leaves', /^Delete the campaign pumpkin-fest-oct\?/.test(delAsk) && bodiesBy['campaigns.delete'] && bodiesBy['campaigns.delete'].label === 'pumpkin-fest-oct', delAsk);
   await page.click('#anCamps .anCamp:nth-child(1)'); await page.waitForSelector('#anPrintC');
   await page.screenshot({ path: path.join(SHOTS, 'admin-analytics-campaigns.png'), fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });

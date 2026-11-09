@@ -94,6 +94,39 @@ async function ensureCampaign(label) {
   if (Array.isArray(data) && data.length) return;
   await rest('POST', 'campaigns', { body: { label, name: label }, prefer: 'return=minimal' });
 }
+// Release 1.6 #74 (Danny, October 16): a campaign deletes only when it is empty: no codes in its batch
+// and no counts at all (opens, plays, gifts, passes). Counts are history; a campaign with counts can Pause.
+async function campaignEmpty(label) {
+  const { data: c } = await rest('GET', 'campaigns?label=eq.' + enc(label) + '&select=label&limit=1');
+  if (!Array.isArray(c) || !c.length) return { ok: false, reason: 'no campaign has that label' };
+  const { data: codes } = await rest('GET', 'passes?batch=eq.' + enc(label) + '&select=id&limit=1');
+  if (Array.isArray(codes) && codes.length) return { ok: false, reason: 'codes still carry this label. Delete its unused codes first; a campaign whose codes families turned on stays' };
+  const { data: counts } = await rest('GET', 'campaign_hourly?label=eq.' + enc(label) + '&n=gt.0&select=n&limit=1');
+  if (Array.isArray(counts) && counts.length) return { ok: false, reason: 'this campaign has opens or plays. Campaigns with counts stay, so its history stays true. Pause it instead' };
+  return { ok: true };
+}
+async function deleteCampaign(label) {
+  const e = await campaignEmpty(label);
+  if (!e.ok) throw new Error(e.reason);
+  await rest('DELETE', 'campaigns?label=eq.' + enc(label), { prefer: 'return=minimal' });
+  console.log('admin-api: deleted an empty campaign');
+}
+// Labels that still have codes, for the Delete button on campaign cards.
+async function labelsWithCodes() {
+  try {
+    const { data } = await rest('POST', 'rpc/batch_stats', { body: {} });
+    if (Array.isArray(data)) return new Set(data.filter((r) => r.b && Number(r.codes) > 0).map((r) => r.b));
+  } catch { /* SQL not run yet: count row by row */ }
+  const rows = await allRows('passes?batch=neq.' + FRIEND_BATCH + '&select=batch');
+  return new Set(rows.map((r) => r.batch).filter(Boolean));
+}
+const countsOf = (c) => (c.open || 0) + (c.play || 0) + (c.gift || 0) + (c.pass48 || 0) + (c.forever || 0);
+async function campaignsOut() {
+  const v = await campaignsView();
+  const withCodes = await labelsWithCodes();
+  for (const c of v.campaigns || []) c.deletable = !withCodes.has(c.label) && countsOf(c) === 0;
+  return v;
+}
 const PASS_TABS = { all: '', active: '&status=eq.active', paid: '&source=eq.stripe', gifts: '&source=in.(gift,support)' };
 const PASS_SORTS = { made: 'created_at.desc', on: 'starts_at.desc.nullslast', ends: 'ends_at.asc.nullslast' };
 async function allRows(path) {
@@ -182,6 +215,7 @@ const actions = {
         pct: b.codes ? Math.round((b.used / b.codes) * 100) : 0,
         avgDays: b.daysN ? Math.round((b.daysSum / b.daysN) * 10) / 10 : null,
         bought: c ? (c.pass48 || 0) + (c.forever || 0) : null,
+        campEmpty: !!c && countsOf(c) === 0, // Release 1.6 #74: offer the campaign delete with Delete unused
       };
     }).filter((b) => !s || b.label.includes(s) || String(b.name).toLowerCase().includes(s))
       .sort((x, y) => String(y.made).localeCompare(String(x.made)));
@@ -397,16 +431,20 @@ const actions = {
 
   // Release 1.5 #67: delete a batch's codes nobody ever turned on (unused, or ended before use).
   // Codes a family turned on stay, even after they end. Gift and support codes only; never FRIEND, never paid.
-  async 'codes.delete_unused'({ batch }) {
+  // Release 1.6 #74: with_campaign also deletes the batch's campaign when the delete leaves it empty.
+  async 'codes.delete_unused'({ batch, with_campaign }) {
     const lb = cleanBatch(batch);
     if (!lb) throw new Error('pick a batch');
     if (lb.toUpperCase() === FRIEND_BATCH) throw new Error('friend passes cannot be deleted here');
     const filter = 'batch=eq.' + enc(lb) + '&source=in.(gift,support)&status=in.(unused,ended)&starts_at=is.null';
     const rows = await allRows('passes?' + filter + '&select=id');
-    if (!rows.length) return { deleted: 0 };
-    await rest('DELETE', 'passes?' + filter, { prefer: 'return=minimal' });
-    console.log('admin-api: deleted ' + rows.length + ' unused codes in a batch');
-    return { deleted: rows.length };
+    if (rows.length) {
+      await rest('DELETE', 'passes?' + filter, { prefer: 'return=minimal' });
+      console.log('admin-api: deleted ' + rows.length + ' unused codes in a batch');
+    }
+    let campaign_deleted = false;
+    if (with_campaign && (await campaignEmpty(lb)).ok) { await deleteCampaign(lb); campaign_deleted = true; }
+    return { deleted: rows.length, campaign_deleted };
   },
 
   // Many codes at once, for printed cards. Up to 30 per call (function time limit); the page loops for more.
@@ -438,9 +476,16 @@ const actions = {
   async 'analytics.live'() { return liveView(); },
   async 'analytics.history'({ range }) { return historyView(range); },
   async 'analytics.website'({ range }) { return websiteView(range); }, // Release 1.5 #64
-  async 'campaigns.list'() { return campaignsView(); },
-  async 'campaigns.create'(input) { await createCampaign(input); return campaignsView(); },
-  async 'campaigns.active'(input) { await setCampaignActive(input); return campaignsView(); },
+  async 'campaigns.list'() { return campaignsOut(); },
+  async 'campaigns.create'(input) { await createCampaign(input); return campaignsOut(); },
+  async 'campaigns.active'(input) { await setCampaignActive(input); return campaignsOut(); },
+  // Release 1.6 #74: delete an empty campaign so its label is free again.
+  async 'campaigns.delete'({ label }) {
+    const lb = cleanBatch(label);
+    if (!lb) throw new Error('pick a campaign');
+    await deleteCampaign(lb);
+    return campaignsOut();
+  },
 
   // ---- phone alerts (Release 1.1 #23)
   async 'alerts.get'() {

@@ -685,7 +685,7 @@
     const placeRows = [...c.cities.map((x) => ({ name: x.city + ', ' + x.state, sub: x.countyName ? x.countyName + ' ' + countyWord(x.state) : '', n: x.n, ic: '📍' })), ...c.counties.map((x) => ({ name: 'Small towns in ' + x.name + ' ' + countyWord(x.state) + ', ' + x.state, sub: '', n: x.n, ic: '🗺️' })), ...Object.entries(c.rolls).map(([st, v]) => ({ name: 'Smaller places, ' + st, sub: '', n: v, ic: '➕' }))].sort((a, b) => b.n - a.n);
     const pmax = Math.max(1, ...placeRows.map((r) => r.n));
     b.innerHTML = `<div class="anHead"><div style="min-width:0"><h2><span class="anTag" style="background:${c.color}"></span>${esc(c.name)}</h2><p>${c.note ? esc(c.note) + ' · ' : ''}Started ${fmtDay(c.start)}${c.active ? '' : ' · paused, new scans count nothing'}</p></div>
-      <div class="row"><button type="button" class="secondary" id="anPrintC">Print QR cards</button><button type="button" class="secondary" id="anCopyC">Copy link</button><button type="button" class="${c.active ? 'danger' : 'secondary'}" id="anPause">${c.active ? 'Pause' : 'Resume'}</button></div></div>
+      <div class="row"><button type="button" class="secondary" id="anPrintC">Print QR cards</button><button type="button" class="secondary" id="anCopyC">Copy link</button><button type="button" class="${c.active ? 'danger' : 'secondary'}" id="anPause">${c.active ? 'Pause' : 'Resume'}</button>${c.deletable ? '<button type="button" class="danger" id="anDelC">Delete</button>' : ''}</div></div>
       <div class="anLinkbox"><img alt="QR code" src="${qr(link, 4)}"><div style="display:grid;gap:4px;min-width:0"><span class="anMuted">QR code opens</span><code>${esc(link)}</code><span class="anMuted" id="anCopyOk"></span></div></div>
       <div class="anFunnel">
         <div class="anStep"><div class="l">QR opens</div><div class="n">${fmtN(c.open)}</div><div class="s">first open per device</div></div>
@@ -703,6 +703,12 @@
     m.render({ cities: c.cities, counties: c.counties, rolls: c.rolls, states: [] }).then(() => { if (inLakes([...c.cities, ...c.counties])) m.zoomTo('lakes'); });
     $('anCopyC').addEventListener('click', async () => { let ok = false; try { await navigator.clipboard.writeText(link); ok = true; } catch (e) {} $('anCopyOk').textContent = ok ? 'Link copied.' : 'Copy failed. Select the link above.'; });
     $('anPause').addEventListener('click', async (e) => { e.target.disabled = true; try { loadCampaigns(await api('campaigns.active', { label: c.label, active: !c.active })); } catch (err) { setErr(err.message); e.target.disabled = false; } });
+    // Release 1.6 #74: Delete shows only on an empty campaign (no codes, no counts). The server checks again.
+    if ($('anDelC')) $('anDelC').addEventListener('click', async (e) => {
+      if (!confirm('Delete the campaign ' + c.label + '? It has no codes and no opens. The label ' + c.label + ' is free to use again after.')) return;
+      e.target.disabled = true;
+      try { sel = 0; loadCampaigns(await api('campaigns.delete', { label: c.label })); } catch (err) { setErr(err.message); e.target.disabled = false; }
+    });
     const job = campaignPdf(link);
     $('anPrintC').addEventListener('click', () => printCards(job));
   }
