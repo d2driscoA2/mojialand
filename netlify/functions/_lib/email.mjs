@@ -59,7 +59,7 @@ export function buildEmail({ plan, pass, code, origin, friend, byAdmin }) {
   const fUntil = friend && friend.use_by ? new Date(friend.use_by).toLocaleDateString('en-US', { timeZone: 'America/Detroit', month: 'long', day: 'numeric' }) : '';
   const fHead = 'Give a friend 48 free hours';
   const fWhy = 'Your pass comes with one free 48-hour pass for another family. It works once, on a device new to Mojialand' + (fUntil ? ', until ' + fUntil : '') + '.';
-  const fMsg = 'Here are 48 free hours of Mojialand, emoji games for kids 3 and up. No ads. Tap to play: ' + fLink;
+  const fMsg = 'Here are 48 free hours of Mojialand. Picture games for kids 3 and up. No accounts. No ads. No chat. Tap to play: ' + fLink;
   const fSms = fLink ? 'sms:?&body=' + encodeURIComponent(fMsg) : null;
 
   // Release 1.5 #61: a still of the 21-second Add to Home Screen video and a button to a small page that plays it

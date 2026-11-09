@@ -8,9 +8,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Mojialand">
-<meta name="description" content="Mojialand: seven emoji games for kids 3 and up. Pattern, Bounce, Match, Parade, Draw, Share Party, Feelings Faces. No reading, no timers, no losing.">
+<meta name="description" content="Mojialand: seven picture games for kids 3 and up. Pattern, Bounce, Match, Parade, Draw, Share Party, Feelings Faces. No reading, no timers, no losing.">
 <meta property="og:title" content="Mojialand">
-<meta property="og:description" content="Seven emoji games for kids 3 and up.">
+<meta property="og:description" content="Seven picture games for kids 3 and up. No accounts. No ads. No chat.">
 <link rel="preload" as="image" href="/logo/logo-3d-1000.webp" type="image/webp" fetchpriority="high">
 <link rel="icon" type="image/svg+xml" href="/logo/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/logo/icon-32.png">
@@ -4540,7 +4540,7 @@ const pay=(function(){
   async function loadGift(){ const raw=store.get('pass',null); if(!raw||!raw.token) return null; if(giftCache&&giftCache.token===raw.token) return giftCache.data;
     try{ const res=await fetch('/.netlify/functions/friend-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:raw.token}),credentials:'same-origin',cache:'no-store'});
       const d=res.status===200?await res.json():null; const data=d&&typeof d.code==='string'&&typeof d.link==='string'?d:null; giftCache={token:raw.token,data}; return data; }catch(e){ return null; } }
-  const GIFT_MSG='Here are 48 free hours of Mojialand, emoji games for kids 3 and up. No ads. Tap to play:';
+  const GIFT_MSG='Here are 48 free hours of Mojialand. Picture games for kids 3 and up. No accounts. No ads. No chat. Tap to play:';
   function giftDate(iso){ try{ return new Date(iso).toLocaleDateString('en-US',{month:'long',day:'numeric'}); }catch(e){ return ''; } }
   function paintGift(el,d){ if(!d||d.state==='expired'){ el.hidden=true; el.innerHTML=''; return false; } el.hidden=false;
     if(d.state==='used'){ el.innerHTML='<h4>🎁 Your friend pass is in use</h4><p>A friend is playing on the 48 free hours you shared. Thank you for spreading the word!</p>'; return true; }
@@ -4556,7 +4556,7 @@ const pay=(function(){
   /* Release 1.4 #32: 3 gifts of 7 free days for every family from day 3, behind the grown-up check.
      A gift works once, on a device new to Mojialand, within 30 days. When a friend turns one on, this family
      gets 7 more days, up to 21. A free-week family gets a gift holder from the server on this tap only. */
-  const GIFT7_MSG='Here are 7 free days of Mojialand, emoji games for kids 3 and up. No ads. Tap to play:';
+  const GIFT7_MSG='Here are 7 free days of Mojialand. Picture games for kids 3 and up. No accounts. No ads. No chat. Tap to play:';
   let gifts7=null;
   async function loadGifts7(){ const raw=store.get('pass',null); const tok=raw&&typeof raw.token==='string'?raw.token:'';
     try{ const res=await fetch('/.netlify/functions/gifts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:tok||undefined,device_id:deviceId(),fv_end:freeEnd()}),credentials:'same-origin',cache:'no-store'});

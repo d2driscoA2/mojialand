@@ -1,7 +1,7 @@
 {
   "name": "Mojialand",
   "short_name": "Mojialand",
-  "description": "Emoji games for little hands.",
+  "description": "Picture games for kids 3 and up.",
   "start_url": "/play/",
   "scope": "/",
   "display": "standalone",

@@ -2229,11 +2229,35 @@ for (const [w, h, name] of [[390, 844, 'phone'], [820, 1180, 'ipad'], [1180, 820
   check('#49 after Clear, the game reloads to the new build', await nav);
   await ctx.close();
 }
+// Release 1.6 #75 (Brand section 10): "emoji" never in a page title, meta or og/twitter text, manifest, share text lead line or the friend page lead line.
+{
+  const rd = (f) => fs.readFileSync(path.join(site, f), 'utf8');
+  const hits = [];
+  const pages = ['index.html', 'play/index.html', 'g/index.html', 'r/index.html', 'pass/index.html', 'pass/done/index.html', 'home-screen/index.html'];
+  for (const f of pages) {
+    if (!fs.existsSync(path.join(site, f))) continue;
+    const h = rd(f);
+    const bits = [...h.matchAll(/<title>([^<]*)<\/title>/gi)].map((m) => m[1])
+      .concat([...h.matchAll(/<meta\s+(?:name|property)="(?:description|og:[a-z_:]+|twitter:[a-z_:]+)"\s+content="([^"]*)"/gi)].map((m) => m[1]))
+      .concat([...h.matchAll(/<p class="eyebrow">([^<]*)<\/p>/gi)].map((m) => m[1]));
+    for (const b of bits) if (/emoji/i.test(b)) hits.push(f + ': ' + b);
+  }
+  for (const f of ['manifest.webmanifest', 'manifest-install.webmanifest']) { const j = JSON.parse(rd(f)); for (const k of ['name', 'short_name', 'description']) if (/emoji/i.test(j[k] || '')) hits.push(f + ' ' + k); }
+  const game = rd('play/index.html');
+  for (const k of ['GIFT_MSG', 'GIFT7_MSG']) { const m = new RegExp('const ' + k + "='([^']*)'").exec(game); if (!m) hits.push(k + ' missing'); else if (/emoji/i.test(m[1])) hits.push(k); }
+  const friend = /<p>([^<]*)<\/p>/.exec(rd('g/index.html'));
+  if (!friend || /emoji/i.test(friend[1])) hits.push('g lead line');
+  const mail = fs.readFileSync(path.join(ROOT, 'netlify/functions/_lib/email.mjs'), 'utf8');
+  const fm = /const fMsg = '([^']*)'/.exec(mail);
+  if (!fm || /emoji/i.test(fm[1])) hits.push('email friend message');
+  check('1.6 #75 copy sweep: no "emoji" in titles, meta, og, manifests, share text or the friend page lead line', hits.length === 0, hits.join(' | '));
+  check('1.6 #75 copy sweep: share text and friend page lead with the brand line', /Picture games for kids 3 and up\. No accounts\. No ads\. No chat\./.test(game) && /<p>Picture games for kids 3 and up\. No accounts\. No ads\. No chat\.<\/p>/.test(rd('g/index.html')));
+}
 // Release 1.3: the website and game descriptions count 7 games; the website shows a card for each
 {
   const home = fs.readFileSync(path.join(site, 'index.html'), 'utf8'), game = fs.readFileSync(path.join(site, 'play', 'index.html'), 'utf8');
   check('1.3 wording: no page says five or four games', !/five (emoji )?games|four little/i.test(home + game));
-  check('1.3 wording: website and game say seven games', /Seven games\. One happy place\./.test(home) && /seven emoji games/.test(game));
+  check('1.3 wording: website and game say seven games', /Seven games\. One happy place\./.test(home) && /seven picture games/.test(game));
   const { ctx, page } = await newPage({ viewport: { width: 1280, height: 900 } });
   await page.goto(base + '/'); await page.waitForTimeout(400);
   const t = await page.evaluate(() => { const cells = [...document.querySelectorAll('.tiles .gcell')]; const names = cells.map((c) => c.querySelector('.gname').textContent); const bg = cells.map((c) => getComputedStyle(c).backgroundColor); const r = cells.map((c) => c.getBoundingClientRect()); let touch = 0; for (let i = 0; i < r.length; i++) for (let j = i + 1; j < r.length; j++) { const near = Math.max(r[i].left - r[j].right, r[j].left - r[i].right) < 30 && Math.max(r[i].top - r[j].bottom, r[j].top - r[i].bottom) < 30; if (near && bg[i] === bg[j]) touch++; } return { names: names.join(','), touch, white: getComputedStyle(cells[4].querySelector('.gname')).color }; });
