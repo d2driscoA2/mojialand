@@ -457,9 +457,17 @@ body.drawer-open .addbtn{display:none}
 .pw-status b{font-family:var(--display);font-weight:900;font-size:17px}
 .pw-status span{color:var(--mute)}
 .pw-gulist{display:grid;gap:8px}
+/* Release 1.6 #76: top (status action and pass rows) and middle groups with a gap between them; Settings folds the switches. */
+.pw-gutop,.pw-gumid{display:grid;gap:8px}
+.pw-gulist .pw-gumid{margin-top:10px}
+.pw-gusets{display:grid;gap:10px}
+.pw-gusets[hidden]{display:none}
+.pw-gusetbtn[aria-expanded="true"] span:last-child{transform:rotate(90deg)}
+.pw-gusetbtn span:last-child{transition:transform .15s}
 .pw-gurow{display:flex;justify-content:space-between;align-items:center;gap:10px;border:2px solid var(--line);border-radius:16px;padding:12px;font:inherit;font-weight:800;font-size:14px;background:var(--white);cursor:pointer;color:var(--ink);text-align:left;width:100%;min-height:48px}
 .pw-gurow span:last-child{color:var(--purple);white-space:nowrap}
 .pw-gurow.share{border-color:var(--purple);background:var(--purple-l)}
+.pw-hsbig[hidden]{display:none}
 .pw-hsbig{display:flex;gap:14px;align-items:flex-end;background:linear-gradient(135deg,#F3ECFC,#FFF1C9);border:2px solid var(--purple);border-radius:24px;padding:14px 14px 0;overflow:hidden}
 .pw-hsbig>div:last-child{padding-bottom:14px;min-width:0}
 .pw-hsbig p{margin:0;font-size:13px;font-weight:700;color:var(--ink);line-height:1.4}
@@ -985,13 +993,15 @@ html.lite #s-home *,html.lite #s-home *::before,html.lite #s-home *::after{anima
   <div class="pw-status" id="pwStatus"></div>
   <div class="pw-gulist" id="pwGuList"></div>
   <div class="pw-hsbig" id="pwHS"><div class="pw-mini" id="pwMini" aria-hidden="true"></div><div class="pw-hsvid" id="pwGuVidWrap" hidden><video id="pwGuVid" muted playsinline preload="none" poster="/img/a2hs-iphone-poster.jpg" aria-label="Video: the four taps that put Mojialand on your Home Screen"><source src="/img/a2hs-iphone.mp4" type="video/mp4"></video><button class="pw-textbtn" id="pwGuVidAgain" type="button" hidden>▶ Watch again</button></div><div><p class="pw-hst" id="pwHSt">Mojialand on your Home Screen!</p><p id="pwHSbody">Add Mojialand to your Home Screen. Your kids find it next to your other apps, and it opens full screen.</p><button class="pw-primary" id="pwHSbtn">Show me how</button></div></div>
-  <div class="banner"><span class="e">🔒</span><div>Grown-ups only<div style="font-size:12px;font-weight:700;color:var(--purple-d);opacity:.8">A number question keeps kids out. Tap Grown-ups on the home screen to get here.</div></div></div>
-  <div class="row"><div><div class="l">Voice</div><div class="s">Speaks emoji names and how-to cards out loud. Off by default.</div></div><button class="sw" id="swVoice" role="switch" aria-checked="false" aria-label="Voice"></button></div>
-  <div class="row"><div><div class="l">Sounds</div><div class="s">Boops, chimes, cheers</div></div><button class="sw" id="swSound" role="switch" aria-checked="true" aria-label="Sounds"></button></div>
-  <div class="row"><div><div class="l">Sound check</div><div class="s" id="sndInfo">Tap to play a chime</div></div><button class="small" id="sndTest">Test</button></div>
-  <div class="row"><div><div class="l">How-to-play cards</div><div class="s" id="demosInfo">Show a how-to card the first time each game opens</div></div><button class="sw" id="swDemos" role="switch" aria-checked="true" aria-label="How-to-play cards"></button></div>
-  <div class="row"><div><div class="l">Show cards again</div><div class="s">Replay the how-to cards for every game</div></div><button class="small" id="resetDemos">Reset</button></div>
-  <div class="note"><div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="width:28px;height:28px;border-radius:999px;background:var(--purple);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px">✓</span><b style="color:var(--ink);font-size:13px">No accounts · No ads · No chat</b></div>Just a safe, fun place to play, create and explore.<br><span id="voiceInfo"></span></div>
+  <button type="button" class="pw-gurow pw-gusetbtn" id="guSetBtn" aria-expanded="false" aria-controls="guSets"><span>⚙️ Settings</span><span>›</span></button>
+  <div class="pw-gusets" id="guSets" hidden>
+    <div class="row"><div><div class="l">Voice</div><div class="s">Speaks emoji names and how-to cards out loud. Off by default.</div></div><button class="sw" id="swVoice" role="switch" aria-checked="false" aria-label="Voice"></button></div>
+    <div class="row"><div><div class="l">Sounds</div><div class="s">Boops, chimes, cheers</div></div><button class="sw" id="swSound" role="switch" aria-checked="true" aria-label="Sounds"></button></div>
+    <div class="row"><div><div class="l">How-to-play cards</div><div class="s" id="demosInfo">Show a how-to card the first time each game opens</div></div><button class="sw" id="swDemos" role="switch" aria-checked="true" aria-label="How-to-play cards"></button></div>
+    <div class="row"><div><div class="l">Sound check</div><div class="s" id="sndInfo">Tap to play a chime</div></div><button class="small" id="sndTest">Test</button></div>
+    <div class="row"><div><div class="l">Show cards again</div><div class="s">Replay the how-to cards for every game</div></div><button class="small" id="resetDemos">Reset</button></div>
+  </div>
+  <div class="note"><div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="width:28px;height:28px;border-radius:999px;background:var(--purple);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px">✓</span><b style="color:var(--ink);font-size:13px">No accounts · No ads · No chat</b></div>Just a safe, fun place to play, create and explore.</div>
 </section>
 
 <!-- TIME'S UP (kid-facing, no price) -->
@@ -1214,7 +1224,7 @@ const sfx={
 
 /* ---------- voice (text to speech) ---------- */
 let voice=null;
-function pickVoice(){ if(!('speechSynthesis' in window)) return; const vs=speechSynthesis.getVoices(); if(!vs.length) return; const en=vs.filter(v=>/^en/i.test(v.lang)); const pref=['Samantha','Karen','Moira','Google UK English Female','Microsoft Aria','Microsoft Jenny','Zira','Female']; voice=en.find(v=>pref.some(p=>v.name.includes(p)))||en[0]||vs[0]; $('#voiceInfo').textContent='Voice: '+(voice?voice.name:'none'); }
+function pickVoice(){ if(!('speechSynthesis' in window)) return; const vs=speechSynthesis.getVoices(); if(!vs.length) return; const en=vs.filter(v=>/^en/i.test(v.lang)); const pref=['Samantha','Karen','Moira','Google UK English Female','Microsoft Aria','Microsoft Jenny','Zira','Female']; voice=en.find(v=>pref.some(p=>v.name.includes(p)))||en[0]||vs[0]; }
 if('speechSynthesis' in window){ pickVoice(); speechSynthesis.onvoiceschanged=pickVoice; }
 function say(text){ if(!settings.voice||!('speechSynthesis' in window)||!text) return; try{ if(speechSynthesis.speaking||speechSynthesis.pending) speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text); if(voice) u.voice=voice; u.rate=0.82; u.pitch=1.15; u.volume=1; u.onend=u.onerror=()=>{ wake(); setTimeout(wake,120); setTimeout(wake,400); }; speechSynthesis.speak(u); setTimeout(wake,60); }catch(e){} }
 
@@ -4669,8 +4679,8 @@ const pay=(function(){
     if(passOn(p)&&p.kind==='forever') h='<b>Forever pass on</b><span>Code '+p.code+'</span>';
     else if(passOn(p)){ const m=Math.max(0,Math.ceil((p.ends_at-Date.now())/MIN)); const label={'48h':'48-hour pass on','30d':'30-day pass on','90d':'90-day pass on','7d':'Gift days on','holder':'Free days on'}[p.kind]||'Pass on'; h='<b>'+label+'</b><span>Ends '+fmtT(p.ends_at)+(m<=60?' ('+m+' min left)':'')+(p.code?' · Code '+p.code:'')+'</span>'+(p.kind==='holder'?'<span>Your free week plus bonus days from gifts. Then '+SETTINGS.daily_minutes+' minutes a day.</span>':''); }
     else if(graceOn()){ const m=Math.max(1,Math.ceil((graceInfo().until-Date.now())/MIN)); h='<b>Your pass is on its way</b><span>Payment received. Free play for '+m+' more min while it arrives. Your code also comes by email.</span>'; }
-    else if(inFreeWeek()){ h=passOffLine()+'<b>Free week</b><span>Every game, no limits, until '+fmtT(freeEnd())+'. Then '+SETTINGS.daily_minutes+' minutes a day.</span>'+(standalone()?'<span>Paid already? Type the code from your email under Have a code? below.</span>':''); }
-    else { const s=Math.ceil(freeLeft()/1000); h=passOffLine()+'<b>Free play</b><span>'+SETTINGS.daily_minutes+' minutes a day. Resets each morning.</span><span>Left today: '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0')+'</span>'+(standalone()?'<span>Paid already? Type the code from your email under Have a code? below.</span>':''); }
+    else if(inFreeWeek()){ h=passOffLine()+'<b>Free week</b><span>Every game, no limits, until '+fmtT(freeEnd())+'. Then '+SETTINGS.daily_minutes+' minutes a day.</span>'+(standalone()&&guOffer(p)?'<span>Paid already? Type the code from your email under Have a code? below.</span>':''); }
+    else { const s=Math.ceil(freeLeft()/1000); h=passOffLine()+'<b>Free play</b><span>'+SETTINGS.daily_minutes+' minutes a day. Resets each morning.</span><span>Left today: '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0')+'</span>'+(standalone()&&guOffer(p)?'<span>Paid already? Type the code from your email under Have a code? below.</span>':''); }
     if(STAGING_HOST){ h+='<span style="opacity:.6">Staging check: '+(standalone()?'Home Screen app':'browser')+' · opened with pass in address: '+dbgRestore+' · address carries pass now: '+(/restore=/.test(location.search)?'yes':'no')+' · free week day '+dayNum()+'</span>'
       +'<span class="pw-stagedays">Staging test date: <button type="button" data-day="1">Day 1</button><button type="button" data-day="3">Day 3</button><button type="button" data-day="5">Day 5</button><button type="button" data-day="8">Day 8</button></span>'; }
     const el=$('#pwStatus'); if(el.innerHTML!==h) el.innerHTML=h; }
@@ -4678,26 +4688,35 @@ const pay=(function(){
   const STAGING_HOST=/displayedux\.com$|netlify\.app$|^localhost$|^127\.0\.0\.1$/.test(location.hostname);
   $('#pwStatus').addEventListener('click',e=>{ const b=e.target.closest('[data-day]'); if(!b||!STAGING_HOST) return; ctx(); sfx.boop();
     store.set('freeStart',Date.now()-(Number(b.dataset.day)-1)*DAY-60e3); store.set('freeUsed',0); gifts7=null; paintChips(); buildGU(); toast('Test date: day '+b.dataset.day); });
-  function buildGU(){ paintStatus(); checkPass(true); const p=getPass(), rows=[]; let nudge='';
-    /* Release 1.4 #32: the offer on day 5 for families with no paid pass; time's up keeps its own offer. */
-    if(!(p&&(p.kind==='forever'||paidTimed(p)&&passOn(p)))&&dayNum()>=5){ const end=p&&passOn(p)&&p.ends_at>freeEnd()?p.ends_at:freeEnd();
-      nudge+='<div class="pw-gunudge pw-offer">'+(end>Date.now()?'Your free days end '+fmtT(end)+'.':'Your free week ended.')+' Keep playing with Forever, '+money(PRICES.life)+', or 30 days, '+money(PRICES.pass)+'. Never renews by itself.<button type="button" class="pw-offerbtn" data-a="buy">See passes</button></div>'; }
+  /* Release 1.4 #32: the offer on day 5 for families with no paid pass; time's up keeps its own offer. */
+  function guOffer(p){ return !(p&&(p.kind==='forever'||paidTimed(p)&&passOn(p)))&&dayNum()>=5; }
+  /* Release 1.6 #76 (Danny, October 23 and 27; layout November 9): less on screen, one price (the cheaper one).
+     Top: the status plus one action (the day 5 offer, else Have a code?), then pass rows (Get a pass $4.99 only without the offer;
+     Add 30 days and Upgrade for paid timed passes; Send code). Middle: gifts, Save drawings to Photos, Have a code? while the offer shows,
+     Contact us. Bottom: the Home Screen card (Safari only), one Settings row, the safety footer. The pay screen keeps Forever first. */
+  function buildGU(){ paintStatus(); checkPass(true); const p=getPass(), top=[], mid=[]; let nudge='', lead='';
+    const offer=guOffer(p);
+    if(offer) lead='<div class="pw-gunudge pw-offer">30 days for '+money(PRICES.pass)+'. Never renews by itself.<button type="button" class="pw-offerbtn" data-a="buy">See passes</button></div>';
+    else top.push(['Have a code?','›','code']);
     /* Give a friend shows only when the server says this pass has a friend pass (Release 1.1.1 #37: friend passes and support passes have none). */
     /* Release 1.4 #32: 3 gifts of 7 days from day 3 for every family (48-hour passes keep their one old friend pass). */
     /* A running 48-hour pass keeps its old friend pass; once it ends, the family gets the 3 gifts (the server gives gifts to that pass). */
     const old48=p&&p.kind==='48h'&&passOn(p);
-    if(dayNum()>=3&&!old48&&!(p&&['refunded','disputed'].includes(p.status))) rows.push(['🎁 Give 3 friends 7 free days','›','gifts']);
+    if(dayNum()>=3&&!old48&&!(p&&['refunded','disputed'].includes(p.status))) mid.push(['🎁 Give 3 friends 7 free days','›','gifts']);
     if(old48){ const raw=store.get('pass',null), gc=raw&&giftCache&&giftCache.token===raw.token?giftCache:null;
-      if(gc&&gc.data&&gc.data.state!=='expired') rows.push(['🎁 Give a friend 48 hours','›','gift']);
+      if(gc&&gc.data&&gc.data.state!=='expired') mid.push(['🎁 Give a friend 48 hours','›','gift']);
       else if(!gc) loadGift().then(d=>{ if(d&&d.state!=='expired') buildGU(); });
       const left=p.kind==='48h'?p.ends_at-Date.now():0, nk=(p.code||'')+':'+p.ends_at;
       if(gc&&gc.data&&gc.data.state==='ready'&&left>0&&left<=6*60*MIN&&store.get('giftNudge','')!==nk){ store.set('giftNudge',nk); nudge='<div class="pw-gunudge">🎁 Your pass ends soon. Know a family who would enjoy 48 free hours? Tap Give a friend below.</div>'; } }
-    if(passOn(p)&&p.code) rows.push(['📲 Send code to another device','›','share']); /* a pass that arrived by address token has no code here; the code stays in the email */
-    if(passOn(p)&&paidTimed(p)) rows.push(['Add 30 days',money(PRICES.add),'add'],['Upgrade to Forever',money(PRICES[upKey()]),'up']);
-    else if(!(passOn(p)&&p.kind==='forever')) rows.push(['Get a pass',money(PRICES.life)+' or '+money(PRICES.pass),'buy']);
-    rows.push(['🖼️ Save drawings to Photos','›','photos'],['Have a code?','›','code'],['Contact us','›','help']);
-    $('#pwGuList').innerHTML=nudge+rows.map(r=>'<button class="pw-gurow'+(r[2]==='share'?' share':'')+'" data-a="'+r[2]+'"><span>'+r[0]+'</span><span>'+r[1]+'</span></button>').join('');
-    const on=standalone(), hb=$('#pwHS'); hb.classList.toggle('done',on); $('#pwHSt').textContent=on?'On your Home Screen':'Mojialand on your Home Screen!';
+    if(passOn(p)&&paidTimed(p)) top.push(['Add 30 days',money(PRICES.add),'add'],['Upgrade to Forever',money(PRICES[upKey()]),'up']);
+    else if(!(passOn(p)&&p.kind==='forever')&&!offer) top.push(['Get a pass',money(PRICES.pass),'buy']);
+    if(passOn(p)&&p.code) top.push(['📲 Send code to another device','›','share']); /* a pass that arrived by address token has no code here; the code stays in the email */
+    mid.push(['🖼️ Save drawings to Photos','›','photos']);
+    if(offer) mid.push(['Have a code?','›','code']);
+    mid.push(['Contact us','›','help']);
+    const row=r=>'<button class="pw-gurow'+(r[2]==='share'?' share':'')+'" data-a="'+r[2]+'"><span>'+r[0]+'</span><span>'+r[1]+'</span></button>';
+    $('#pwGuList').innerHTML='<div class="pw-gutop">'+lead+top.map(row).join('')+'</div><div class="pw-gumid">'+nudge+mid.map(row).join('')+'</div>';
+    const on=standalone(), hb=$('#pwHS'); hb.classList.toggle('done',on); hb.hidden=on; /* Release 1.6 #76: the Home Screen app hides the card; Safari keeps the card and the #61 video */ $('#pwHSt').textContent=on?'On your Home Screen':'Mojialand on your Home Screen!';
     $('#pwHSbody').textContent=on?'Mojialand sits next to your other apps on this device. Open it from the icon for full screen play.':'Add Mojialand to your Home Screen. Your kids find it next to your other apps, and it opens full screen.';
     $('#pwHSbtn').hidden=on; $('#pwHSbtn').textContent=installEvt?'Install':'Show me how'; /* Release 1.5 #24: Android and computers get one Install button */
     /* Release 1.5 #61: first Grown-ups open on an iPhone in Safari plays the video once, muted; later opens offer Watch again */
@@ -4710,7 +4729,10 @@ const pay=(function(){
     if(a==='add'||a==='up') openGate('plans','gate',a); else if(a==='buy') openGate('plans','gate','life');
     else if(a==='share') sharePass(); else if(a==='gift') openGift(); else if(a==='gifts') openGifts7(); else if(a==='photos') games.draw.openPhotos(); else if(a==='code') openCode(); else if(a==='help') openContact(); });
 
-  function onScreen(name){ if(name==='ngate'){ newGate(); } else if(name==='plans') buildPlans(); else if(name==='gate') buildGU(); if(name!=='rest') $('#pwZeroChip').classList.remove('shake'); $$('.pw-ov').forEach(o=>o.classList.add('hidden')); paintChips(); }
+  /* Release 1.6 #76: one Settings row opens Voice, Sounds, How-to-play cards, Sound check and Show cards again. Closed on each visit. */
+  function setSets(open){ $('#guSets').hidden=!open; $('#guSetBtn').setAttribute('aria-expanded',String(open)); }
+  $('#guSetBtn').addEventListener('click',()=>{ ctx(); sfx.boop(); setSets($('#guSets').hidden); });
+  function onScreen(name){ if(name==='ngate'){ newGate(); } else if(name==='plans') buildPlans(); else if(name==='gate'){ setSets(false); buildGU(); } if(name!=='rest') $('#pwZeroChip').classList.remove('shake'); $$('.pw-ov').forEach(o=>o.classList.add('hidden')); paintChips(); }
   async function start(route){ deviceId(); rollDay(); await restoreFromUrl(); await verifyStored(); ackEnd(getPass()); paintChips(); checkPass();
     if(route==='allset'&&showAllset()){} else if(route==='passes') openGate('plans','home'); else if(blocked()) showRest();
     setInterval(tick,1000); }

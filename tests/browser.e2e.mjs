@@ -683,7 +683,7 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
     { const ans = await page.getAttribute('#pwChoices', 'data-a'); await page.click('#pwChoices [data-n="' + ans + '"]'); }
     await page.waitForSelector('#s-gate:not(.hidden)'); await page.waitForTimeout(400);
     check('Home Screen app with no pass: card says it is on the Home Screen, nothing about passes', /On your Home Screen/.test(await page.textContent('#pwHS')) && !/pairing|paid in safari/i.test(await page.textContent('#pwHS')));
-    check('Home Screen app with no pass: the status line points to Have a code?', /Paid already\? Type the code from your email under Have a code\? below\./.test(await page.textContent('#pwStatus')) && await page.isVisible('.pw-gurow[data-a="code"]'));
+    check('Home Screen app with no pass, day 1 (1.6 #76): Have a code? sits right under the status, so no Paid already line', !/Paid already\?/.test(await page.textContent('#pwStatus')) && await page.isVisible('.pw-gutop > .pw-gurow[data-a="code"]:first-child'));
     await ctx.close();
   }
 }
@@ -1113,7 +1113,7 @@ check('#18 website pass card says up to 5 devices', /Up to 5 devices share the s
   check('Welcome screen switch is gone', (await page.locator('#replaySplash').count()) === 0);
   const order = await page.evaluate(() => [...document.querySelectorAll('#s-gate > *')].map((e) => e.id || e.className.split(' ')[0]));
   const ix = (k) => order.indexOf(k);
-  check('Grown-ups order: pass rows, Home Screen, settings, promise last', ix('pwGuList') < ix('pwHS') && ix('pwHS') < ix('banner') && ix('note') === order.length - 1, order.join(','));
+  check('Grown-ups order: pass rows, Home Screen, Settings, promise last (1.6 #76: no lock card)', ix('pwGuList') < ix('pwHS') && ix('pwHS') < ix('guSetBtn') && ix('guSetBtn') < ix('guSets') && ix('note') === order.length - 1 && ix('banner') === -1, order.join(','));
   check('play: zero third-party requests', page.reqs.every((u) => u.startsWith(base) || u.startsWith('data:')));
   check('play: no CSP violations', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
   await ctx.close();
@@ -2253,6 +2253,74 @@ for (const [w, h, name] of [[390, 844, 'phone'], [820, 1180, 'ipad'], [1180, 820
   check('1.6 #75 copy sweep: no "emoji" in titles, meta, og, manifests, share text or the friend page lead line', hits.length === 0, hits.join(' | '));
   check('1.6 #75 copy sweep: share text and friend page lead with the brand line', /Picture games for kids 3 and up\. No accounts\. No ads\. No chat\./.test(game) && /<p>Picture games for kids 3 and up\. No accounts\. No ads\. No chat\.<\/p>/.test(rd('g/index.html')));
 }
+// Release 1.6 #76 (Danny, October 23 and 27; layout November 9): Grown-ups shows less, one price, settings folded.
+{
+  const guState = (page) => page.evaluate(() => {
+    const vis = (e) => !!e && !e.hidden && !!(e.offsetWidth || e.offsetHeight || e.getClientRects().length);
+    const ids = (sel) => [...document.querySelectorAll(sel)].filter(vis).map((e) => e.classList.contains('pw-offer') ? 'offer' : e.dataset.a || 'nudge');
+    const txt = document.getElementById('s-gate').innerText;
+    return { top: ids('#pwGuList .pw-gutop > *'), mid: ids('#pwGuList .pw-gumid > *'), hs: vis(document.getElementById('pwHS')), sets: vis(document.getElementById('guSetBtn')), setsOpen: vis(document.getElementById('guSets')),
+      prices: (txt.match(/\$\d+\.\d\d/g) || []), paidAlready: /Paid already\?/.test(document.getElementById('pwStatus').textContent), footer: /No accounts · No ads · No chat/.test(txt),
+      lock: /Grown-ups only/.test(txt), voice: /Voice: /.test(txt), blocks: [...document.querySelectorAll('#s-gate > *')].filter(vis).length };
+  });
+  const run = async (name, { standalone, day, forever }) => {
+    const { ctx, page } = await newPage();
+    const { token } = tokenFor('forever');
+    if (forever) await page.route('**/.netlify/functions/pass-check', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ state: 'on', kind: 'forever', ends_at: null, token }) }));
+    await page.addInitScript(([sa, d, fv, tok]) => {
+      if (sa) Object.defineProperty(navigator, 'standalone', { get: () => true });
+      if (sessionStorage.getItem('s76')) return; sessionStorage.setItem('s76', '1');
+      localStorage.setItem('mojia.demos', 'false'); localStorage.setItem('mojia.welcomed', 'true');
+      localStorage.setItem('mojia.freeStart', String(Date.now() - (d - 1) * 864e5 - 60e3)); localStorage.setItem('mojia.a2hsVid', 'true');
+      if (fv) localStorage.setItem('mojia.pass', JSON.stringify({ code: 'MOJI-FORE-VERR-2345', kind: 'forever', ends_at: null, token: tok }));
+    }, [!!standalone, day, !!forever, token]);
+    await page.goto(base + '/play/'); await page.waitForTimeout(600);
+    if (await page.isVisible('#splash')) { await page.click('#splash'); await page.waitForTimeout(400); }
+    await page.click('#lockBtn'); await page.waitForSelector('#s-ngate:not(.hidden)');
+    { const ans = await page.getAttribute('#pwChoices', 'data-a'); await page.click('#pwChoices [data-n="' + ans + '"]'); }
+    await page.waitForSelector('#s-gate:not(.hidden)'); await page.waitForTimeout(400);
+    const s = await guState(page);
+    await page.screenshot({ path: path.join(SHOTS, 'gu-1.6-' + name + '.png'), fullPage: true });
+    return { ctx, page, s };
+  };
+  const common = (s) => s.sets && !s.setsOpen && s.footer && !s.lock && !s.voice;
+  let r = await run('safari-day1', { day: 1 });
+  check('1.6 #76 Safari day 1: Have a code, Get a pass $4.99 only, then Photos and Contact us, Home Screen card, Settings closed', JSON.stringify(r.s.top) === '["code","buy"]' && JSON.stringify(r.s.mid) === '["photos","help"]' && r.s.hs && JSON.stringify(r.s.prices) === '["$4.99"]' && common(r.s), JSON.stringify(r.s));
+  // Settings opens the five rows; every switch still works
+  await r.page.click('#guSetBtn'); await r.page.waitForTimeout(150);
+  const sets = await r.page.evaluate(() => [...document.querySelectorAll('#guSets .row .l')].map((e) => e.textContent));
+  check('1.6 #76 Settings opens Voice, Sounds, How-to-play cards, Sound check, Show cards again', JSON.stringify(sets) === '["Voice","Sounds","How-to-play cards","Sound check","Show cards again"]' && (await r.page.getAttribute('#guSetBtn', 'aria-expanded')) === 'true', JSON.stringify(sets));
+  const flip = async (id) => { const a = await r.page.getAttribute(id, 'aria-checked'); await r.page.click(id); await r.page.waitForTimeout(100); const b = await r.page.getAttribute(id, 'aria-checked'); await r.page.click(id); await r.page.waitForTimeout(100); return a !== b && (await r.page.getAttribute(id, 'aria-checked')) === a; };
+  check('1.6 #76 Settings switches flip: Voice, Sounds, How-to-play cards', (await flip('#swVoice')) && (await flip('#swSound')) && (await flip('#swDemos')));
+  await r.page.click('#sndTest'); await r.page.click('#resetDemos');
+  check('1.6 #76 Sound check and Show cards again still run', r.page.errors.length === 0, r.page.errors.join(' | '));
+  await r.page.click('#s-gate [data-go="home"]'); await r.page.waitForTimeout(300);
+  await r.page.click('#lockBtn'); await r.page.waitForSelector('#s-ngate:not(.hidden)');
+  { const ans = await r.page.getAttribute('#pwChoices', 'data-a'); await r.page.click('#pwChoices [data-n="' + ans + '"]'); }
+  await r.page.waitForSelector('#s-gate:not(.hidden)');
+  check('1.6 #76 Settings is closed again on the next visit', !(await r.page.isVisible('#guSets')));
+  await r.ctx.close();
+  r = await run('safari-day5', { day: 5 });
+  check('1.6 #76 Safari day 5: the offer is the one action with 30 days for $4.99, no Get a pass row, Have a code in the middle', JSON.stringify(r.s.top) === '["offer"]' && JSON.stringify(r.s.mid) === '["gifts","photos","code","help"]' && JSON.stringify(r.s.prices) === '["$4.99"]' && /^30 days for \$4\.99\. Never renews by itself\./.test(await r.page.textContent('#pwGuList .pw-offer')) && r.s.hs && common(r.s), JSON.stringify(r.s));
+  await r.page.click('#pwGuList .pw-offerbtn'); await r.page.waitForSelector('#s-ngate:not(.hidden),#s-plans:not(.hidden)');
+  if (await r.page.isVisible('#s-ngate')) { const ans = await r.page.getAttribute('#pwChoices', 'data-a'); await r.page.click('#pwChoices [data-n="' + ans + '"]'); await r.page.waitForSelector('#s-plans:not(.hidden)'); }
+  const plans = await r.page.evaluate(() => [...document.querySelectorAll('#pwCards .pw-plan')].map((b) => b.dataset.plan + ' ' + b.querySelector('.price').textContent));
+  check('1.6 #76 See passes opens the pay screen with Forever $14.99 first', plans[0] === 'life $14.99' && plans[1] === 'pass $4.99', JSON.stringify(plans));
+  await r.ctx.close();
+  r = await run('safari-forever', { day: 9, forever: true });
+  check('1.6 #76 Safari Forever: no price at all, Have a code and Send code on top', JSON.stringify(r.s.top) === '["code","share"]' && r.s.prices.length === 0 && r.s.hs && common(r.s), JSON.stringify(r.s));
+  await r.ctx.close();
+  r = await run('app-day1', { standalone: true, day: 1 });
+  check('1.6 #76 Home Screen app day 1: no Home Screen card, no Paid already line (Have a code sits under the status)', !r.s.hs && !r.s.paidAlready && r.s.top[0] === 'code' && common(r.s), JSON.stringify(r.s));
+  const b1 = r.s.blocks; await r.ctx.close();
+  r = await run('app-day5', { standalone: true, day: 5 });
+  check('1.6 #76 Home Screen app day 5: no Home Screen card, Paid already line back (the offer sits under the status)', !r.s.hs && r.s.paidAlready && r.s.top[0] === 'offer' && JSON.stringify(r.s.prices) === '["$4.99"]' && common(r.s), JSON.stringify(r.s));
+  await r.ctx.close();
+  r = await run('app-forever', { standalone: true, day: 9, forever: true });
+  check('1.6 #76 Home Screen app Forever: no card, no price', !r.s.hs && r.s.prices.length === 0 && common(r.s), JSON.stringify(r.s));
+  check('1.6 #76 block count: the Home Screen app shows 5 parts (bar, status, rows, Settings, footer)', b1 === 5 && r.s.blocks === 5, b1 + ' ' + r.s.blocks);
+  await r.ctx.close();
+}
 // Release 1.3: the website and game descriptions count 7 games; the website shows a card for each
 {
   const home = fs.readFileSync(path.join(site, 'index.html'), 'utf8'), game = fs.readFileSync(path.join(site, 'play', 'index.html'), 'utf8');
@@ -2473,7 +2541,7 @@ for (const [st, title] of [[403, 'This pass is on 5 devices'], [410, 'This link 
   await page.click('#pwOvGift [data-pw-close]');
   await page.click('#pwStatus [data-day="5"]').catch(() => {}); await page.waitForTimeout(300);
   await page.screenshot({ path: path.join(SHOTS, 'gu-offer-390.png') });
-  check('1.4 offer: day 5 shows the offer in Grown-ups with Forever first', /Forever, \$14\.99, or 30 days, \$4\.99/.test(await page.textContent('#pwGuList .pw-offer')));
+  check('1.4 offer (1.6 #76 one price): day 5 shows the offer in Grown-ups, 30 days for $4.99', /30 days for \$4\.99\. Never renews by itself\./.test(await page.textContent('#pwGuList .pw-offer')) && !/14\.99/.test(await page.textContent('#pwGuList')));
   await page.click('#pwGuList .pw-offerbtn'); await page.waitForSelector('#s-ngate:not(.hidden),#s-plans:not(.hidden)');
   check('1.4 offer: See passes opens the grown-up check, then the pass screen', true);
   await ctx.close();
