@@ -2321,6 +2321,61 @@ for (const [w, h, name] of [[390, 844, 'phone'], [820, 1180, 'ipad'], [1180, 820
   check('1.6 #76 block count: the Home Screen app shows 5 parts (bar, status, rows, Settings, footer)', b1 === 5 && r.s.blocks === 5, b1 + ' ' + r.s.blocks);
   await r.ctx.close();
 }
+// Release 1.6 #68 (Danny, October 15; tiers November 9): Match keeps its level on the device, Start over, two harder tiers.
+{
+  const LOOK = ['😺','😸','😹','😻','😼','😽','🙀','😿','😾','🙈','🙉','🙊','🐵','🐶','🐕','🐩','😀','😃','😄','😁','😆'];
+  const openMatch = async (page) => {
+    if (await page.isVisible('#splash')) { await page.click('#splash'); await page.waitForTimeout(400); }
+    await page.click('#hgrid [data-go="match"], [data-go="match"]'); await page.waitForSelector('#s-match:not(.hidden)'); await page.waitForTimeout(300);
+  };
+  const clearBoard = async (page) => {
+    const faces = await page.evaluate(() => [...document.querySelectorAll('#mgrid .mt .f')].map((f) => f.textContent));
+    const by = {}; faces.forEach((f, i) => (by[f] = by[f] || []).push(i));
+    for (const [a, b] of Object.values(by)) { await page.click('#mgrid .mt[data-i="' + a + '"]'); await page.click('#mgrid .mt[data-i="' + b + '"]'); await page.waitForTimeout(760); }
+    await page.waitForFunction(() => !document.querySelector('#mgrid .mt.done') && document.querySelector('#mreward').classList.contains('hidden'), null, { timeout: 15000 });
+    return faces;
+  };
+  const { ctx, page } = await newPage();
+  await page.addInitScript(() => { if (!sessionStorage.getItem('s68')) { sessionStorage.setItem('s68', '1'); localStorage.setItem('mojia.demos', 'false'); localStorage.setItem('mojia.welcomed', 'true'); } });
+  await page.goto(base + '/play/'); await page.waitForTimeout(600);
+  await openMatch(page);
+  check('1.6 #68 a new device starts Match at level 1 with no Start over', (await page.evaluate(() => Number(document.querySelector('#mgrid').dataset.lv))) === 0 && await page.isHidden('#mrestart'));
+  await clearBoard(page); await clearBoard(page);
+  const saved = await page.evaluate(() => [localStorage.getItem('mojia.matchLv'), JSON.parse(localStorage.getItem('mojia.homeProg') || '{}').match]);
+  check('1.6 #68 two cleared boards save level 3 on the device, and the home tile progress updates', saved[0] === '2' && saved[1] && Math.abs(saved[1].frac - 2 / 3) < 0.01, JSON.stringify(saved));
+  await page.reload(); await page.waitForTimeout(600);
+  await openMatch(page);
+  check('1.6 #68 after closing and reopening, Match opens on the same level', (await page.evaluate(() => Number(document.querySelector('#mgrid').dataset.lv))) === 2 && await page.isVisible('#mrestart'));
+  await page.click('#mrestart'); await page.waitForTimeout(200);
+  check('1.6 #68 one tap on Start over only asks (a stray tap keeps the level)', (await page.evaluate(() => Number(document.querySelector('#mgrid').dataset.lv))) === 2 && /armed/.test(await page.getAttribute('#mrestart', 'class')));
+  await page.click('#mrestart'); await page.waitForTimeout(300);
+  check('1.6 #68 a second tap starts over at level 1 and saves it', (await page.evaluate(() => [Number(document.querySelector('#mgrid').dataset.lv), localStorage.getItem('mojia.matchLv')].join())) === '0,0' && await page.isHidden('#mrestart') && (await page.locator('#mgrid .mt').count()) === 6);
+  // the top level: look-alike faces on a 6x6 board, loops without breaking, Rocket on the home tile
+  await page.evaluate(() => localStorage.setItem('mojia.matchLv', '23'));
+  await page.reload(); await page.waitForTimeout(600);
+  await openMatch(page);
+  const faces = await page.evaluate(() => [...document.querySelectorAll('#mgrid .mt .f')].map((f) => f.textContent));
+  check('1.6 #68 tier 8: 36 cards, all look-alike faces', faces.length === 36 && faces.every((f) => LOOK.includes(f)), faces.join(''));
+  const size = await page.evaluate(() => { const r = document.querySelector('#mgrid .mt').getBoundingClientRect(); return Math.min(r.width, r.height); });
+  check('1.6 #68 6x6 cards stay big enough to tap on a phone 390 wide (44 px or more)', size >= 44, String(size));
+  await page.screenshot({ path: path.join(SHOTS, 'match-1.6-look-390.png') });
+  await clearBoard(page);
+  const top = await page.evaluate(() => [Number(document.querySelector('#mgrid').dataset.lv), document.querySelectorAll('#mgrid .mt').length, JSON.parse(localStorage.getItem('mojia.homeProg')).match.medal]);
+  check('1.6 #68 the highest level loops: still level 24 with a fresh 6x6 board, Rocket on the home tile', top[0] === 23 && top[1] === 36 && top[2] === 7, JSON.stringify(top));
+  await page.click('#s-match [data-go="home"]'); await page.waitForTimeout(400);
+  check('1.6 #68 home Match tile names the Rocket', /🚀 Rocket/.test(await page.textContent('#hgrid [data-go="match"]').catch(() => '')) || /🚀/.test(await page.textContent('#home, #s-home').catch(() => '')));
+  check('1.6 #68 no page errors', page.errors.length === 0, page.errors.join(' | '));
+  await ctx.close();
+  // tier 7 (6x6) on an iPad
+  const { ctx: c2, page: p2 } = await newPage({ viewport: { width: 820, height: 1180 }, isMobile: false });
+  await p2.addInitScript(() => { localStorage.setItem('mojia.demos', 'false'); localStorage.setItem('mojia.welcomed', 'true'); localStorage.setItem('mojia.matchLv', '18'); });
+  await p2.goto(base + '/play/'); await p2.waitForTimeout(600);
+  await openMatch(p2);
+  const ip = await p2.evaluate(() => { const r = document.querySelector('#mgrid .mt').getBoundingClientRect(); return [document.querySelectorAll('#mgrid .mt').length, Math.round(Math.min(r.width, r.height))]; });
+  check('1.6 #68 tier 7 on an iPad: 36 cards, each 44 px or more', ip[0] === 36 && ip[1] >= 44, JSON.stringify(ip));
+  await p2.screenshot({ path: path.join(SHOTS, 'match-1.6-6x6-ipad.png') });
+  await c2.close();
+}
 // Release 1.3: the website and game descriptions count 7 games; the website shows a card for each
 {
   const home = fs.readFileSync(path.join(site, 'index.html'), 'utf8'), game = fs.readFileSync(path.join(site, 'play', 'index.html'), 'utf8');

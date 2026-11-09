@@ -57,6 +57,7 @@ body{position:fixed;inset:0;width:100%;background:var(--cream);color:var(--ink);
 .stage{flex:1;min-height:0;border-radius:var(--r);background:var(--white);position:relative;overflow:hidden;border:2px solid var(--line);box-shadow:var(--shadow)}
 .btnrow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 /* v1.11: small help row under each game so the stage gets the height */
+.helpbtn.armed{color:var(--pink);animation:wob .4s ease 2}
 .helprow{display:flex;justify-content:center;align-items:center;gap:6px;flex-wrap:wrap;min-height:44px}
 .helpbtn{background:none;border:0;color:var(--purple-d);font-family:var(--display);font-weight:800;font-size:14px;cursor:pointer;min-height:44px;padding:0 10px;display:inline-flex;align-items:center;gap:5px;text-decoration:underline;text-underline-offset:3px}
 .helpbtn.act{text-decoration:none;border:2px solid var(--line);border-radius:999px;background:var(--white);padding:0 16px;box-shadow:var(--shadow)}
@@ -928,7 +929,7 @@ html.lite #s-home *,html.lite #s-home *::before,html.lite #s-home *::after{anima
 <section class="screen hidden" id="s-match" data-bg="pink">
   <div class="bar"><button class="pill gear" data-go="home" aria-label="Back to home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7138D1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg></button><div class="gname"><span class="e">😊</span>Match</div><div class="pw-slot"><span class="pw-chip" data-chip role="timer"><svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="14" fill="none" stroke="#F3ECFC" stroke-width="6"/><circle class="arc" cx="18" cy="18" r="14" fill="none" stroke="#FFC83D" stroke-width="6" stroke-linecap="round" stroke-dasharray="88" stroke-dashoffset="0" transform="rotate(-90 18 18)"/></svg><span class="t">15:00</span></span></div></div>
   <div class="stage" style="background:var(--purple-l)"><div class="grid" id="mgrid"></div><div class="reward hidden" id="mreward"></div></div>
-  <div class="helprow"><button class="helpbtn" data-demo="match"><span aria-hidden="true">❓</span>How to play</button><button class="helpbtn" id="msay"><span aria-hidden="true">🔊</span>Say it</button></div>
+  <div class="helprow"><button class="helpbtn" data-demo="match"><span aria-hidden="true">❓</span>How to play</button><button class="helpbtn" id="msay"><span aria-hidden="true">🔊</span>Say it</button><button class="helpbtn" id="mrestart" hidden><span aria-hidden="true">↩️</span>Start over</button></div>
 </section>
 
 <!-- PARADE -->
@@ -1350,7 +1351,8 @@ const HG=[
   {id:'share',name:'Share Party',fill:'#5122A5',sub:'Fair shares for all',isNew:true,dark:true},
   {id:'feelings',name:'Feelings Faces',fill:'#EDE6FB',sub:'How do they feel?',isNew:true,soft:true},
   {id:'draw',name:'Draw',fill:'#7138D1',sub:'Draw with your friends',isNew:true,alwaysNew:true}];
-const MEDALS=[['🥉','Bronze'],['🥈','Silver'],['🥇','Gold'],['🏆','Trophy'],['👑','Crown'],['🌈','Rainbow']];
+const MEDALS=[['🥉','Bronze'],['🥈','Silver'],['🥇','Gold'],['🏆','Trophy'],['👑','Crown'],['🌈','Rainbow'],['💎','Diamond'],['🚀','Rocket']]; /* Release 1.6 #68: Diamond and Rocket for the new Match tiers; Pattern tops out at the Rainbow */
+const MEDAL_TOP={pattern:5};
 const PLAYSVG=c=>'<svg width="22" height="22" viewBox="0 0 20 20" aria-hidden="true"><path d="M6 3.5v13l11-6.5z" fill="'+c+'"></path></svg>';
 function homeScene(id){
   if(id==='pattern') return '<div style="display:flex;align-items:center;gap:3px;font-size:26px;line-height:1"><span class="hs-pi">🦄</span><span class="hs-pi hs-pi2">🐴</span><span class="hs-pi hs-pi3">🦄</span><span class="hs-pq">?</span></div>';
@@ -1393,7 +1395,7 @@ function homeOrder(list,feat,colsSet){ colsSet=colsSet||[2,3];
 function homeCols(){ return matchMedia('(min-width:700px) and (orientation:portrait)').matches?3:2; }
 function homeRender(){ const f=homeFeatured(), prog=store.get('homeProg',{}), g=f.g, dark=f.isNew||g.fill==='#7138D1'||!!g.dark;
   let mid='';
-  if(!f.isNew&&g.medals){ const p=prog[g.id]||{medal:-1,frac:0}, have=p.medal, nxt=Math.min(MEDALS.length-1,have+1), on=Math.round(p.frac*6);
+  if(!f.isNew&&g.medals){ const p=prog[g.id]||{medal:-1,frac:0}, have=p.medal, nxt=Math.min(g.id in MEDAL_TOP?MEDAL_TOP[g.id]:MEDALS.length-1,have+1), on=Math.round(p.frac*6);
     mid='<div class="hprog">'+(have>=0?'<span>'+MEDALS[have][0]+'</span>':'')+[0,1,2,3,4,5].map(i=>'<i class="'+(i<on?'on':'')+'"></i>').join('')+'<span class="dim">'+MEDALS[nxt][0]+'</span></div>'; }
   else mid='<div class="hsub" style="color:'+(dark?'#FFFFFF':'var(--ink)')+'">'+g.sub+'</div>';
   const chip=f.keep?'<span class="hchip" style="background:#FFC83D;color:#30254A">Keep playing</span>':f.isNew?'<span class="hchip" style="background:#FFC83D;color:#30254A">New!</span>':'<span class="hchip" style="background:'+(dark?'#FFC83D':'#7138D1')+';color:'+(dark?'#30254A':'#FFFFFF')+'">'+(f.played?'Keep playing':'Play')+'</span>';
@@ -1533,10 +1535,24 @@ games.bounce=(function(){
 
 /* ---------- MATCH (memory) ---------- */
 games.match=(function(){
-  const grid=$('#mgrid'), reward=$('#mreward'); const BASE=['🦄','🐴','🐲','🦖','🦈','⭐','🐸','🦋','🐶','🐱','🐙','🌈']; const LV=[[2,3],[3,4],[4,4],[4,5],[4,6],[5,6]]; const BADGES=['🥉','🥈','🥇','🏆','👑','🌈']; const PER=3; let lv=0, cards=[], open=[], busy=false, matched=0, newFaces=[]; const tier=l=>Math.floor(l/PER); const MAXLV=LV.length*PER-1;
+  const grid=$('#mgrid'), reward=$('#mreward'); const BASE=['🦄','🐴','🐲','🦖','🦈','⭐','🐸','🦋','🐶','🐱','🐙','🌈']; const LV=[[2,3],[3,4],[4,4],[4,5],[4,6],[5,6],[6,6],[6,6]]; const BADGES=MEDALS.map(m=>m[0]); const PER=3; let lv=0, cards=[], open=[], busy=false, matched=0, newFaces=[]; const tier=l=>Math.floor(l/PER); const MAXLV=LV.length*PER-1;
   const EXTRA=LIB.flatMap(([,,items])=>items.map(x=>x[0])).filter(e=>!BASE.includes(e)); let extraOrder=[...EXTRA].sort(()=>Math.random()-0.5);
-  function poolFor(l){ return l===0?BASE:[...BASE,...extraOrder.slice(0,l*3)]; }
-  function deal(){ const [cols,rows]=LV[tier(lv)]; const n=cols*rows; const pool=poolFor(lv); const pick=[...pool].sort(()=>Math.random()-0.5).slice(0,n/2); newFaces=pick.filter(e=>!BASE.includes(e)).slice(0,3); const deck=[...pick,...pick].sort(()=>Math.random()-0.5); cards=deck.map(e=>({e,up:false,done:false})); open=[]; busy=false; matched=0; reward.classList.add('hidden'); mlayout(); render(); }
+  /* Release 1.6 #68 (Danny, October 15 and November 9): two harder tiers after 5x6. Tier 7 is a 6x6 board (18 pairs).
+     Tier 8 is 6x6 with look-alike faces (cats, monkeys, dogs, smileys), so kids look closely. Same rules: no hints, no timer, no lives, no fail screen. */
+  const LOOK=['😺','😸','😹','😻','😼','😽','🙀','😿','😾','🙈','🙉','🙊','🐵','🐶','🐕','🐩','😀','😃','😄','😁','😆'], LOOKTIER=7;
+  const LOOKNAMES={'😺':'happy cat','😸':'grinning cat','😹':'laughing cat','😻':'heart-eyes cat','😼':'smirking cat','😽':'kissing cat','🙀':'surprised cat','😿':'crying cat','😾':'grumpy cat','🙈':'see-no-evil monkey','🙉':'hear-no-evil monkey','🙊':'speak-no-evil monkey','🐵':'monkey face','🐶':'puppy face','🐕':'dog','🐩':'poodle','😀':'big smile','😃':'happy face','😄':'smiling eyes','😁':'beaming face','😆':'laughing face'};
+  Object.keys(LOOKNAMES).forEach(e=>{ if(!NAMES[e]) NAMES[e]=LOOKNAMES[e]; });
+  function poolFor(l){ return tier(l)===LOOKTIER?LOOK:l===0?BASE:[...BASE,...extraOrder.slice(0,l*3)]; }
+  /* Release 1.6 #68 A: the level stays on this device (store key matchLv, saved after each cleared board). Nothing leaves the phone.
+     Safari and the Home Screen app keep separate progress. */
+  lv=Math.max(0,Math.min(MAXLV,parseInt(store.get('matchLv',0),10)||0));
+  const restart=$('#mrestart'); let restartArm=0;
+  function paintRestart(){ restart.hidden=lv===0; restart.classList.remove('armed'); restartArm=0; }
+  /* Start over on the Match screen (Danny, November 9). Two taps within 3 seconds, so one stray tap never wipes a kid's place. Medals earned stay on the home tile. */
+  restart.onclick=()=>{ if(busy) return; ctx(); sfx.boop();
+    if(Date.now()-restartArm>3000){ restartArm=Date.now(); restart.classList.add('armed'); say('Tap again to start over'); toast('Tap again to start over'); setTimeout(()=>{ if(restartArm&&Date.now()-restartArm>=3000) paintRestart(); },3050); return; }
+    lv=0; store.set('matchLv',0); homeProg('match',-1,0); paintRestart(); say('Back to level 1!'); deal(); };
+  function deal(){ paintRestart(); grid.dataset.lv=lv; const [cols,rows]=LV[tier(lv)]; const n=cols*rows; const pool=poolFor(lv); const pick=[...pool].sort(()=>Math.random()-0.5).slice(0,n/2); newFaces=pick.filter(e=>!BASE.includes(e)).slice(0,3); const deck=[...pick,...pick].sort(()=>Math.random()-0.5); cards=deck.map(e=>({e,up:false,done:false})); open=[]; busy=false; matched=0; reward.classList.add('hidden'); mlayout(); render(); }
   /* The card grid follows the screen: more columns than rows on a wide screen, more rows on a tall one. Emoji size follows the card size. */
   function mlayout(){ if(!cards.length) return; const [a,b]=LV[tier(lv)], r=grid.getBoundingClientRect(), wide=r.width>r.height*1.15; const cols=wide?Math.max(a,b):Math.min(a,b), rows=wide?Math.min(a,b):Math.max(a,b);
     grid.style.gridTemplateColumns='repeat('+cols+',minmax(0,1fr))'; grid.style.gridTemplateRows='repeat('+rows+',minmax(0,1fr))';
@@ -1549,15 +1565,16 @@ games.match=(function(){
     if(open.length<2){ armIdle(); return; }
     busy=true; idleClear(); const [a,b]=open; await wait(700);
     if(cards[a].e===cards[b].e){ cards[a].done=cards[b].done=true; cards[a].up=cards[b].up=false; el(a).classList.add('done','pop'); el(b).classList.add('done','pop'); sfx.chime(); say('two '+nameOf(cards[a].e)+'s!'); toast('Nice match!'); const s=$('#s-match .stage').getBoundingClientRect(); [a,b].forEach(i=>{ const r=el(i).getBoundingClientRect(); confetti($('#s-match .stage'),r.left-s.left+r.width/2,r.top-s.top+r.height/2,12); }); matched++; open=[]; busy=false;
-      if(matched===cards.length/2){ busy=true; sfx.cheer(); const done=lv; lv=Math.min(MAXLV,lv+1); homeProg('match',Math.floor(lv/PER)-1,(lv%PER)/PER); const medal=done%PER===PER-1; const st=$('#s-match .stage').getBoundingClientRect(); for(let k=0;k<(medal?6:3);k++) setTimeout(()=>confetti($('#s-match .stage'),Math.random()*st.width,st.height*0.3,16),k*140); await wait(500); showReward(done,medal); await wait(medal?3200:2000); reward.classList.add('hidden'); deal(); }
+      if(matched===cards.length/2){ busy=true; sfx.cheer(); const done=lv; lv=Math.min(MAXLV,lv+1); store.set('matchLv',lv); homeProg('match',Math.floor((done+1)/PER)-1,((done+1)%PER)/PER); const medal=done%PER===PER-1; const st=$('#s-match .stage').getBoundingClientRect(); for(let k=0;k<(medal?6:3);k++) setTimeout(()=>confetti($('#s-match .stage'),Math.random()*st.width,st.height*0.3,16),k*140); await wait(500); showReward(done,medal); await wait(medal?3200:2000); reward.classList.add('hidden'); deal(); }
       else armIdle(); }
     else { sfx.hmm(); el(a).classList.add('wobble'); el(b).classList.add('wobble'); await wait(500); cards[a].up=cards[b].up=false; el(a).classList.remove('up','wobble'); el(b).classList.remove('up','wobble'); el(a).setAttribute('aria-label','hidden card'); el(b).setAttribute('aria-label','hidden card'); open=[]; busy=false; armIdle(); } }
+  const MNAME=['bronze medal','silver medal','gold medal','trophy','crown','rainbow','diamond','rocket'];
   function showReward(done,medal){ const t=tier(done); const shelf=BADGES.map((b,i)=>'<span class="'+(i<t||(medal&&i===t)?'got':'')+'" style="animation-delay:'+(i*80)+'ms">'+b+'</span>').join(''); const nf=poolFor(done+1).filter(e=>!poolFor(done).includes(e)).slice(0,3); const stars='<div class="stars">'+[0,1,2].map(i=>'<span class="'+(i<=done%PER?'on':'')+'" style="animation-delay:'+(i*120)+'ms">⭐</span>').join('')+'</div>';
-    if(medal){ reward.innerHTML='<div class="badge">'+BADGES[t]+'</div><div class="lvl">You won a '+['bronze medal','silver medal','gold medal','trophy','crown','rainbow'][t]+'!</div><div class="shelf">'+shelf+'</div>'+(done<MAXLV?'<div class="newf">Bigger board next!</div>':''); say(done<MAXLV?'You won a '+['bronze medal','silver medal','gold medal','trophy','crown','rainbow'][t]+'! Bigger board next!':'You are the champion!'); }
+    if(medal){ reward.innerHTML='<div class="badge">'+BADGES[t]+'</div><div class="lvl">You won a '+MNAME[t]+'!</div><div class="shelf">'+shelf+'</div>'+(done<MAXLV?'<div class="newf">'+(tier(done+1)===LOOKTIER?'Look closely next!':'Bigger board next!')+'</div>':''); say(done<MAXLV?'You won a '+MNAME[t]+'! '+(tier(done+1)===LOOKTIER?'Look closely next!':'Bigger board next!'):'You are the champion!'); }
     else { reward.innerHTML='<div class="badge" style="font-size:80px">🌟</div><div class="lvl">Level '+(done+1)+' done!</div>'+stars+'<div class="shelf">'+shelf+'</div>'+(nf.length?'<div class="newf">New friends: '+nf.map(e=>'<b>'+e+'</b>').join('')+'</div>':''); say('Level '+(done+1)+' done! New friends are coming!'); }
     reward.classList.remove('hidden'); }
   $('#msay').onclick=()=>{ ctx(); sfx.boop(); say('Flip two cards. Find two the same.'); };
-  return { enter(){ deal(); }, leave(){ idleClear(); }, async demo(tap,stopped){ say('Flip two cards. Find two the same.'); await wait(500); const e=cards[0].e; let j=cards.findIndex((c,i)=>i>0&&c.e===e); await tap(el(0)); if(stopped()) return; await wait(300); await tap(el(j)); await wait(1400); } };
+  return { enter(){ deal(); }, leave(){ idleClear(); paintRestart(); }, async demo(tap,stopped){ say('Flip two cards. Find two the same.'); await wait(500); const e=cards[0].e; let j=cards.findIndex((c,i)=>i>0&&c.e===e); await tap(el(0)); if(stopped()) return; await wait(300); await tap(el(j)); await wait(1400); } };
 })();
 
 /* ---------- EMOJI PICKER (shared drawer) ---------- */
