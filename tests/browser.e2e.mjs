@@ -2324,6 +2324,7 @@ for (const [w, h, name] of [[390, 844, 'phone'], [820, 1180, 'ipad'], [1180, 820
 // Release 1.6 #68 (Danny, October 15; tiers November 9): Match keeps its level on the device, Start over, two harder tiers.
 {
   const LOOK = ['😺','😸','😹','😻','😼','😽','🙀','😿','😾','🙈','🙉','🙊','🐵','🐶','🐕','🐩','😀','😃','😄','😁','😆'];
+  const mprog = (pg) => pg.evaluate(() => ({ on: document.querySelectorAll('#mprog span.on').length, all: document.querySelectorAll('#mprog span').length, medal: (document.querySelector('#mprog b') || {}).textContent || '', label: document.querySelector('#mprog').getAttribute('aria-label') }));
   const openMatch = async (page) => {
     if (await page.isVisible('#splash')) { await page.click('#splash'); await page.waitForTimeout(400); }
     await page.click('#hgrid [data-go="match"], [data-go="match"]'); await page.waitForSelector('#s-match:not(.hidden)'); await page.waitForTimeout(300);
@@ -2346,10 +2347,12 @@ for (const [w, h, name] of [[390, 844, 'phone'], [820, 1180, 'ipad'], [1180, 820
   await page.reload(); await page.waitForTimeout(600);
   await openMatch(page);
   check('1.6 #68 after closing and reopening, Match opens on the same level', (await page.evaluate(() => Number(document.querySelector('#mgrid').dataset.lv))) === 2 && await page.isVisible('#mrestart'));
+  { const m = await mprog(page); check('1.6 #68 level marker on level 3: 2 of 3 stars, no medal yet, read as Level 3', m.on === 2 && m.all === 3 && m.medal === '' && m.label === 'Level 3', JSON.stringify(m)); }
   await page.click('#mrestart'); await page.waitForTimeout(200);
   check('1.6 #68 one tap on Start over only asks (a stray tap keeps the level)', (await page.evaluate(() => Number(document.querySelector('#mgrid').dataset.lv))) === 2 && /armed/.test(await page.getAttribute('#mrestart', 'class')));
   await page.click('#mrestart'); await page.waitForTimeout(300);
   check('1.6 #68 a second tap starts over at level 1 and saves it', (await page.evaluate(() => [Number(document.querySelector('#mgrid').dataset.lv), localStorage.getItem('mojia.matchLv')].join())) === '0,0' && await page.isHidden('#mrestart') && (await page.locator('#mgrid .mt').count()) === 6);
+  { const m = await mprog(page); check('1.6 #68 level marker after Start over: no stars', m.on === 0 && m.label === 'Level 1', JSON.stringify(m)); }
   // the top level: look-alike faces on a 6x6 board, loops without breaking, Rocket on the home tile
   await page.evaluate(() => localStorage.setItem('mojia.matchLv', '23'));
   await page.reload(); await page.waitForTimeout(600);
@@ -2362,6 +2365,7 @@ for (const [w, h, name] of [[390, 844, 'phone'], [820, 1180, 'ipad'], [1180, 820
   await clearBoard(page);
   const top = await page.evaluate(() => [Number(document.querySelector('#mgrid').dataset.lv), document.querySelectorAll('#mgrid .mt').length, JSON.parse(localStorage.getItem('mojia.homeProg')).match.medal]);
   check('1.6 #68 the highest level loops: still level 24 with a fresh 6x6 board, Rocket on the home tile', top[0] === 23 && top[1] === 36 && top[2] === 7, JSON.stringify(top));
+  { const m = await mprog(page); check('1.6 #68 level marker at the top: the Rocket medal shows', m.medal === '🚀' && m.on === 2, JSON.stringify(m)); }
   await page.click('#s-match [data-go="home"]'); await page.waitForTimeout(400);
   check('1.6 #68 home Match tile names the Rocket', /🚀 Rocket/.test(await page.textContent('#hgrid [data-go="match"]').catch(() => '')) || /🚀/.test(await page.textContent('#home, #s-home').catch(() => '')));
   check('1.6 #68 no page errors', page.errors.length === 0, page.errors.join(' | '));
