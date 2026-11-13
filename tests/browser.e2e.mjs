@@ -2285,7 +2285,8 @@ for (const [w, h, name] of [[390, 844, 'phone'], [820, 1180, 'ipad'], [1180, 820
   };
   const common = (s) => s.sets && !s.setsOpen && s.footer && !s.lock && !s.voice;
   let r = await run('safari-day1', { day: 1 });
-  check('1.6 #76 Safari day 1: Have a code, Get a pass $4.99 only, then Photos and Contact us, Home Screen card, Settings closed', JSON.stringify(r.s.top) === '["code","buy"]' && JSON.stringify(r.s.mid) === '["photos","help"]' && r.s.hs && JSON.stringify(r.s.prices) === '["$4.99"]' && common(r.s), JSON.stringify(r.s));
+  check('1.6 #76 Safari day 1: Have a code, Get a pass from $4.99 only, then Photos and Contact us, Home Screen card, Settings closed', JSON.stringify(r.s.top) === '["code","buy"]' && JSON.stringify(r.s.mid) === '["photos","help"]' && r.s.hs && JSON.stringify(r.s.prices) === '["$4.99"]' && common(r.s), JSON.stringify(r.s))
+  check('1.6 Legal: the days 1 to 4 row reads Get a pass, from $4.99', /^Get a pass\s*from \$4\.99$/.test((await r.page.textContent('#pwGuList [data-a="buy"]')).trim()));
   // Settings opens the five rows; every switch still works
   await r.page.click('#guSetBtn'); await r.page.waitForTimeout(150);
   const sets = await r.page.evaluate(() => [...document.querySelectorAll('#guSets .row .l')].map((e) => e.textContent));
