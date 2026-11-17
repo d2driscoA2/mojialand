@@ -1,0 +1,221 @@
+game,type,text,file
+feelings,base,Puppy is at the park with a red balloon.,puppy-is-at-the-park-with-a-red-balloon
+feelings,base,Oh! Pop!,oh-pop
+feelings,base,How does Puppy feel? Tap the face.,how-does-puppy-feel-tap-the-face
+feelings,base,How does Puppy feel?,how-does-puppy-feel
+feelings,base,Yes. Puppy feels sad because the balloon popped.,yes-puppy-feels-sad-because-the-balloon-popped
+feelings,soft,Hmm. Watch Puppy again.,hmm-watch-puppy-again
+feelings,command,Can you help Puppy? Get a new balloon.,can-you-help-puppy-get-a-new-balloon
+feelings,cheer,You helped Puppy feel better.,you-helped-puppy-feel-better
+feelings,base,It's Unicorn's birthday party.,it-s-unicorn-s-birthday-party
+feelings,base,Here comes the cake!,here-comes-the-cake
+feelings,base,How does Unicorn feel? Tap the face.,how-does-unicorn-feel-tap-the-face
+feelings,base,How does Unicorn feel?,how-does-unicorn-feel
+feelings,cheer,Yes. Unicorn feels happy because it is a birthday party with cake.,yes-unicorn-feels-happy-because-it-is-a-birthday
+feelings,soft,Hmm. Watch Unicorn again.,hmm-watch-unicorn-again
+feelings,command,Let's celebrate with Unicorn! Tap the hands.,let-s-celebrate-with-unicorn-tap-the-hands
+feelings,cheer,Hooray! You celebrated with Unicorn.,hooray-you-celebrated-with-unicorn
+feelings,base,Shark is in bed. It is raining outside.,shark-is-in-bed-it-is-raining-outside
+feelings,base,Flash! Rumble.,flash-rumble
+feelings,base,How does Shark feel? Tap the face.,how-does-shark-feel-tap-the-face
+feelings,base,How does Shark feel?,how-does-shark-feel
+feelings,base,Yes. Shark feels scared because the storm is loud.,yes-shark-feels-scared-because-the-storm-is-loud
+feelings,soft,Hmm. Watch Shark again.,hmm-watch-shark-again
+feelings,command,Can you help Shark? Turn on the night light.,can-you-help-shark-turn-on-the-night-light
+feelings,cheer,You helped Shark feel better.,you-helped-shark-feel-better
+feelings,base,Monkey is building a tall tower.,monkey-is-building-a-tall-tower
+feelings,base,Oh no! The ball!,oh-no-the-ball
+feelings,base,How does Monkey feel? Tap the face.,how-does-monkey-feel-tap-the-face
+feelings,base,How does Monkey feel?,how-does-monkey-feel
+feelings,base,Yes. Monkey feels mad because the ball knocked the tower down.,yes-monkey-feels-mad-because-the-ball-knocked-th
+feelings,soft,Hmm. Watch Monkey again.,hmm-watch-monkey-again
+feelings,command,Can you help Monkey? Take a big breath together.,can-you-help-monkey-take-a-big-breath-together
+feelings,cheer,You helped Monkey feel better.,you-helped-monkey-feel-better
+feelings,base,Cat finds a big present on the porch.,cat-finds-a-big-present-on-the-porch
+feelings,base,Boing!,boing
+feelings,base,How does Cat feel? Tap the face.,how-does-cat-feel-tap-the-face
+feelings,base,How does Cat feel?,how-does-cat-feel
+feelings,cheer,Yes. Cat feels surprised because a toy jumped out of the box.,yes-cat-feels-surprised-because-a-toy-jumped-out
+feelings,soft,Hmm. Watch Cat again.,hmm-watch-cat-again
+feelings,command,What a surprise! Let's celebrate with Cat. Tap the hands.,what-a-surprise-let-s-celebrate-with-cat-tap-the
+feelings,cheer,Hooray! You celebrated with Cat.,hooray-you-celebrated-with-cat
+feelings,base,Bear has an ice cream at the beach.,bear-has-an-ice-cream-at-the-beach
+feelings,base,Oops! Plop!,oops-plop
+feelings,base,How does Bear feel? Tap the face.,how-does-bear-feel-tap-the-face
+feelings,base,How does Bear feel?,how-does-bear-feel
+feelings,base,Yes. Bear feels sad because the ice cream fell on the sand.,yes-bear-feels-sad-because-the-ice-cream-fell-on
+feelings,soft,Hmm. Watch Bear again.,hmm-watch-bear-again
+feelings,command,Can you help Bear? Give a big hug.,can-you-help-bear-give-a-big-hug
+feelings,cheer,You helped Bear feel better.,you-helped-bear-feel-better
+feelings,base,Bunny swings and swings all day.,bunny-swings-and-swings-all-day
+feelings,base,The sun goes down.,the-sun-goes-down
+feelings,base,How does Bunny feel? Tap the face.,how-does-bunny-feel-tap-the-face
+feelings,base,How does Bunny feel?,how-does-bunny-feel
+feelings,base,Yes. Bunny feels sleepy because it is late and Bunny played all day.,yes-bunny-feels-sleepy-because-it-is-late-and-bu
+feelings,soft,Hmm. Watch Bunny again.,hmm-watch-bunny-again
+feelings,command,Can you help Bunny? Tuck Bunny in.,can-you-help-bunny-tuck-bunny-in
+feelings,cheer,You helped Bunny feel better.,you-helped-bunny-feel-better
+feelings,base,Dino looks up at the gray sky.,dino-looks-up-at-the-gray-sky
+feelings,base,Snow! The first snow!,snow-the-first-snow
+feelings,base,How does Dino feel? Tap the face.,how-does-dino-feel-tap-the-face
+feelings,base,How does Dino feel?,how-does-dino-feel
+feelings,cheer,Yes. Dino feels excited because the first snow is falling.,yes-dino-feels-excited-because-the-first-snow-is
+feelings,soft,Hmm. Watch Dino again.,hmm-watch-dino-again
+feelings,command,Let's build a snowman with Dino!,let-s-build-a-snowman-with-dino
+feelings,cheer,Hooray! You played in the snow with Dino.,hooray-you-played-in-the-snow-with-dino
+feelings,base,Tiger practiced and practiced. Now Tiger kicks.,tiger-practiced-and-practiced-now-tiger-kicks
+feelings,base,Goal!,goal
+feelings,base,How does Tiger feel? Tap the face.,how-does-tiger-feel-tap-the-face
+feelings,base,How does Tiger feel?,how-does-tiger-feel
+feelings,cheer,Yes. Tiger feels proud because Tiger worked hard and scored a goal.,yes-tiger-feels-proud-because-tiger-worked-hard
+feelings,soft,Hmm. Watch Tiger again.,hmm-watch-tiger-again
+feelings,command,Tiger worked hard. Give Tiger a medal!,tiger-worked-hard-give-tiger-a-medal
+feelings,cheer,Hooray! You cheered for Tiger.,hooray-you-cheered-for-tiger
+feelings,base,Koala reads a book under a big shady tree.,koala-reads-a-book-under-a-big-shady-tree
+feelings,base,A soft breeze. A butterfly floats by.,a-soft-breeze-a-butterfly-floats-by
+feelings,base,How does Koala feel? Tap the face.,how-does-koala-feel-tap-the-face
+feelings,base,How does Koala feel?,how-does-koala-feel
+feelings,cheer,Yes. Koala feels calm because it is quiet and peaceful under the tree.,yes-koala-feels-calm-because-it-is-quiet-and-pea
+feelings,soft,Hmm. Watch Koala again.,hmm-watch-koala-again
+feelings,command,Let's sit quietly and read with Koala.,let-s-sit-quietly-and-read-with-koala
+feelings,cheer,You shared a quiet time with Koala.,you-shared-a-quiet-time-with-koala
+feelings,base,Penguin is walking home in the rain.,penguin-is-walking-home-in-the-rain
+feelings,base,Cow shares the umbrella.,cow-shares-the-umbrella
+feelings,base,How does Penguin feel? Tap the face.,how-does-penguin-feel-tap-the-face
+feelings,base,How does Penguin feel?,how-does-penguin-feel
+feelings,cheer,Yes. Penguin feels thankful because Cow shared the umbrella.,yes-penguin-feels-thankful-because-cow-shared-th
+feelings,soft,Hmm. Watch Penguin again.,hmm-watch-penguin-again
+feelings,command,What can Penguin say to Cow? Tap to say thank you.,what-can-penguin-say-to-cow-tap-to-say-thank-you
+feelings,cheer,Kind words help friends feel good.,kind-words-help-friends-feel-good
+feelings,base,Pig's best friend is moving far away.,pig-s-best-friend-is-moving-far-away
+feelings,base,"Bye-bye, Puppy!",bye-bye-puppy
+feelings,base,How does Pig feel? Tap the face.,how-does-pig-feel-tap-the-face
+feelings,base,How does Pig feel?,how-does-pig-feel
+feelings,base,Yes. Pig feels sad because a best friend moved away.,yes-pig-feels-sad-because-a-best-friend-moved-aw
+feelings,soft,Hmm. Watch Pig again.,hmm-watch-pig-again
+feelings,command,Can you help Pig? Give a big hug.,can-you-help-pig-give-a-big-hug
+feelings,cheer,You helped Pig feel better.,you-helped-pig-feel-better
+feelings,base,Panda waits to open birthday presents.,panda-waits-to-open-birthday-presents
+feelings,base,Almost time!,almost-time
+feelings,base,How does Panda feel? Tap the face.,how-does-panda-feel-tap-the-face
+feelings,base,How does Panda feel?,how-does-panda-feel
+feelings,cheer,Yes. Panda feels excited because it is almost time to open the presents.,yes-panda-feels-excited-because-it-is-almost-tim
+feelings,soft,Hmm. Watch Panda again.,hmm-watch-panda-again
+feelings,command,It's time! Help Panda open a present.,it-s-time-help-panda-open-a-present
+feelings,cheer,Hooray! A new teddy! You opened presents with Panda.,hooray-a-new-teddy-you-opened-presents-with-pand
+feelings,base,"Frog builds a sandcastle, one tower at a time.",frog-builds-a-sandcastle-one-tower-at-a-time
+feelings,base,Ta-da!,ta-da
+feelings,base,How does Frog feel? Tap the face.,how-does-frog-feel-tap-the-face
+feelings,base,How does Frog feel?,how-does-frog-feel
+feelings,cheer,Yes. Frog feels proud because Frog built a tall sandcastle.,yes-frog-feels-proud-because-frog-built-a-tall-s
+feelings,soft,Hmm. Watch Frog again.,hmm-watch-frog-again
+feelings,command,Frog built a big castle! Take a picture.,frog-built-a-big-castle-take-a-picture
+feelings,cheer,Click! Hooray for Frog's castle.,click-hooray-for-frog-s-castle
+feelings,base,It's Chicken's first day at a new school.,it-s-chicken-s-first-day-at-a-new-school
+feelings,base,"Ding, ding! So many new faces.",ding-ding-so-many-new-faces
+feelings,base,How does Chicken feel? Tap the face.,how-does-chicken-feel-tap-the-face
+feelings,base,How does Chicken feel?,how-does-chicken-feel
+feelings,base,Yes. Chicken feels nervous because everything at the new school is new.,yes-chicken-feels-nervous-because-everything-at
+feelings,soft,Hmm. Watch Chicken again.,hmm-watch-chicken-again
+feelings,command,Can you help Chicken? Hold hands and walk in together.,can-you-help-chicken-hold-hands-and-walk-in-toge
+feelings,cheer,You helped Chicken feel brave.,you-helped-chicken-feel-brave
+feelings,base,Fox is playing at the park.,fox-is-playing-at-the-park
+feelings,base,Tiger has a shiny new bike.,tiger-has-a-shiny-new-bike
+feelings,base,How does Fox feel? Tap the face.,how-does-fox-feel-tap-the-face
+feelings,base,How does Fox feel?,how-does-fox-feel
+feelings,base,Yes. Fox feels jealous because Tiger has a new bike and Fox wants one too.,yes-fox-feels-jealous-because-tiger-has-a-new-bi
+feelings,soft,Hmm. Watch Fox again.,hmm-watch-fox-again
+feelings,command,Can you help? Tiger and Fox can take turns.,can-you-help-tiger-and-fox-can-take-turns
+feelings,cheer,Taking turns helped Fox feel better.,taking-turns-helped-fox-feel-better
+feelings,base,Cow runs to meet friends after the rain.,cow-runs-to-meet-friends-after-the-rain
+feelings,base,Splash! Friends saw it.,splash-friends-saw-it
+feelings,base,How does Cow feel? Tap the face.,how-does-cow-feel-tap-the-face
+feelings,base,How does Cow feel?,how-does-cow-feel
+feelings,base,Yes. Cow feels embarrassed because Cow slipped in a puddle in front of friends.,yes-cow-feels-embarrassed-because-cow-slipped-in
+feelings,soft,Hmm. Watch Cow again.,hmm-watch-cow-again
+feelings,command,Can you help Cow up? Tap the helping hand.,can-you-help-cow-up-tap-the-helping-hand
+feelings,cheer,You helped Cow up. Everyone slips sometimes.,you-helped-cow-up-everyone-slips-sometimes
+feelings,base,Lion wants to go out and play in the snow.,lion-wants-to-go-out-and-play-in-the-snow
+feelings,base,Stuck again!,stuck-again
+feelings,base,How does Lion feel? Tap the face.,how-does-lion-feel-tap-the-face
+feelings,base,How does Lion feel?,how-does-lion-feel
+feelings,base,Yes. Lion feels frustrated because the zipper keeps getting stuck.,yes-lion-feels-frustrated-because-the-zipper-kee
+feelings,soft,Hmm. Watch Lion again.,hmm-watch-lion-again
+feelings,command,"Can you help Lion? Let's try together, slowly.",can-you-help-lion-let-s-try-together-slowly
+feelings,cheer,You helped Lion zip the coat. Now let's play!,you-helped-lion-zip-the-coat-now-let-s-play
+feelings,base,Turtle carries a big stack of books.,turtle-carries-a-big-stack-of-books
+feelings,base,Oops!,oops
+feelings,base,How does Turtle feel? Tap the face.,how-does-turtle-feel-tap-the-face
+feelings,base,How does Turtle feel?,how-does-turtle-feel
+feelings,cheer,Yes. Turtle feels thankful because Bunny helped pick up the books.,yes-turtle-feels-thankful-because-bunny-helped-p
+feelings,soft,Hmm. Watch Turtle again.,hmm-watch-turtle-again
+feelings,command,What can Turtle say to Bunny? Tap to say thank you.,what-can-turtle-say-to-bunny-tap-to-say-thank-yo
+feelings,cheer,Kind words make friends smile.,kind-words-make-friends-smile
+feelings,base,Octopus is at the playground.,octopus-is-at-the-playground
+feelings,base,Everyone runs off to play.,everyone-runs-off-to-play
+feelings,base,How does Octopus feel? Tap the face.,how-does-octopus-feel-tap-the-face
+feelings,base,How does Octopus feel?,how-does-octopus-feel
+feelings,base,Yes. Octopus feels lonely because Octopus is sitting all alone.,yes-octopus-feels-lonely-because-octopus-is-sitt
+feelings,soft,Hmm. Watch Octopus again.,hmm-watch-octopus-again
+feelings,command,Can you help Octopus? Invite Octopus to play.,can-you-help-octopus-invite-octopus-to-play
+feelings,cheer,You invited Octopus to play. Now Octopus has a friend!,you-invited-octopus-to-play-now-octopus-has-a-fr
+feelings,base,Happy.,happy
+feelings,base,Sad.,sad
+feelings,base,Scared.,scared
+feelings,base,Mad.,mad
+feelings,base,Surprised.,surprised
+feelings,base,Sleepy.,sleepy
+feelings,base,Proud.,proud
+feelings,base,Excited.,excited
+feelings,base,Lonely.,lonely
+feelings,base,Nervous.,nervous
+feelings,base,Jealous.,jealous
+feelings,base,Embarrassed.,embarrassed
+feelings,base,Calm.,calm
+feelings,base,Frustrated.,frustrated
+feelings,base,Thankful.,thankful
+feelings,base,Breathe in.,breathe-in
+feelings,base,And out.,and-out
+feelings,base,Bunny helps pick them up.,bunny-helps-pick-them-up
+feelings,cheer,"Thank you, Cow!",thank-you-cow
+feelings,cheer,"Thank you, Bunny!",thank-you-bunny
+feelings,cheer,You know so many feelings. And you are a great helper!,you-know-so-many-feelings-and-you-are-a-great-he
+share,command,Share the pizza with two friends! Cut on the dotted line!,share-the-pizza-with-two-friends-cut-on-the-dott
+share,command,Share the cookie with two friends! Cut on the dotted line!,share-the-cookie-with-two-friends-cut-on-the-dot
+share,command,Share the sandwich with two friends! Cut on the dotted line!,share-the-sandwich-with-two-friends-cut-on-the-d
+share,command,Share the grapes with two friends!,share-the-grapes-with-two-friends
+share,command,Share the strawberries with three friends!,share-the-strawberries-with-three-friends
+share,command,Share the crayons with two friends!,share-the-crayons-with-two-friends
+share,command,Share the cake with three friends! Cut on the dotted line!,share-the-cake-with-three-friends-cut-on-the-dot
+share,command,Share the pie with four friends! Cut on the dotted line!,share-the-pie-with-four-friends-cut-on-the-dotte
+share,command,Share the pancake with four friends! Cut from dot to dot!,share-the-pancake-with-four-friends-cut-from-dot
+share,command,Share the chocolate bar with four friends! Snap it into pieces!,share-the-chocolate-bar-with-four-friends-snap-i
+share,command,Share the waffle with two friends! Snap it into pieces!,share-the-waffle-with-two-friends-snap-it-into-p
+share,command,Share the brownies with three friends! Snap it into pieces!,share-the-brownies-with-three-friends-snap-it-in
+share,command,Share the cookies with three friends!,share-the-cookies-with-three-friends
+share,command,Share the donuts with two friends!,share-the-donuts-with-two-friends
+share,command,Share the candies with three friends!,share-the-candies-with-three-friends
+share,command,Share the cookies with two friends!,share-the-cookies-with-two-friends
+share,command,Share the strawberries with four friends!,share-the-strawberries-with-four-friends
+share,command,Share the brownies with two friends!,share-the-brownies-with-two-friends
+share,command,Share the pizza slices with three friends!,share-the-pizza-slices-with-three-friends
+share,command,Share the cake slices with two friends!,share-the-cake-slices-with-two-friends
+share,command,Share the donuts with four friends!,share-the-donuts-with-four-friends
+share,command,Some friends already have grapes! Share so everyone gets the same.,some-friends-already-have-grapes-share-so-everyo
+share,command,Some friends already have strawberries! Share so everyone gets the same.,some-friends-already-have-strawberries-share-so
+share,command,Some friends already have cookies! Share so everyone gets the same.,some-friends-already-have-cookies-share-so-every
+share,command,Share the pizza with four friends! Cut it into equal pieces!,share-the-pizza-with-four-friends-cut-it-into-eq
+share,command,Now share the grapes!,now-share-the-grapes
+share,command,Now share the cookies!,now-share-the-cookies
+share,command,Share the cake with three friends! Cut it into equal pieces!,share-the-cake-with-three-friends-cut-it-into-eq
+share,command,Now share the donuts!,now-share-the-donuts
+share,command,Now give everyone a piece!,now-give-everyone-a-piece
+share,command,Now give each friend a piece!,now-give-each-friend-a-piece
+share,command,"Hmm, is that fair? Put one back in the bowl!",hmm-is-that-fair-put-one-back-in-the-bowl
+share,soft,"Hmm, is that fair?",hmm-is-that-fair
+share,soft,One is left! Let's break it so everyone gets the same.,one-is-left-let-s-break-it-so-everyone-gets-the
+share,soft,Some are left! Let's break them so everyone gets the same.,some-are-left-let-s-break-them-so-everyone-gets
+share,cheer,Fair! Everyone got the same!,fair-everyone-got-the-same
+share,cheer,Fair share! Everyone got the same!,fair-share-everyone-got-the-same
+share,cheer,Hooray! You shared it all!,hooray-you-shared-it-all
+core,command,All done for now! Can you please find a grown-up?,all-done-for-now-can-you-please-find-a-grown-up
