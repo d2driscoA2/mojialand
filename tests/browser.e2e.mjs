@@ -1883,9 +1883,31 @@ for (const [w, h, name] of [[375, 667, 'se'], [820, 1180, 'ipad']]) {
   await page.click('#s-feelings [data-go="home"]'); await page.waitForTimeout(2500);
   check('1.3: leaving mid-story stops the game (stage empty)', await page.evaluate(() => document.querySelector('#feelingsstage').children.length === 0 && document.querySelector('#sharestage').children.length === 0));
   { const spoke = await page.evaluate(() => window.__spoke); check('1.3: no device voice in either game, even with Voice on', spoke.length === 0, JSON.stringify(spoke)); }
+  // Board #77: with Voice on, the games play our own voice files from this site.
+  check('#77 voice: Voice on loads the voice map from /audio/', page.reqs.some((u) => u === base + '/audio/voice.json'));
+  check('#77 voice: Share Party asks for its first line file', page.reqs.includes(base + '/audio/share/share-the-pizza-with-two-friends-cut-on-the-dott.m4a'), page.reqs.filter((u) => /audio/.test(u)).join(' '));
+  check('#77 voice: Feelings Faces asks for the Puppy story line', page.reqs.includes(base + '/audio/feelings/puppy-is-at-the-park-with-a-red-balloon.m4a'));
+  check('#77 voice: every voice file asked for exists (no 404)', !page.reqs.some((u) => /\/audio\//.test(u) && !fs.existsSync(path.join(site, decodeURIComponent(u.slice(base.length))))));
   check('1.3: no network requests from the new games', !page.reqs.some((u) => !u.startsWith(base) && !/fonts\.g/.test(u)), page.reqs.filter((u) => !u.startsWith(base)).join(' '));
   check('1.3: no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
   await ctx.close();
+}
+// Board #77: Voice off (the default) asks for no voice files; the map covers every file on disk; time's up wording.
+{
+  const { ctx, page } = await newPage();
+  await page.addInitScript(() => { localStorage.setItem('mojia.demos', 'false'); localStorage.setItem('mojia.welcomed', 'true'); });
+  await page.goto(base + '/play/'); await page.click('#splash'); await page.waitForTimeout(400);
+  await page.click('#hfeat .hfeat'); await page.waitForSelector('#s-share:not(.hidden)'); await page.waitForTimeout(300);
+  await page.click('#sharestage .sh-lv[data-lv="0"]'); await page.waitForTimeout(1200);
+  check('#77 voice: Voice off asks for no voice files', !page.reqs.some((u) => /\/audio\//.test(u)), page.reqs.filter((u) => /audio/.test(u)).join(' '));
+  check('#77 voice: no CSP violations or errors with Voice off', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
+  await ctx.close();
+  const vmap = JSON.parse(fs.readFileSync(path.join(site, 'audio', 'voice.json'), 'utf8'));
+  const missing = []; let n = 0;
+  for (const g of Object.keys(vmap)) for (const t of Object.keys(vmap[g])) { n++; if (!fs.existsSync(path.join(site, 'audio', g, vmap[g][t] + '.m4a'))) missing.push(g + ': ' + t); }
+  check('#77 voice: voice.json maps 220 lines and every file exists', n === 220 && missing.length === 0, n + ' ' + missing.join(' | '));
+  const pt = fs.readFileSync(path.join(site, 'play', 'index.html'), 'utf8');
+  check('#77 time\'s up: the new kind wording, with its voice file', /<small>All done for now!<\/small>Can you please find a grown-up\?/.test(pt) && !/Go get a grown-up/.test(pt) && !!(vmap.core && vmap.core['All done for now! Can you please find a grown-up?']));
 }
 // 12d. Release 1.3 how-to cards: no Watch how button for games without a demo
 {

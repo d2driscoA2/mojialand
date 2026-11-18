@@ -12,7 +12,7 @@ def add(game, typ, text):
 
 # ---------- Feelings Faces ----------
 a = src.index("FEELINGS FACES (Release 1.3)")
-b = src.index("function say(text){ if(beatScene", a)
+b = src.index("{ if(beatScene && text === beatScene.event)", a)
 block = src[a:b]
 feel = dict(re.findall(r'(\w+):\s*\{ e:"[^"]*", name:"(\w+)"', block))
 pos = re.search(r'POS = \[(.*?)\]', src[a:]).group(1).replace('"', '').split(',')

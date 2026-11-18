@@ -1015,7 +1015,7 @@ html.lite #s-home *,html.lite #s-home *::before,html.lite #s-home *::after{anima
 <section class="screen hidden pw-rest" id="s-rest">
   <div class="pw-resttop"><span class="pw-chip zero" id="pwZeroChip"><span class="pw-glass">⌛</span><span>0:00</span></span></div>
   <div class="pw-friends" aria-hidden="true"><span class="pw-zz">💤</span>🦄🦈🐶😴🍕</div>
-  <button class="pw-bubble" id="pwBubble" aria-label="Time's up! Go get a grown-up!"><span aria-hidden="true">🔊</span><span class="pw-btxt" aria-hidden="true"><small>Time's up!</small>Go get a grown-up!</span></button>
+  <button class="pw-bubble" id="pwBubble" aria-label="All done for now! Can you please find a grown-up?"><span aria-hidden="true">🔊</span><span class="pw-btxt" aria-hidden="true"><small>All done for now!</small>Can you please find a grown-up?</span></button>
   <div class="pw-walk" aria-hidden="true"><span class="kid">🧒</span><span class="pw-trail"><i>👣</i><i>👣</i><i>👣</i></span><span>👩🧔</span></div>
   <div class="pw-point" aria-hidden="true">👇</div>
   <button class="pw-grown" id="pwGrown"><span class="e" aria-hidden="true">👩🧔</span>Grown-up</button>
@@ -1240,6 +1240,27 @@ let toastT=null; function toast(text){ const t=$('#toast'); $('#toastText').text
 /* ---------- confetti ---------- */
 /* Release 1.5 #24 (Danny, October 15): Home sweet home speaks even with the Voice switch off */
 function sayAlways(text){ const v=settings.voice; settings.voice=true; try{ say(text); }finally{ settings.voice=v; } }
+/* ---------- Mojialand voice files (board #77, November 2026). One made-up voice, made on Danny's Mac (Mojialand-Brand.md section 11).
+   Static files in /audio/<game>/, mapped by exact text in /audio/voice.json. Played through the game's audio context, so the iOS sound fix covers it.
+   Plays only when Voice and Sounds are both on (time's up is the one exception, as before). A new line cuts the old one; queue:true waits for it. ---------- */
+const VOICE=(()=>{
+  let map=null, mapP=null, cur=null, token=0, next=null; const buf={};
+  function loadMap(){ if(map) return Promise.resolve(map); if(!mapP) mapP=fetch('/audio/voice.json',{credentials:'same-origin'}).then(r=>r.ok?r.json():null).then(j=>{ if(!j) throw 0; map=j; return j; }).catch(()=>{ mapP=null; return {}; }); return mapP; }
+  function get(g,f){ const k=g+'/'+f; if(!buf[k]){ const a=ctx(); if(!a) return Promise.reject(new Error('no audio'));
+      buf[k]=fetch('/audio/'+g+'/'+f+'.m4a',{credentials:'same-origin'}).then(r=>{ if(!r.ok) throw new Error('voice '+r.status); return r.arrayBuffer(); })
+        .then(b=>new Promise((res,rej)=>{ try{ const p=a.decodeAudioData(b,res,rej); if(p&&p.then) p.then(res,rej); }catch(e){ rej(e); } }))
+        .catch(e=>{ delete buf[k]; throw e; }); }
+    return buf[k]; }
+  function on(){ return settings.voice&&settings.sound; }
+  function start(b){ const a=ctx(); if(!a) return; if(cur){ try{ cur.onended=null; cur.stop(); }catch(e){} cur=null; } const s=a.createBufferSource(); s.buffer=b; s.connect(a.destination);
+    s.onended=()=>{ if(cur!==s) return; cur=null; if(next){ const n=next; next=null; n(); } }; s.start(); cur=s; }
+  function play(g,text,opt){ opt=opt||{}; if(!text||!(opt.force||on())) return Promise.resolve(false); const t=++token; if(!opt.queue) next=null;
+    return loadMap().then(m=>{ const f=m[g]&&m[g][text]; if(!f) return false;
+      return get(g,f).then(b=>{ if(t!==token) return false; if(opt.queue&&cur){ next=()=>start(b); return true; } start(b); return true; }); }).catch(()=>false); }
+  function stop(){ token++; next=null; if(cur){ try{ cur.onended=null; cur.stop(); }catch(e){} cur=null; } }
+  function preload(g,match){ if(!on()) return; loadMap().then(m=>{ const o=m[g]||{}; Object.keys(o).forEach(tx=>{ if(!match||match(tx)) get(g,o[tx]).catch(()=>{}); }); }); }
+  return {play,stop,preload,playing:()=>!!cur};
+})();
 function confetti(host,x,y,n){ const cols=['#FF6FAE','#4CC9F0','#FFC83D','#8AE234','#9B5DE5']; for(let i=0;i<(n||18);i++){ const c=document.createElement('div'); c.className='confetti'; c.style.left=x+'px'; c.style.top=y+'px'; c.style.background=rnd(cols); c.style.setProperty('--dx',(Math.random()*220-110)+'px'); c.style.setProperty('--dy',(Math.random()*180+40)+'px'); host.appendChild(c); setTimeout(()=>c.remove(),1100);} }
 
 /* ---------- play counts: game, city (added by the server), nothing about the child ---------- */
@@ -1268,7 +1289,7 @@ const PS=(function(){
 const screens={home:'#s-home',pattern:'#s-pattern',bounce:'#s-bounce',match:'#s-match',parade:'#s-parade',share:'#s-share',feelings:'#s-feelings',draw:'#s-draw',gate:'#s-gate',rest:'#s-rest',ngate:'#s-ngate',plans:'#s-plans',allset:'#s-allset'};
 let current='home';
 const games={};
-function go(name){ stopDemo(); closeGlass(); if(games[current]&&games[current].leave) games[current].leave(); $$('.screen').forEach(s=>s.classList.add('hidden')); $(screens[name]).classList.remove('hidden'); PS.screen(name); current=name; document.body.classList.toggle('in-draw',name==='draw'); homeNote(name); if(name==='home'){ homeRefresh(); setTimeout(()=>{ try{ maybeReload(); checkBuild(false); }catch(e){} },400); homeParty(); } try{  }catch(e){} onScreen(name); if(games[name]&&games[name].enter) games[name].enter(); if(games[name]&&settings.demos&&!demoDone[name]) setTimeout(()=>showGlass(name),350); }
+function go(name){ stopDemo(); closeGlass(); VOICE.stop(); if(games[current]&&games[current].leave) games[current].leave(); $$('.screen').forEach(s=>s.classList.add('hidden')); $(screens[name]).classList.remove('hidden'); PS.screen(name); current=name; document.body.classList.toggle('in-draw',name==='draw'); homeNote(name); if(name==='home'){ homeRefresh(); setTimeout(()=>{ try{ maybeReload(); checkBuild(false); }catch(e){} },400); homeParty(); } try{  }catch(e){} onScreen(name); if(games[name]&&games[name].enter) games[name].enter(); if(games[name]&&settings.demos&&!demoDone[name]) setTimeout(()=>showGlass(name),350); }
 document.addEventListener('click',e=>{ const b=e.target.closest('[data-go]'); if(b){ ctx(); sfx.boop(); if(b.dataset.go==='home'&&b.closest('.bar')&&games[current]&&games[current].back&&games[current].back()) return; go(b.dataset.go);} const d=e.target.closest('[data-demo]'); if(d){ ctx(); sfx.boop(); showGlass(d.dataset.demo);} });
 
 /* ---------- how-to-play glass cards ---------- */
@@ -2225,7 +2246,7 @@ const NGA=(function(){
   return {host};
 })();
 
-/* ---------- SHARE PARTY (Release 1.3): cut, snap, and deal food so every friend gets a fair share. 9 levels x 3 puzzles. No fail state, no voice (Danny, October 6). ---------- */
+/* ---------- SHARE PARTY (Release 1.3): cut, snap, and deal food so every friend gets a fair share. 9 levels x 3 puzzles. No fail state. Voice from files when Voice is on (board #77). ---------- */
 (function(){
   const CSS = `
 .g-share{background:#FFF8E8;touch-action:manipulation}
@@ -2491,7 +2512,9 @@ const NGA=(function(){
       const done = new Set((store.get("shareStars", [])||[]).filter(n=>Number.isInteger(n) && n >= 0 && n < LEVELS.length));
       const G = {W:0, H:0};
 
-      const say = t=>{ lastLine = t; };
+      const say = t=>{ lastLine = t; VOICE.play('share', t); };
+      /* Board #77: the lines every puzzle shares load ahead; puzzle lines load when the puzzle starts. */
+      VOICE.preload('share', tx=>!/^(Share the|Now share|Now the|Some friends already)/.test(tx));
       const stageRect = ()=>stage.getBoundingClientRect();
       const preSum = st=>(st.pre||[]).reduce((a, b)=>a+b, 0);
 
@@ -3010,7 +3033,7 @@ const NGA=(function(){
 })();
 
 
-/* ---------- FEELINGS FACES (Release 1.3): watch a picture-book scene, name how the friend feels, then help. No voice; a picture strip and a spotlight tell the story (Danny, October 6). ---------- */
+/* ---------- FEELINGS FACES (Release 1.3): watch a picture-book scene, name how the friend feels, then help. A picture strip and a spotlight tell the story; voice from files when Voice is on (board #77). ---------- */
 (function(){
   const FEEL = {
     happy:     { e:"😀", name:"Happy",     c:"#FFC83D" },
@@ -4052,9 +4075,9 @@ const NGA=(function(){
       function clearTimers(){ timers.forEach(clearTimeout); timers.clear(); }
       function setPhase(p){ phase = p; root.dataset.phase = p; }
 
-      /* ---------- voice: none for now. Danny records the voice files later; say() is the hook. No device voice (Danny, October 6). ---------- */
+      /* ---------- voice: files from /audio/feelings/ when Voice is on (board #77). No device voice (Danny, October 6). ---------- */
       let beatScene = null;
-      function say(text){ if(beatScene && text === beatScene.event) beat(2); }
+      function say(text, q){ if(beatScene && text === beatScene.event) beat(2); VOICE.play('feelings', text, {queue:!!q}); }
       function soundOn(){ return settings.sound; }
       function thunder(){
         try{
@@ -4191,6 +4214,7 @@ const NGA=(function(){
         cam.x = 200; cam.y = 150; cam.z = 1; cancelAnimationFrame(raf);
         svg = makeSVG(sc, sc.svg() + spotSVG(sc) + bubbleSVG(sc));
         beatScene = sc; stripFor(sc);
+        VOICE.preload('feelings', tx=>tx.indexOf(sc.name)>=0 || /^[A-Z][a-z]+\.$/.test(tx));
         scnEl.append(svg, replayBtn);
         bubble = svg.querySelector(".bub");
         replayBtn.setAttribute("aria-disabled","true");
@@ -4461,7 +4485,10 @@ const pay=(function(){
     $$('[data-chip]').forEach(c=>{ if(c.className!==cls) c.className=cls; const t=c.querySelector('.t'); if(t.textContent!==txt) t.textContent=txt; c.setAttribute('aria-label',p&&passOn(p)?'Pass: '+txt:'Free play left: '+txt); if(arc!==null) c.querySelector('.arc').setAttribute('stroke-dashoffset',arc); }); }
 
   /* time's up voice: the only speech that ignores the Voice switch */
-  function sayTimesUp(){ if(!('speechSynthesis' in window)) return; try{ if(speechSynthesis.speaking||speechSynthesis.pending) speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance("Time's up! Go get a grown-up!"); if(voice) u.voice=voice; u.rate=0.9; u.pitch=1.2; u.volume=1; u.onend=u.onerror=()=>{ wake(); setTimeout(wake,120); setTimeout(wake,400); }; speechSynthesis.speak(u); setTimeout(wake,60); }catch(e){} }
+  const TIMESUP="All done for now! Can you please find a grown-up?";
+  function sayTimesUpTTS(){ if(!('speechSynthesis' in window)) return; try{ if(speechSynthesis.speaking||speechSynthesis.pending) speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(TIMESUP); if(voice) u.voice=voice; u.rate=0.9; u.pitch=1.2; u.volume=1; u.onend=u.onerror=()=>{ wake(); setTimeout(wake,120); setTimeout(wake,400); }; speechSynthesis.speak(u); setTimeout(wake,60); }catch(e){} }
+  /* Board #77 (Danny, November 17): the voice file first; the device voice only if the file cannot play. */
+  function sayTimesUp(){ VOICE.play('core', TIMESUP, {force:true}).then(ok=>{ if(!ok) sayTimesUpTTS(); }); }
   function wiggle(){ const z=$('#pwZeroChip'); z.classList.remove('shake'); void z.offsetWidth; z.classList.add('shake'); }
   function showRest(){ $('#pwRestHint').textContent=endedToday()?'The pass ended. Free play comes back tomorrow, or a grown-up adds time.':'Free play comes back tomorrow. Or a grown-up picks a pass.';
     try{ drawer.close(); }catch(e){} go('rest'); wiggle(); if(!splashOn()) sayTimesUp(); }
