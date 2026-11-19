@@ -1002,7 +1002,7 @@ html.lite #s-home *,html.lite #s-home *::before,html.lite #s-home *::after{anima
   <div class="pw-hsbig" id="pwHS"><div class="pw-mini" id="pwMini" aria-hidden="true"></div><div class="pw-hsvid" id="pwGuVidWrap" hidden><video id="pwGuVid" muted playsinline preload="none" poster="/img/a2hs-iphone-poster.jpg" aria-label="Video: the four taps that put Mojialand on your Home Screen"><source src="/img/a2hs-iphone.mp4" type="video/mp4"></video><button class="pw-textbtn" id="pwGuVidAgain" type="button" hidden>▶ Watch again</button></div><div><p class="pw-hst" id="pwHSt">Mojialand on your Home Screen!</p><p id="pwHSbody">Add Mojialand to your Home Screen. Your kids find it next to your other apps, and it opens full screen.</p><button class="pw-primary" id="pwHSbtn">Show me how</button></div></div>
   <button type="button" class="pw-gurow pw-gusetbtn" id="guSetBtn" aria-expanded="false" aria-controls="guSets"><span>⚙️ Settings</span><span>›</span></button>
   <div class="pw-gusets" id="guSets" hidden>
-    <div class="row"><div><div class="l">Voice</div><div class="s">Speaks emoji names and how-to cards out loud. Off by default.</div></div><button class="sw" id="swVoice" role="switch" aria-checked="false" aria-label="Voice"></button></div>
+    <div class="row"><div><div class="l">Voice</div><div class="s">Reads game lines out loud. On by default.</div></div><button class="sw" id="swVoice" role="switch" aria-checked="false" aria-label="Voice"></button></div>
     <div class="row"><div><div class="l">Sounds</div><div class="s">Boops, chimes, cheers</div></div><button class="sw" id="swSound" role="switch" aria-checked="true" aria-label="Sounds"></button></div>
     <div class="row"><div><div class="l">How-to-play cards</div><div class="s" id="demosInfo">Show a how-to card the first time each game opens</div></div><button class="sw" id="swDemos" role="switch" aria-checked="true" aria-label="How-to-play cards"></button></div>
     <div class="row"><div><div class="l">Sound check</div><div class="s" id="sndInfo">Tap to play a chime</div></div><button class="small" id="sndTest">Test</button></div>
@@ -1209,7 +1209,9 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
 
 /* ---------- settings + storage ---------- */
 const store={get(k,d){try{const v=localStorage.getItem('mojia.'+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem('mojia.'+k,JSON.stringify(v))}catch(e){}}};
-const settings={voice:store.get('voice',false),sound:store.get('sound',true),demos:store.get('demos',true)};
+/* Voice on by default (Danny, November 19, board #77): our own voice plays in Share Party and Feelings Faces. The device voice in the older games
+   speaks only after a grown-up turns Voice on in Settings (voiceChosen), so no kid hears a robot voice by default. */
+const settings={voice:store.get('voice',true),sound:store.get('sound',true),demos:store.get('demos',true)};
 let demoDone=store.get('demoDone',{});
 
 /* ---------- audio ---------- */
@@ -1233,13 +1235,15 @@ const sfx={
 let voice=null;
 function pickVoice(){ if(!('speechSynthesis' in window)) return; const vs=speechSynthesis.getVoices(); if(!vs.length) return; const en=vs.filter(v=>/^en/i.test(v.lang)); const pref=['Samantha','Karen','Moira','Google UK English Female','Microsoft Aria','Microsoft Jenny','Zira','Female']; voice=en.find(v=>pref.some(p=>v.name.includes(p)))||en[0]||vs[0]; }
 if('speechSynthesis' in window){ pickVoice(); speechSynthesis.onvoiceschanged=pickVoice; }
-function say(text){ if(!settings.voice||!('speechSynthesis' in window)||!text) return; try{ if(speechSynthesis.speaking||speechSynthesis.pending) speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text); if(voice) u.voice=voice; u.rate=0.82; u.pitch=1.15; u.volume=1; u.onend=u.onerror=()=>{ wake(); setTimeout(wake,120); setTimeout(wake,400); }; speechSynthesis.speak(u); setTimeout(wake,60); }catch(e){} }
+let sayForce=false;
+function voiceChosen(){ try{ return localStorage.getItem('mojia.voice')!==null; }catch(e){ return false; } }
+function say(text){ if(!settings.voice||(!voiceChosen()&&!sayForce)||!('speechSynthesis' in window)||!text) return; try{ if(speechSynthesis.speaking||speechSynthesis.pending) speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text); if(voice) u.voice=voice; u.rate=0.82; u.pitch=1.15; u.volume=1; u.onend=u.onerror=()=>{ wake(); setTimeout(wake,120); setTimeout(wake,400); }; speechSynthesis.speak(u); setTimeout(wake,60); }catch(e){} }
 
 /* ---------- toast ---------- */
 let toastT=null; function toast(text){ const t=$('#toast'); $('#toastText').textContent=text; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),1800); }
 /* ---------- confetti ---------- */
 /* Release 1.5 #24 (Danny, October 15): Home sweet home speaks even with the Voice switch off */
-function sayAlways(text){ const v=settings.voice; settings.voice=true; try{ say(text); }finally{ settings.voice=v; } }
+function sayAlways(text){ const v=settings.voice; settings.voice=true; sayForce=true; try{ say(text); }finally{ settings.voice=v; sayForce=false; } }
 /* ---------- Mojialand voice files (board #77, November 2026). One made-up voice, made on Danny's Mac (Mojialand-Brand.md section 11).
    Static files in /audio/<game>/, mapped by exact text in /audio/voice.json. Played through the game's audio context, so the iOS sound fix covers it.
    Plays only when Voice and Sounds are both on (time's up is the one exception, as before). A new line cuts the old one; queue:true waits for it. ---------- */

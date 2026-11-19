@@ -1892,10 +1892,10 @@ for (const [w, h, name] of [[375, 667, 'se'], [820, 1180, 'ipad']]) {
   check('1.3: no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
   await ctx.close();
 }
-// Board #77: Voice off (the default) asks for no voice files; the map covers every file on disk; time's up wording.
+// Board #77: Voice switched off asks for no voice files; the map covers every file on disk; time's up wording.
 {
   const { ctx, page } = await newPage();
-  await page.addInitScript(() => { localStorage.setItem('mojia.demos', 'false'); localStorage.setItem('mojia.welcomed', 'true'); });
+  await page.addInitScript(() => { localStorage.setItem('mojia.demos', 'false'); localStorage.setItem('mojia.welcomed', 'true'); localStorage.setItem('mojia.voice', 'false'); });
   await page.goto(base + '/play/'); await page.click('#splash'); await page.waitForTimeout(400);
   await page.click('#hfeat .hfeat'); await page.waitForSelector('#s-share:not(.hidden)'); await page.waitForTimeout(300);
   await page.click('#sharestage .sh-lv[data-lv="0"]'); await page.waitForTimeout(1200);
@@ -1908,6 +1908,24 @@ for (const [w, h, name] of [[375, 667, 'se'], [820, 1180, 'ipad']]) {
   check('#77 voice: voice.json maps 220 lines and every file exists', n === 220 && missing.length === 0, n + ' ' + missing.join(' | '));
   const pt = fs.readFileSync(path.join(site, 'play', 'index.html'), 'utf8');
   check('#77 time\'s up: the new kind wording, with its voice file', /<small>All done for now!<\/small>Can you please find a grown-up\?/.test(pt) && !/Go get a grown-up/.test(pt) && !!(vmap.core && vmap.core['All done for now! Can you please find a grown-up?']));
+}
+// Board #77 (Danny, November 19): Voice is on by default for our own voice files; the older games' device voice stays quiet until a grown-up turns Voice on.
+{
+  const { ctx, page } = await newPage();
+  await page.addInitScript(() => { localStorage.setItem('mojia.demos', 'false'); localStorage.setItem('mojia.welcomed', 'true'); window.__spoke = []; try { speechSynthesis.speak = (u) => { window.__spoke.push(u && u.text); }; } catch (e) {} });
+  await page.goto(base + '/play/'); await page.click('#splash'); await page.waitForTimeout(400);
+  check('#77 default: the Voice switch shows on for a new device', (await page.getAttribute('#swVoice', 'aria-checked')) === 'true');
+  check('#77 default: the Voice row says On by default', /Reads game lines out loud\. On by default\./.test(await page.textContent('#swVoice').catch(() => '') + await page.evaluate(() => document.querySelector('#swVoice').parentElement.textContent)));
+  await page.click('#hfeat .hfeat'); await page.waitForSelector('#s-share:not(.hidden)'); await page.waitForTimeout(300);
+  await page.click('#sharestage .sh-lv[data-lv="0"]'); await page.waitForTimeout(1200);
+  check('#77 default: a new device plays our voice in Share Party', page.reqs.includes(base + '/audio/share/share-the-pizza-with-two-friends-cut-on-the-dott.m4a'));
+  await page.click('#s-share [data-go="home"]'); await page.waitForTimeout(200); await page.click('#s-share [data-go="home"]').catch(() => {}); await page.waitForTimeout(300);
+  await page.click('#tray .tile >> nth=1'); await page.waitForTimeout(200);
+  check('#77 default: no device voice until a grown-up turns Voice on (the silent unlock blank aside)', (await page.evaluate(() => window.__spoke.filter((x) => x && x.trim()))).length === 0, JSON.stringify(await page.evaluate(() => window.__spoke)));
+  await page.evaluate(() => { localStorage.setItem('mojia.voice', 'true'); }); await page.click('#tray .tile >> nth=2'); await page.waitForTimeout(200);
+  check('#77 default: after a grown-up turns Voice on, the older games speak as before', (await page.evaluate(() => window.__spoke.filter((x) => x && x.trim()))).length === 1, JSON.stringify(await page.evaluate(() => window.__spoke)));
+  check('#77 default: no CSP violations or errors', page.csp.length === 0 && page.errors.length === 0, page.csp.concat(page.errors).join(' | '));
+  await ctx.close();
 }
 // 12d. Release 1.3 how-to cards: no Watch how button for games without a demo
 {
