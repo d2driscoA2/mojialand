@@ -138,6 +138,12 @@ blocked_csp = ("default-src 'none'; script-src 'sha256-%s'; style-src 'unsafe-in
 home_screen_csp = ("default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; img-src 'self'; font-src 'self'; media-src 'self'; "
                    "base-uri 'none'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests")
 
+# Word Ninja teacher demo (/ninja-demo/): one external script, local font, voice files from this site.
+# No inline script, so no hash. Never indexed. Kid screen: nothing leaves the device.
+demo_csp = ("default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data:; font-src 'self'; media-src 'self'; connect-src 'self'; "
+            "base-uri 'self'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests")
+
 # Admin page: same-site only, never indexed, never cached.
 admin_csp = ("default-src 'none'; script-src 'self' 'sha256-%s'; style-src 'self' 'unsafe-inline'; "
              "img-src 'self' data:; font-src 'self'; connect-src 'self'; worker-src 'self'; manifest-src 'self'; "
@@ -190,6 +196,8 @@ headers = "".join([
     "/img/a2hs-iphone.mp4\n  Cache-Control: public, max-age=604800\n",
     block('/blocked/*', blocked_csp, 'DENY') + "  Cache-Control: no-store\n  X-Robots-Tag: noindex, nofollow\n",
     block('/admin/*', admin_csp, 'DENY') + "  Cache-Control: no-store\n  X-Robots-Tag: noindex, nofollow\n",
+    block('/ninja-demo/*', demo_csp, 'DENY') + "  X-Robots-Tag: noindex, nofollow\n",
+    "/ninja-demo/audio/*\n  Cache-Control: public, max-age=604800\n",
     block('/pass/*', pass_csp, 'DENY') + "  Permissions-Policy: %s\n" % pass_pp,
     "/fonts/*\n  Cache-Control: public, max-age=31536000, immutable\n",
 ])

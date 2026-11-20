@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Word Ninja demo</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+@font-face{font-family:'Nunito';font-style:normal;font-weight:700 900;font-display:swap;src:url('/fonts/nunito-latin.woff2') format('woff2')}
+/* Layout: one-screen app. Home = wordmark + 5 big game tiles. Game = slim top bar (home, title, sound, voice) over a full-height stage. */
+:root{
+  --purple:#7138D1; --deep:#5122A5; --pink:#FF5FA2; --yellow:#FFC83D; --blue:#4DBCEC; --green:#72D69A;
+  --cream:#FFF8E8; --ink:#30254A; --white:#FFFFFF; --line:#EADFF7;
+  --font:"Nunito","Nunito Rounded",ui-rounded,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --r:24px; --shadow:0 4px 12px rgba(0,0,0,.08);
+  color-scheme:light;
+}
+/* Single bright kid look in both themes, by choice: every color set explicitly. */
+html,body{height:100%}
+body{margin:0;background:var(--cream);color:var(--ink);font-family:var(--font);overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+button{font-family:var(--font)}
+#app{height:100%;display:flex;flex-direction:column}
+/* Home */
+#home{flex:1;overflow:auto;padding:20px 16px 28px;display:flex;flex-direction:column;align-items:center;gap:18px}
+.mark{font-weight:900;font-size:clamp(34px,9vw,52px);color:var(--purple);letter-spacing:-.5px;line-height:1;margin-top:8px}
+.burst{display:inline-flex;gap:3px;vertical-align:top;margin-left:4px}
+.burst i{display:block;width:6px;border-radius:3px}
+.burst i:nth-child(1){height:16px;background:var(--pink);transform:rotate(-18deg)}
+.burst i:nth-child(2){height:20px;background:var(--yellow)}
+.burst i:nth-child(3){height:16px;background:var(--blue);transform:rotate(18deg)}
+.pill{background:var(--yellow);color:var(--ink);font-weight:900;font-size:13px;letter-spacing:.1em;padding:4px 12px;border-radius:999px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;width:100%;max-width:560px}
+.tile{border:0;border-radius:var(--r);box-shadow:var(--shadow);min-height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;color:var(--ink);font-weight:900;font-size:18px;padding:14px}
+.tile .e{font-size:56px;line-height:1}
+.tile:active{transform:scale(.97)}
+.tile:focus-visible,.tb:focus-visible{outline:4px solid var(--blue);outline-offset:3px}
+.tile:last-child:nth-child(odd){grid-column:1/-1}
+.hint{color:var(--deep);font-weight:800;font-size:14px;text-align:center;max-width:42ch;opacity:.8}
+/* Game */
+#game{flex:1;display:none;flex-direction:column;min-height:0}
+#app.playing #home{display:none}
+#app.playing #game{display:flex}
+.bar{display:flex;align-items:center;gap:10px;padding:8px 12px;padding-top:calc(8px + env(safe-area-inset-top,0px));background:var(--white);box-shadow:var(--shadow);z-index:5}
+.tb{width:48px;height:48px;border-radius:50%;border:2px solid var(--line);background:var(--white);font-size:24px;display:grid;place-items:center;cursor:pointer;flex:none;padding:0}
+.tb[aria-pressed="false"]{opacity:.45}
+.gtitle{flex:1;min-width:0;text-align:center;font-weight:900;font-size:clamp(16px,4.6vw,20px);color:var(--purple);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#stage{flex:1;position:relative;overflow:hidden;min-height:0}
+/* Confetti */
+#fx{position:fixed;inset:0;pointer-events:none;z-index:50}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <main id="home">
+    <div class="mark">Mojialand<span class="burst" aria-hidden="true"><i></i><i></i><i></i></span></div>
+    <span class="pill">PLAYTEST</span>
+    <div class="grid" id="tiles"></div>
+    <p class="hint">Demo games for Danny to try. Tap a game. Turn the sound on for the full feel.</p>
+  </main>
+  <section id="game" aria-live="polite">
+    <div class="bar">
+      <button class="tb" id="btn-home" type="button" aria-label="Back to games">🏠</button>
+      <div class="gtitle" id="gtitle"></div>
+      <button class="tb" id="btn-sound" type="button" aria-label="Sound" aria-pressed="true">🔊</button>
+      <button class="tb" id="btn-voice" type="button" aria-label="Voice" aria-pressed="true">🗣️</button>
+    </div>
+    <div id="stage"></div>
+  </section>
+</div>
+<canvas id="fx"></canvas>
+
+<script src="demo.js"></script>
+</body>
+</html>
